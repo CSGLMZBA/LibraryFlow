@@ -39,6 +39,10 @@ The structure may be extended incrementally when justified by an approved requir
 
 ## 4. Technical Restrictions
 
+* Must use Firebase products for authentication, database, and hosting.
+* Must be deployable with render + netlify for the frontend and backend.
+* RESTful API must be implemented for the backend.
+
 ### 4.1. Required Technologies
 
 * HTML5 for document structure.
@@ -49,6 +53,11 @@ The structure may be extended incrementally when justified by an approved requir
 * Visual Studio Code as the development environment.
 * Tailwind CSS for styling, loaded through the CDN for Sprint 1.
 * Reusing from last project, subject to immediate modification
+* React for the frontend.
+* Vite for the frontend build system and backend connection.
+* Node.js for the backend runtime environment.
+* typescript for type safety and code clarity.
+
 ### 4.2. Prohibited Technologies
 * None as of yet.
 
