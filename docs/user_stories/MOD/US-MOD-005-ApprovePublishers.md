@@ -28,4 +28,4 @@ And the publisher must be notified of their rejection with a reason.
 ## Dependencies
 
 - US-REA-010 and role-based authorization.
-
+- US-REA-013 must provide the publisher status request functionality.
