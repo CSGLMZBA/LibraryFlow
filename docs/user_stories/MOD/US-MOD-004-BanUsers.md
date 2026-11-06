@@ -30,6 +30,9 @@ Then the action must be rejected and recorded as unauthorized.
 - **RN-001:** Every ban must have a reason, actor, start time, and duration or permanent flag.
 - **RN-002:** Banned users may not publish comments or books.
 - **RN-003:** A moderator may lift a ban only with appropriate permission.
+- **RN-004:** The system must log all ban actions for audit purposes.
+- **RN-005:** The system must notify the banned user of their ban status, reason, and duration.
+- **RN-006:** The system must hide the content of banned users from public view, including comments and books, until the ban is lifted.
 
 ## Dependencies
 

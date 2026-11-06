@@ -33,7 +33,12 @@ Web: frontend
 Api:backend
 Directory and file responsibilities:
 
-To be defined.
+* `src/index.html`: Application entry point and HTML document structure.
+* `src/css/styles.css`: Application styles and responsive presentation.
+* `src/js/main.js`: Initial JavaScript ES module entry point.
+* `src/assets/`: Static assets required by the application, if any.
+* `SPEC-000-foundation.md`: Foundation specification and technical conventions.
+* `README.md`: Project overview and local execution instructions.
 
 The structure may be extended incrementally when justified by an approved requirement.
 
