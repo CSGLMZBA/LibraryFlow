@@ -83,7 +83,7 @@ Persistence requirements:
 * Authentication and authorization.
 * User accounts and profiles.
 * Backend services, APIs, and databases.
-* Cloud storage and cross-device synchronization.
+* Cloud storage and crosHU-s-device synchronization.
 * Real-time collaboration.
 * Notifications and reminders.
 * Reporting, analytics, and dashboards.
