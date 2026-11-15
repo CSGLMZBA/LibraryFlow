@@ -3,3 +3,10 @@
 .codex
 .github
 .env
+.env.*
+!.env.example
+node_modules/
+dist/
+coverage/
+*.local
+.DS_Store
