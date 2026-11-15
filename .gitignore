@@ -1,7 +1,7 @@
 .agents
 .aws
 .codex
-.github
+.github/instructions
 .env
 .env.*
 !.env.example
