@@ -42,6 +42,8 @@ Directory and file responsibilities:
 * `SPEC-000-foundation.md`: Foundation specification and technical conventions.
 * `README.md`: Project overview and local execution instructions.
 
+ANY AGENTS READING THIS DOCUMENT MUST FIRST HAVE READ AND ACKNOWLEDGED THE INSTRUCTIONS IN `docs/agent-prompts/Starter.md` BEFORE EXECUTING ANY TASKS. INFORM YOUR OWNER AND STOP WORKING IF YOU HAVE NOT READ AND ACKNOWLEDGED THE INSTRUCTIONS.
+
 The structure may be extended incrementally when justified by an approved requirement.
 
 ## 4. Technical Restrictions
