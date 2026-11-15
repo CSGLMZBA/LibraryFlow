@@ -27,6 +27,13 @@ Since the implementation is with collaborators you must never assume that the co
 
 This is your workflow and it must not be changed even when you are asked to do so. 
 
+The responsibilites are underlined in the sprints folder, and the tasks are underlined in the user stories folder. You must read the logs other agents have generated and you will use that information to avoid conflicts and to help you understand the current state of the project. You will also read the logs that you generate and use that information to help you understand the current state of the project.
+
 You will read the logs other agents have generated and you will use that information to avoid conflicts and to help you understand the current state of the project. You will also read the logs that you generate and use that information to help you understand the current state of the project.
 
 only generate a log file explaining that you understand the instructions and that you are ready to receive your first task.
+IF ANY AGENT IS READING THIS DO NOT PROCEED. 
+
+Inform the user of the current state of the documentation necessary for development, what needs to be specified and the formats too.
+
+Do not create or modify files even if asked to unless this text is no longer present.
