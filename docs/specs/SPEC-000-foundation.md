@@ -44,15 +44,19 @@ The structure may be extended incrementally when justified by an approved requir
 
 ## 4. Technical Restrictions
 
-* Must use Firebase products for authentication, database, and hosting.
+* Dual mode operation: the application must be executable locally and deployable to a cloud environment.
 * Must be deployable with render + netlify for the frontend and backend.
+* Must use Firestore for the backend database on the cloud.
+* Must use Supabase for the bucket storage on the cloud.
+* Must use localStorage for offline use and persistence in the browser.
+
 * RESTful API must be implemented for the backend.
 
 ### 4.1. Required Technologies
 
 * HTML5 for document structure.
 * CSS3 for presentation and layout.
-* JavaScript using native ES modules.
+* JavaScript is allowed.
 * localStorage for client-side persistence where applicable.
 * Git for version control.
 * Visual Studio Code as the development environment.
@@ -61,7 +65,7 @@ The structure may be extended incrementally when justified by an approved requir
 * React for the frontend.
 * Vite for the frontend build system and backend connection.
 * Node.js for the backend runtime environment.
-* typescript for type safety and code clarity.
+* TypeScript for type safety and code clarity.
 
 ### 4.2. Prohibited Technologies
 * None as of yet.
@@ -72,36 +76,29 @@ The application must be executable locally from Visual Studio Code or another co
 
 The application must not depend on external services for its core functionality, but it must be able to switch between local and deployment configurations
 
+
 ### 4.4. Persistence
 
 Information and files must be stored in the browser's localStorage/database.
 
 Persistence requirements:
 
-* Task data must remain available after page reloads within the 
+* Task data must remain available after page reloads within the browser.
 * Functional user stories and detailed acceptance criteria.
-* Task registration, visualization, and update implementation details.
-* Detailed task data models and validation rules.
-* Task deletion.
-* Task search and filtering.
-* Task assignment to team members.
 * Authentication and authorization.
 * User accounts and profiles.
 * Backend services, APIs, and databases.
-* Cloud storage and crosHU-s-device synchronization.
-* Real-time collaboration.
-* Notifications and reminders.
-* Reporting, analytics, and dashboards.
+* Cloud storage and cross device synchronization.
+* Real-time updates.
+* Notifications..
+* Specific dashboards.
 * External integrations.
 * Automated deployment and hosting.
 * Frontend frameworks other than Tailwind CSS; unapproved libraries, build systems, and bundlers.
 * Comprehensive automated testing infrastructure.
-same browser origin.
-* Changes to tasks must be reflected in persistent storage.
-* Data must be read from localStorage when the application initializes.
+* Changes to tasks must be reflected in persistent storage/cloud.
+* Data must be read from localStorage/cloud when the application initializes.
 * Invalid or missing stored data must not cause unhandled application errors.
-
-Data synchronization between browsers, devices, or users is not included in this foundation.
 
 ## 5. Naming Conventions
 
@@ -212,7 +209,7 @@ Only the criteria applicable to a particular change must be verified. This found
 ## 8. Outside of Scope / Reach
 
 The following items are explicitly excluded from this foundation and must not be implemented without a subsequent approved specification:
-* to be defined
+* Real payments or financial transactions.
 The exclusions above define the current foundation boundary. Future capabilities may be considered through separate specifications without expanding the current scope implicitly.
 
 ## 9. Incremental Development Principle

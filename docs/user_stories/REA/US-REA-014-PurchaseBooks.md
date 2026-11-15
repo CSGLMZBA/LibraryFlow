@@ -16,7 +16,7 @@ Then the purchase must be denied
 And the reader must be notified of insufficient funds.
 
 ## Business rules
-- **RN-001:** Only authenticated readers may purchase books.
+- **RNs-001:** Only authenticated readers may purchase books.
 - **RN-002:** The system must check the reader's account balance before processing a purchase
 - **RN-003:** The system must update the reader's account balance after a successful purchase.
 

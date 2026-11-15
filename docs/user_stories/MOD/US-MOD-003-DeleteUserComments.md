@@ -12,6 +12,7 @@ Given that the moderator has permission to moderate comments
 When they select a comment and confirm deletion  
 Then the comment must no longer be visible to readers  
 And the comment must be marked as deleted in persistent storage.
+And the comment author must receive an in-app notification of the removal.
 
 ### CA-002 – Require confirmation
 
@@ -42,8 +43,8 @@ And the user must receive an authorization error.
 
 ## Dependencies
 
-- US-REA-002 must provide authenticated users and comments.
-- US-REA-005 and US-PUB-003 must provide comments to moderate.
+- US-REA-010 must provide authenticated users.
+- US-REA-012 and US-PUB-003 must provide comments to moderate.
 - The system must provide role-based access and persistent comment storage.
 
 ## Out of Scope

@@ -35,3 +35,7 @@ And the user must be notified that the credit request amount is invalid.
 - **RN-002:** Credit requests must be reviewed and approved or rejected by a moderator.
 - **RN-003:** The system must notify users of the status of their credit requests (approved or rejected) along with any relevant details.
 - **RN-004:** The system must maintain a record of all credit requests, including the user ID, requested amount, status (pending, approved, rejected), and timestamps for creation and status changes.
+
+
+### Dependencies
+- US-REA-010 and role-based authorization.  

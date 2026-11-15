@@ -31,19 +31,29 @@ And they must be directed to log in or register.
 
 Given that comments exist for a book  
 When a user opens the book  
-Then the comments must be displayed in a consistent order with author and time.
+Then the comments must be displayed in descending creation-date order, with the
+most recent comment first, including author and time.
+
+### CA-005 – Notify after moderation removal
+
+Given that an authorized moderator removes the comment
+When the removal succeeds
+Then the comment must no longer appear in reader or publisher views
+And the comment author must receive an in-app notification with the removal
+status.
 
 ## Business rules
 
 - **RN-001:** Only authenticated readers may publish comments.
 - **RN-002:** A comment must belong to exactly one book and one author.
 - **RN-003:** Comment text is normalized before validation and storage.
-- **RN-004:** Comments may be removed by authorized moderators under US-MOD-003.
+- **RN-004:** Comments may be removed by authorized moderators under
+  `US-MOD-003`, and removal must be recorded for audit purposes.
 
 ## Dependencies
 
 - US-REA-010 must provide authentication.
-- US-PUB-006 must provide books.
+- US-PUB-001 must provide approved books.
 - Persistent comment storage must be available.
 
 ## Out of Scope

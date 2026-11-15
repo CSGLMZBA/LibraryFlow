@@ -34,7 +34,7 @@ And it must not display unrelated books as matches.
 ## Business rules
 
 - **RN-001:** Search results must include only publicly available books.
-- **RN-002:** Search must be case-insensitive.Session Info
+- **RN-002:** Search must be case-insensitive.
 Context Window
 50.3K / 272K tokens
 18%
@@ -44,7 +44,7 @@ Context Window
 
 ## Dependencies
 
-- US-PUB-006 must provide published books and metadata.
+- US-PUB-001 must provide approved books and metadata.
 - US-MOD-001 and US-MOD-002 must provide category and genre values.
 
 ## Out of Scope

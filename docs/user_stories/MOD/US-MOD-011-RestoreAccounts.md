@@ -20,3 +20,4 @@ And the user must be notified of their account restoration.
 
 ## Dependencies
 - US-REA-010 and role-based authorization.
+

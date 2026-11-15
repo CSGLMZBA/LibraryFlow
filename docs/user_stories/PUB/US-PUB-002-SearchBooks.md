@@ -40,7 +40,7 @@ And unrelated books must not be presented as matches.
 
 ## Dependencies
 
-- US-PUB-001 must provide published books and metadata.
+- US-PUB-001 must provide approved books and metadata.
 - US-MOD-001 and US-MOD-002 must provide category and genre values.
 
 ## Out of Scope

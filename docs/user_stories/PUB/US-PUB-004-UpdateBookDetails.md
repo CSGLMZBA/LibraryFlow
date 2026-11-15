@@ -29,11 +29,13 @@ And an explanatory error must be shown.
 
 - **RN-001:** Only the owning publisher or an authorized moderator may update book details.
 - **RN-002:** Required metadata cannot be empty.
-- **RN-003:** Changes must persist between sessions.
+- **RN-003:** The title field has a maximum length of 100 characters.
+- **RN-004:** Changes must persist between sessions through the local IndexedDB
+  adapter and synchronize with Firestore when online.
 
 ## Dependencies
 
-- US-PUB-006 and persistent book metadata.
+- US-PUB-001 and persistent book metadata.
 
 ## Out of Scope
 

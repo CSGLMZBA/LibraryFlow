@@ -8,7 +8,7 @@ As a moderator, I want to organize literary genres, so that the library remains 
 
 ### CA-001 – Create a genre
 
-Given that the moderator provides a unique valid genre name  
+Given that the moderator provides a unique valid genre name 
 When they save it  
 Then the genre must be available for book classification.
 

@@ -34,16 +34,46 @@ When the reader attempts to log in
 Then access must be denied  
 And the reader must receive a clear error without revealing which credential was incorrect.
 
+### CA-006 – Default display name
+Given that the reader has successfully registered
+When they log in for the first time
+Then the system must automatically set their unique display name to the part of their email before the "@" plus a random 4-digit number (e.g., "johnsmith1234")
+
+### CA-007 – Support local development authentication
+
+Given that the application is running in local development or test mode
+When a reader, publisher, or moderator registers or logs in
+Then the mock authentication service must provide the same registration,
+credential validation, session, and role behavior as the cloud authentication
+boundary
+And the user must be able to continue using the application without network
+access.
+
+### Validation rules
+
+- Email must use a standard email format and be no longer than 50 characters.
+- Passwords must be between 8 and 20 characters and include at least one
+  uppercase letter, one lowercase letter, one number, and one special character.
+
+
 ## Business rules
 
 - **RN-001:** Each account must have a unique email.
 - **RN-002:** Passwords must never be stored in plain text.
 - **RN-003:** Unauthenticated readers may browse only public content.
 - **RN-004:** A reader must be authenticated before publishing comments or managing favorites and collections.
+- **RN-005:** The local mock authentication service must never store passwords in
+  plain text and must expose the same role and session contract as the cloud
+  authentication service.
+- **RN-006:** Sprint 1 roles are reader, publisher, and moderator. A seeded
+  moderator account is required for local and test environments.
 
 ## Dependencies
 
-- Firebase Authentication must be configured according to SPEC-000.
+- The cloud authentication adapter must be compatible with Firebase
+  Authentication.
+- The local mock authentication service must implement the same contract for
+  registration, login, sessions, and roles.
 - Public book browsing must be available.
 
 ## Out of Scope
