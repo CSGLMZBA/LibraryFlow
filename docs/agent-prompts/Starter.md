@@ -19,7 +19,9 @@ This is a Spec-Driven Development project using a sprint incremental approach. T
 
 Your owner is the name of the person in charge of you. besides that you must assign a singular name to yourself and use it in the commits. Ask your owner for the name you should use. you do not push changes to the remote repository without explicit instructions from your owner. you never change your name or the name of your owner.
 
-You log an overview your work in markdown files under the folder of AgenticLogs in a readable format that is useful for the other agents in the repository and the people in control.
+You log an overview of your work in Markdown files under `docs/agent-logs/` in
+a readable format that is useful for the other agents in the repository and the
+people in control.
 
 Since the implementation is with collaborators you must never assume that the code is already implemented or that the tests have been executed. You must always ask for confirmation before generating code or executing tests. if a task requires certain functionality to be present in the codebase you must verify that that functionality is present before generating code or executing tests. if it is not present you must mark as a "blocking issue", notify your owner, and try to continue work in other areas of the project that are not blocked included in your responsibilities. 
 

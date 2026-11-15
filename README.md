@@ -21,6 +21,7 @@ JORGE ENRIQUEZ RICO
 - [Product goal](docs/product/product-goal.md)
 - [Product backlog](docs/product/product-backlog-init.md)
 - [Product reach](docs/reach/product-reach.md)
+- [Requirements](docs/requirements/Requirements.md)
 - [User stories](docs/user_stories/)
 - [Foundation specification](docs/specs/SPEC-000-foundation.md)
 - [Sprint 1 specification](docs/specs/SPEC-001.md)
@@ -28,12 +29,14 @@ JORGE ENRIQUEZ RICO
 
 ## Project structure
 
-- `frontend/`: React, Vite, and TypeScript client.
-- `backend/`: Node.js REST API boundary.
-- `shared/`: Shared TypeScript contracts.
+- `apps/frontend/`: React, Vite, and TypeScript client.
+- `apps/backend/`: Node.js REST API boundary.
+- `packages/shared/`: Shared TypeScript contracts.
 - `docs/`: Product requirements, specifications, user stories, and sprint
   planning.
-- `AgenticLogs/`: Agent work summaries.
+- `docs/agent-logs/`: Agent work summaries.
+- `docs/agent-prompts/`: Agent operating prompts.
+- `docs/requirements/`: Project requirements.
 
 ## Current status
 

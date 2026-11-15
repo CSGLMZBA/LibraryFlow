@@ -11,11 +11,14 @@ approved technical baseline in `SPEC-001.md`.
 
 ## Created areas
 
-- `frontend/`: React/Vite/TypeScript client scaffold.
-- `backend/`: Node.js/Express REST API boundary with a health endpoint.
-- `shared/`: Shared TypeScript contract package.
+- `apps/frontend/`: React/Vite/TypeScript client scaffold.
+- `apps/backend/`: Node.js/Express REST API boundary with a health endpoint.
+- `packages/shared/`: Shared TypeScript contract package.
 - Root workspace configuration and TypeScript project references.
 - Root ignore rules for generated and environment-specific files.
+- `docs/agent-logs/`: Agent work summaries.
+- `docs/agent-prompts/`: Agent operating prompts.
+- `docs/requirements/`: Project requirements.
 
 ## Deliberately not implemented
 

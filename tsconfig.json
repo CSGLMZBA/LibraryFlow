@@ -2,13 +2,13 @@
   "files": [],
   "references": [
     {
-      "path": "./shared"
+      "path": "./packages/shared"
     },
     {
-      "path": "./backend"
+      "path": "./apps/backend"
     },
     {
-      "path": "./frontend"
+      "path": "./apps/frontend"
     }
   ]
 }

@@ -26,17 +26,19 @@ Functional user stories, detailed acceptance criteria, and individual feature sp
 
 ## 3. Initial Project Structure
 
-The project will use `src/` as the root directory for application source files.
+The project uses `apps/` for deployable applications and `packages/` for
+reusable shared code.
 
 Initial proposed structure:
-Web: frontend
-Api:backend
+Web: `apps/frontend`
+API: `apps/backend`
+Shared contracts: `packages/shared`
 Directory and file responsibilities:
 
-* `src/index.html`: Application entry point and HTML document structure.
-* `src/css/styles.css`: Application styles and responsive presentation.
-* `src/js/main.js`: Initial JavaScript ES module entry point.
-* `src/assets/`: Static assets required by the application, if any.
+* `apps/frontend/index.html`: Application entry point and HTML document structure.
+* `apps/frontend/src/`: React frontend source files and responsive presentation.
+* `apps/backend/src/`: Node.js REST API source files.
+* `packages/shared/src/`: Shared TypeScript contracts.
 * `SPEC-000-foundation.md`: Foundation specification and technical conventions.
 * `README.md`: Project overview and local execution instructions.
 
@@ -194,7 +196,8 @@ Branching strategies, pull request requirements, and release conventions are not
 A technical change is considered complete when all applicable criteria below are satisfied:
 
 1. **Scope compliance:** The implementation addresses only the requested objective.
-2. **Structure compliance:** Files are located within the established project structure, using `src/` for application source files.
+2. **Structure compliance:** Application files are located under `apps/`,
+   shared contracts under `packages/`, and documentation under `docs/`.
 3. **Technology compliance:** The implementation uses the approved native technologies without unauthorized frameworks, backends, or dependencies.
 4. **Code organization:** HTML, CSS, and JavaScript responsibilities remain appropriately separated.
 5. **Naming compliance:** New files, variables, functions, and CSS classes follow the defined naming conventions.

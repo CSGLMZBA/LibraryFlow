@@ -12,7 +12,7 @@
   },
   "references": [
     {
-      "path": "../shared"
+      "path": "../../packages/shared"
     }
   ],
   "include": ["src"]
