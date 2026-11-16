@@ -4,7 +4,7 @@
 **Sprint:** 1  
 **Team size:** 7 workers, including the product owner/technical lead  
 **Working model:** Scrum with specification-driven development (SDD) and agent-assisted implementation  
-**Status:** Execution plan prepared; implementation starts only after the open decisions in this document are approved
+**Status:** Execution-ready; implementation may begin against approved `SPEC-001`
 
 ## 1. Purpose and operating principles
 
@@ -23,9 +23,9 @@ The team will:
 6. Never allow an agent to merge its own work without human review.
 7. Escalate ambiguity instead of silently inventing behavior.
 
-The repository currently states that the validated requirements must not be
-modified without authorization and that the proposed `SPEC-001` must be approved
-before implementation. Those constraints remain in force.
+The repository states that validated requirements must not be modified without
+authorization. `SPEC-001` is now approved for implementation; any new
+behavioral decision requires a specification change before coding.
 
 ## 2. Sprint 1 scope baseline
 
@@ -108,8 +108,8 @@ the listed owner, labels, dependency, and acceptance evidence.
 
 | Task | Owner | Depends on | Output |
 |---|---|---|---|
-| S1-DOC-01 Approve scope and `SPEC-001` outline | Carlos | None | Approved story mapping, technical decisions, and specification outline |
-| S1-DOC-02 Build acceptance-criteria test register | Cesar | S1-DOC-01 | Test cases for every in-scope acceptance criterion |
+| S1-DOC-01 Approve scope and `SPEC-001` outline | Carlos | None | Complete; approved story mapping, technical decisions, and specification outline |
+| S1-DOC-02 Build acceptance-criteria test register | Cesar | S1-DOC-01 | Ready; test cases for every in-scope acceptance criterion |
 | S1-ARCH-01 Define domain and API contracts | Carlos, Juan, Bryan | S1-DOC-01 | Auth, book, classification, comment, and storage contracts |
 | S1-AUTH-01 Implement registration and login | Bryan | S1-ARCH-01 | PB-001 behavior, validation, secure credential handling, authorization boundary |
 | S1-DATA-01 Implement book and metadata persistence | Juan | S1-ARCH-01 | Book identity, ownership, metadata, publication state, and storage boundary |
@@ -142,18 +142,17 @@ underlying stories.
 
 ## 7. Coherence and dependency findings
 
-The following findings must be resolved in `SPEC-001` or explicitly accepted as
-constraints before implementation:
+The following decisions are resolved and are now implementation constraints:
 
 1. **Story identifiers:** The sprint now uses the canonical role-prefixed
    identifiers listed in `SPRINT-001.md`.
 2. **Duplicate capabilities:** Search, download, and sharing appear in multiple
    role-specific stories. The specification must define one shared domain
    behavior with role-specific permissions rather than duplicate implementations.
-3. **Inconsistent dependency IDs:** Some stories depend on `US-PUB-006` while
-   the visible publishing story is `US-PUB-001`; classification depends on both
-   `US-REA-011` and similarly named search stories. The canonical dependency IDs
-   need confirmation.
+3. **Dependency IDs:** The canonical dependencies are the `S1-` task
+   dependencies in Section 5 and the role-prefixed story IDs in
+   `SPRINT-001.md`. Historical references to `US-PUB-006` are not used for
+   Sprint 1 planning.
 4. **Authentication provider boundary:** Local development uses a mock service
    compatible with the Firebase contract; cloud authentication remains the
    production boundary.
@@ -163,12 +162,13 @@ constraints before implementation:
    with Firestore online; invalid stored data must be safely rejected.
 7. **File and offline limits:** EPUB/PDF, 20 MB maximum, IndexedDB quota
    management, and four explicit download states are now defined.
-8. **Field limits:** Email, password, and title limits are defined; remaining
-   fields retain the default rules until separately approved.
+8. **Field limits:** Default and exception limits are defined in Section 15 of
+   `SPEC-001`.
 
 ## 8. Proposed `SPEC-001` structure
 
-The product owner must approve this structure before implementation:
+The following `SPEC-001` structure is approved and is the implementation
+baseline:
 
 1. **Purpose and Sprint 1 scope**
 2. **Canonical story IDs and scope mapping**
@@ -193,7 +193,7 @@ The product owner must approve this structure before implementation:
 12. **Testing and acceptance-evidence plan**
 13. **Local execution and deployment configuration**
 14. **Definition of Done and traceability requirements**
-15. **Out of scope and unresolved decisions**
+15. **Approved implementation decisions and out-of-scope behavior**
 
 ## 9. Review and communication cadence
 
@@ -231,6 +231,11 @@ A work item is done only when:
 Sprint 1 is complete only when the integrated increment passes the agreed
 acceptance tests and the product owner accepts the demo.
 
+The acceptance-criteria register is maintained in
+[`S1-ACCEPTANCE-REGISTER.md`](../testing/S1-ACCEPTANCE-REGISTER.md). A row may
+be marked passed only with an executed test or a dated manual verification
+record.
+
 ## 11. Execution record
 
 ### Completed during planning
@@ -241,12 +246,12 @@ acceptance tests and the product owner accepts the demo.
   first-viable-product stories and their enabling stories.
 - Assigned all seven workers and defined two frontend-oriented workstreams.
 - Defined dependencies, traceability, verification, review cadence, and the
-  proposed `SPEC-001` structure.
+  approved `SPEC-001` structure.
 
-### Not started by design
+### Planning boundary
 
-- No application code was generated.
+- No application feature code was generated during planning.
 - No Sprint 2 functionality was implemented.
 - No validated requirement was modified.
-- No feature task is authorized until the scope and `SPEC-001` decisions above
-  are approved by the product owner.
+- Feature tasks are now authorized against the approved `SPEC-001` and the
+  acceptance register; later-sprint functionality remains prohibited.

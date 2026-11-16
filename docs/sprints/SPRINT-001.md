@@ -89,7 +89,7 @@ Do not modify the validated requirements without previous authorization.
 
 Do not generate any code yet.
 
-The proposed SPEC-001 structure must be approved by me.
+The approved SPEC-001 structure is the implementation baseline.
 
 I will only work with Sprint 1. Do not implement functionalities of the second
 sprint or any later backlog capability.
@@ -135,7 +135,7 @@ outside Sprint 1.
 | Metadata and classification | Coherent with dependency | `US-PUB-004` and `US-PUB-005` require ownership checks and persistent controlled values. Category/genre identity behavior when renamed or removed must be defined. |
 | Comments | Coherent after clarification | Reader publishing, publisher viewing, and `US-MOD-003` removal now share book-scoped comments, newest-first ordering, audit data, and author notification. |
 | Offline access | Coherent after clarification | `US-REA-003` defines EPUB/PDF storage in IndexedDB, progress states, quota failure handling, retry behavior, and offline reading. |
-| Field validation | Partially resolved | Email, password, and title rules are approved. Remaining fields use `FIELD_RULES.md` until more specific limits are approved. |
+| Field validation | Resolved | The default 25-character rule and all Sprint 1 field exceptions are defined in SPEC-001. |
 
 The affected acceptance criteria and business rules were updated to reflect the
 clarified decisions. The findings above confirm their coherence and identify
@@ -198,18 +198,18 @@ affected user stories:
 | DEC-004 | Define the authoritative local persistence adapter and synchronization boundary with Firestore. | **Resolved:** IndexedDB is authoritative for structured local data and offline files; synchronization with Firestore handles online consistency and conflicts. |
 | DEC-005 | Confirm the minimum moderator workflow. | **Resolved:** Sprint 1 includes a moderator role, seeded moderator account, and basic approve/reject UI. |
 | DEC-006 | Define file formats, upload validation, offline storage, quota behavior, and progress states. | **Resolved:** EPUB/PDF, maximum 20 MB, IndexedDB with quota management, and `Not Started`, `In Progress`, `Completed`, and `Failed` states. |
-| DEC-007 | Approve field-specific lengths and validation rules. | **Partially resolved:** Email max 50 and standard format; password 8–20 with uppercase, lowercase, number, and special character; title max 100. Other fields retain `FIELD_RULES.md` defaults. |
+| DEC-007 | Approve field-specific lengths and validation rules. | **Resolved:** The default text maximum is 25 characters. Exceptions are email (50), password (8–128), title (100), author (100), comment (1000), rejection reason (500), and classification name (50). |
 | DEC-008 | Define rejection notification behavior and bucket deletion timing. | **Resolved:** Immediate in-app notification; Supabase deletion 24 hours after rejection. |
 | DEC-009 | Define comment ordering and moderator-removal behavior. | **Resolved:** Newest-first ordering; authorized removal hides the comment and sends an in-app notification to its author. |
 
-Only the remaining field-specific limits under DEC-007 require a future
-clarification. The proposed `SPEC-001` structure and this execution record
-remain subject to the explicit approval gate below.
+All field-specific limits required for Sprint 1 are resolved. The approved
+`SPEC-001` structure and this execution record authorize implementation within
+the stated scope.
 
-### 5. Proposed `SPEC-001` structure
+### 5. Approved `SPEC-001` structure
 
-The following structure is proposed for approval. It is not yet a specification
-and does not authorize implementation:
+The following structure is approved and is recorded in `SPEC-001.md`. It
+authorizes implementation within the stated Sprint 1 scope:
 
 1. Purpose, Sprint 1 goal, and explicit in/out-of-scope capabilities.
 2. Canonical story IDs, backlog mapping, and acceptance-criteria index.
@@ -229,7 +229,7 @@ and does not authorize implementation:
 14. Test strategy, acceptance evidence, traceability, and regression checks.
 15. Local execution, environment configuration, deployment boundaries, and
     security checks.
-16. Definition of Done, unresolved decisions, and explicit future-sprint
+16. Definition of Done, approved decisions, and explicit future-sprint
     exclusions.
 
 ### 6. Traceability matrix: story -> acceptance criteria -> SPEC-001
@@ -274,21 +274,22 @@ with implementation, but the assigned worker owns the result and verification.
 
 ### 8. Execution gate
 
-This analysis, proposed structure, matrix, and task plan are complete for the
-planning phase. The next required action is product-owner approval of:
+This analysis, approved structure, matrix, and task plan are complete for the
+planning phase. The readiness gate is satisfied because:
 
-- the Sprint 1 story scope;
-- the proposed `SPEC-001` structure; and
-- decisions `DEC-001` through `DEC-009`.
+- the Sprint 1 story scope is approved;
+- the `SPEC-001` structure and implementation contracts are approved;
+- decisions `DEC-001` through `DEC-009` are resolved; and
+- the acceptance register is available at
+  `docs/testing/S1-ACCEPTANCE-REGISTER.md`.
 
-After approval, the team may author `SPEC-001` and begin implementation tasks.
-Until then, the team must not generate application code or implement later
-backlog capabilities.
+The team may begin implementation tasks. It must not implement later backlog
+capabilities or mark acceptance criteria as passed without executed evidence.
 
 ### 9. Approval and continuation record
 
 The product owner approved the clarified Sprint 1 scope, decisions, and
-proposed `SPEC-001` structure after the affected user stories were updated.
+approved `SPEC-001` structure after the affected user stories were updated.
 The approved specification is now recorded in
 [`docs/specs/SPEC-001.md`](../specs/SPEC-001.md).
 

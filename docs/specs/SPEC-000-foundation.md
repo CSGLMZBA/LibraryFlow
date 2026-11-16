@@ -57,7 +57,9 @@ The structure may be extended incrementally when justified by an approved requir
 * Must be deployable with render + netlify for the frontend and backend.
 * Must use Firestore for the backend database on the cloud.
 * Must use Supabase for the bucket storage on the cloud.
-* Must use localStorage for offline use and persistence in the browser.
+* Must use browser persistence for offline use and persistence between sessions.
+  Sprint 1 uses IndexedDB for structured records and book files; localStorage
+  is permitted only for small non-sensitive preferences.
 
 * RESTful API must be implemented for the backend.
 
@@ -66,7 +68,8 @@ The structure may be extended incrementally when justified by an approved requir
 * HTML5 for document structure.
 * CSS3 for presentation and layout.
 * JavaScript is allowed.
-* localStorage for client-side persistence where applicable.
+* IndexedDB for structured client-side persistence and offline book files.
+* localStorage only for small non-sensitive preferences where applicable.
 * Git for version control.
 * Visual Studio Code as the development environment.
 * Tailwind CSS for styling, loaded through the CDN for Sprint 1.
@@ -88,7 +91,8 @@ The application must not depend on external services for its core functionality,
 
 ### 4.4. Persistence
 
-Information and files must be stored in the browser's localStorage/database.
+Information and files must be stored in the browser's IndexedDB database.
+LocalStorage may contain only small, non-sensitive preferences.
 
 Persistence requirements:
 
@@ -106,7 +110,7 @@ Persistence requirements:
 * Frontend frameworks other than Tailwind CSS; unapproved libraries, build systems, and bundlers.
 * Comprehensive automated testing infrastructure.
 * Changes to tasks must be reflected in persistent storage/cloud.
-* Data must be read from localStorage/cloud when the application initializes.
+* Data must be read from IndexedDB/cloud when the application initializes.
 * Invalid or missing stored data must not cause unhandled application errors.
 
 ## 5. Naming Conventions
@@ -220,7 +224,8 @@ A technical change is considered complete when all applicable criteria below are
 4. **Code organization:** HTML, CSS, and JavaScript responsibilities remain appropriately separated.
 5. **Naming compliance:** New files, variables, functions, and CSS classes follow the defined naming conventions.
 6. **Execution:** The application can be opened and executed locally in the intended development environment.
-7. **Persistence:** When task data is affected, localStorage behavior is verified, including persistence after a page reload.
+7. **Persistence:** When persisted data is affected, IndexedDB behavior is
+   verified, including persistence after a page reload.
 8. **Verification transparency:** Verification steps and actual results are documented accurately; unexecuted tests are explicitly identified as unexecuted.
 9. **Documentation:** Relevant specifications or execution instructions are updated when the change affects them.
 10. **Change isolation:** No unrelated functionality, files, or requirements are introduced.

@@ -6,7 +6,7 @@ This specification defines the approved technical and functional baseline for
 LibraryFlow Sprint 1. It converts the Sprint 1 stories and clarified decisions
 into implementable contracts without adding later-backlog functionality.
 
-**Status:** Approved for Sprint 1 implementation planning  
+**Status:** Approved for Sprint 1 implementation
 **Baseline:** `SPEC-000-foundation.md`  
 **Scope source:** `docs/sprints/SPRINT-001.md` and the linked user stories
 
@@ -78,6 +78,10 @@ catalog, detail, comment, or download queries.
 The React/Vite/TypeScript baseline supersedes the older native-ES-module-only
 wording in `SPEC-000` for this sprint. JavaScript/TypeScript modules remain
 required for code organization.
+
+The approved local persistence decision is IndexedDB for structured records,
+sessions, and offline book files. `localStorage` is limited to small,
+non-sensitive preferences and is not an authoritative application store.
 
 ## 5. Domain model and invariants
 
@@ -250,6 +254,57 @@ files, or whether a login failure was caused by the email or password. Storage,
 sync, quota, and scheduled-deletion failures must be surfaced explicitly and
 must not return a success-shaped fallback.
 
+### 11.1 Sprint 1 endpoint boundary
+
+The REST API uses the `/api/v1` prefix. Authentication is supplied through the
+configured session token; public catalog reads do not require authentication.
+
+| Method | Path | Purpose |
+|---|---|---|
+| `POST` | `/api/v1/auth/register` | Register a reader or publisher. |
+| `POST` | `/api/v1/auth/login` | Create a session. |
+| `POST` | `/api/v1/auth/logout` | Invalidate the current session. |
+| `GET` | `/api/v1/auth/session` | Return the current session. |
+| `GET` | `/api/v1/books` | List approved books using text, category, and genre filters. |
+| `POST` | `/api/v1/books` | Submit a publisher-owned book as `pending`. |
+| `GET` | `/api/v1/books/:bookId` | Return an approved public book or an authorized owner view. |
+| `PATCH` | `/api/v1/books/:bookId` | Update metadata for an owned book. |
+| `GET` | `/api/v1/books/:bookId/download` | Return an authorized download reference for an approved book. |
+| `GET` | `/api/v1/books/:bookId/comments` | List visible comments newest first. |
+| `POST` | `/api/v1/books/:bookId/comments` | Add a reader comment. |
+| `DELETE` | `/api/v1/comments/:commentId` | Remove a comment as a moderator with a reason. |
+| `GET` | `/api/v1/moderation/books/pending` | List pending books for moderators. |
+| `POST` | `/api/v1/moderation/books/:bookId/approve` | Approve a pending book. |
+| `POST` | `/api/v1/moderation/books/:bookId/reject` | Reject a pending book and schedule deletion. |
+| `GET` | `/api/v1/classifications` | List available categories and genres. |
+| `POST` | `/api/v1/classifications` | Create a category or genre as a moderator. |
+| `PATCH` | `/api/v1/classifications/:classificationId` | Rename a category or genre as a moderator. |
+
+Request and response DTOs, role names, lifecycle states, error codes, and
+download states are exported from `packages/shared`. Each endpoint validates
+its input at the API boundary and returns the error shape defined above.
+
+### 11.2 Local, cloud, and scheduled-operation adapters
+
+The service layer uses ports so local and cloud implementations have the same
+behavior:
+
+- Local mode uses IndexedDB and the mock authentication service.
+- Cloud mode uses the REST API, Firestore, Firebase-compatible authentication,
+  and Supabase storage.
+- The backend owns Firestore and Supabase access; the frontend never accesses
+  either provider directly.
+- Rejected-file deletion is represented by a persisted deletion job with an
+  execution time 24 hours after rejection. A worker or scheduled deployment
+  process claims due jobs idempotently and records success or an explicit
+  failure for retry.
+
+Required configuration names are:
+`APP_MODE` (`local` or `cloud`), `PORT`, `VITE_API_BASE_URL`,
+`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`,
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `SUPABASE_BUCKET`.
+Secrets are supplied through the environment and must not be committed.
+
 ## 12. Frontend routes and accessibility
 
 The frontend must provide role-aware views for:
@@ -297,3 +352,16 @@ The following remain explicitly excluded: collections, favorites, general
 notifications, ratings, following publishers, purchases, pricing, credits,
 account deletion, social login, MFA, full moderation administration, automatic
 content moderation, and cross-device annotation synchronization.
+
+## 15. Approved implementation decisions
+
+- Canonical story IDs are the role-prefixed IDs listed in `SPRINT-001.md`.
+- Shared capabilities have one domain implementation with role-specific
+  authorization, not duplicated role-specific implementations.
+- Text fields use the default 25-character maximum from `FIELD_RULES.md`
+  unless this specification explicitly sets another limit. The approved
+  exceptions are email (50 characters), password (8-128 characters), book
+  title (100 characters), author (100 characters), comment (1000 characters),
+  rejection reason (500 characters), and classification name (50 characters).
+- The implementation may extend a field limit only through a specification
+  change before coding that field.
