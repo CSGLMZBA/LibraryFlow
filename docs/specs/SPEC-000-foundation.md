@@ -42,6 +42,11 @@ Directory and file responsibilities:
 * `SPEC-000-foundation.md`: Foundation specification and technical conventions.
 * `README.md`: Project overview and local execution instructions.
 
+The complete layer-by-layer file organization is defined in
+[`SPEC-002-project-structure.md`](SPEC-002-project-structure.md). New source
+files must follow that specification rather than placing all implementation in
+the application entry points.
+
 ANY AGENTS READING THIS DOCUMENT MUST FIRST HAVE READ AND ACKNOWLEDGED THE INSTRUCTIONS IN `docs/agent-prompts/Starter.md` BEFORE EXECUTING ANY TASKS. INFORM YOUR OWNER AND STOP WORKING IF YOU HAVE NOT READ AND ACKNOWLEDGED THE INSTRUCTIONS.
 
 The structure may be extended incrementally when justified by an approved requirement.
@@ -146,11 +151,22 @@ Examples:
 * Maintain a logical heading hierarchy.
 * Use accessible text alternatives for meaningful images.
 
-### 5.6 TSX 
-* to be defined
+### 5.6 TSX
 
-### 5.7 TS 
-* to be defined
+* Use `.tsx` for React components, layouts, and pages that contain JSX.
+* Use PascalCase for component symbols and filenames for React components and
+  route-level pages.
+* Keep data access and domain workflows outside components; use frontend hooks,
+  services, and repositories as defined in `SPEC-002`.
+* Prefer explicit prop types and accessible semantic markup.
+
+### 5.7 TS
+
+* Use `.ts` for non-JSX TypeScript modules.
+* Use camelCase for functions and variables, PascalCase for types and
+  classes, and UPPER_SNAKE_CASE only for genuine fixed constants.
+* Keep runtime validation in schemas and keep compile-time contracts in types.
+* Use the layer boundaries and dependency direction defined in `SPEC-002`.
 
 ## 6. Git Conventions
 

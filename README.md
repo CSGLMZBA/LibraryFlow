@@ -25,6 +25,7 @@ JORGE ENRIQUEZ RICO
 - [User stories](docs/user_stories/)
 - [Foundation specification](docs/specs/SPEC-000-foundation.md)
 - [Sprint 1 specification](docs/specs/SPEC-001.md)
+- [Project structure specification](docs/specs/SPEC-002-project-structure.md)
 - [Sprint 1](docs/sprints/SPRINT-001.md)
 
 ## Project structure
@@ -32,6 +33,11 @@ JORGE ENRIQUEZ RICO
 - `apps/frontend/`: React, Vite, and TypeScript client.
 - `apps/backend/`: Node.js REST API boundary.
 - `packages/shared/`: Shared TypeScript contracts.
+- `apps/backend/src/`: Layered API source organized into controllers,
+  middleware, repositories, routes, schemas, services, types, and utils.
+- `apps/frontend/src/`: Layered client source organized into components,
+  contexts, hooks, layouts, pages, repositories, routes, schemas, services,
+  styles, types, and utils.
 - `docs/`: Product requirements, specifications, user stories, and sprint
   planning.
 - `docs/agent-logs/`: Agent work summaries.
