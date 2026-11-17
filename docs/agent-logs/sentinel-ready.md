@@ -2,7 +2,7 @@
 
 ## Owner
 
-Cesar (Cesar Cutberto Hortelano Jimenez), QA and SDD Engineer
+Cesar Cutberto Hortelano Jimenez, QA and SDD Engineer
 
 ## Agent identity
 
