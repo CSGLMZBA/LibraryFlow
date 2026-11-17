@@ -1,5 +1,6 @@
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AuthPage } from "./pages/AuthPage";
+import { PublisherDashboardPage } from "./pages/PublisherDashboardPage";
 
 function WorkspaceShell() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -32,19 +33,22 @@ function WorkspaceShell() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-8">
-        {!isAuthenticated ? (
+        {!isAuthenticated || !user ? (
           <AuthPage />
+        ) : user.role === "publisher" ? (
+          <PublisherDashboardPage publisher={user} />
         ) : (
           <section
-            aria-labelledby="session-overview-heading"
+            aria-labelledby="role-notice-heading"
             className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
           >
-            <h2 id="session-overview-heading" className="text-lg font-semibold text-slate-900">
-              Authenticated Workspace
+            <h2 id="role-notice-heading" className="text-lg font-semibold text-slate-900">
+              {user.role === "moderator" ? "Moderator Session Active" : "Reader Session Active"}
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              Signed in as <span className="font-medium text-slate-900">{user?.email}</span> with
-              role <span className="font-medium capitalize text-indigo-600">{user?.role}</span>.
+              Signed in as <span className="font-medium text-slate-900">{user.email}</span> (Role:{" "}
+              <span className="font-medium capitalize text-indigo-600">{user.role}</span>).
+              Publisher upload and metadata tools are restricted to Publisher accounts.
             </p>
           </section>
         )}
