@@ -77,3 +77,37 @@ export function requireLocalRole(session:AuthSession|null,role:UserRole):void {
   if(!session) throw new AuthError('UNAUTHENTICATED','Debes iniciar sesión.');
   if(session.user.role!==role) throw new AuthError('FORBIDDEN','No tienes autorización para esta función.');
 }
+
+/** Sprint 1 Moderator fixture. Explicit setup, only bundled in Vite development. */
+export async function seedLocalModeratorForTests(password: string): Promise<AuthUser> {
+  if ((import.meta as ImportMeta & {env?: {DEV?: boolean}}).env?.DEV !== true) throw new AuthError('FORBIDDEN', 'Solo disponible en modo desarrollo.');
+  const email = 'moderator@libraryflow.local';
+  // Reuse the already-approved credential rules without granting registration privileges.
+  validateRegistration(email, password, 'reader');
+  const existing = await getUser(email);
+  if (existing) {
+    if (existing.role !== 'moderator') throw new AuthError('SEED_CONFLICT', 'Correo de prueba ocupado.');
+    return publicUser(existing);
+  }
+  const users = await getAllUsers();
+  let displayName = '';
+  for (let suffix = 1000; suffix <= 9999; suffix++) {
+    const proposed = `moderator${suffix}`;
+    if (!users.some(user => user.displayName.toLowerCase() === proposed.toLowerCase())) {
+      displayName = proposed;
+      break;
+    }
+  }
+  if (!displayName) throw new AuthError('NAME_UNAVAILABLE', 'No hay nombre de prueba disponible.');
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const user: StoredAuthUser = {
+    id:crypto.randomUUID(), email, displayName, role:'moderator',
+    createdAt:new Date().toISOString(), salt:[...salt], passwordHash:await derive(password,salt)
+  };
+  try {await putUserIfAbsent(user);} catch {
+    const stored = await getUser(email);
+    if (stored?.role === 'moderator') return publicUser(stored);
+    throw new AuthError('SEED_CONFLICT', 'No se pudo preparar el moderador.');
+  }
+  return publicUser(user);
+}
