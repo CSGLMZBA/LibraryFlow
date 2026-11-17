@@ -1,0 +1,11 @@
+export const DEFAULT_TEXT_MAX_LENGTH = 25;
+export const EMAIL_MAX_LENGTH = 50;
+export const PASSWORD_MIN_LENGTH = 8;
+export const PASSWORD_MAX_LENGTH = 128;
+export const BOOK_TITLE_MAX_LENGTH = 100;
+export const BOOK_AUTHOR_MAX_LENGTH = 100;
+export const BOOK_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+export const COMMENT_MAX_LENGTH = 1000;
+export const REJECTION_REASON_MAX_LENGTH = 500;
+export const CLASSIFICATION_NAME_MAX_LENGTH = 50;
+export const REJECTED_FILE_DELETION_HOURS = 24;
