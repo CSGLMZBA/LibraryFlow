@@ -26,7 +26,7 @@ export const localAuthService: AuthPort = {
     const email=normalizeEmail(rawEmail);
     validateRegistration(email,password,role);
     const users=await getAllUsers();
-    if (users.some(user=>user.email===email)) throw new AuthError('EMAIL_ALREADY_EXISTS','Este correo ya está registrado.','email');
+    if (users.some(user=>user.email===email)) throw new AuthError('EMAIL_ALREADY_EXISTS','Este correo ya est├í registrado.','email');
     const base=email.split('@')[0];
     let displayName='';
     for(let i=0;i<10000;i++) {
@@ -34,11 +34,11 @@ export const localAuthService: AuthPort = {
       const candidate=`${base}${suffix}`;
       if(!users.some(u=>u.displayName.toLowerCase()===candidate.toLowerCase())) { displayName=candidate; break; }
     }
-    if (!displayName) throw new AuthError('NAME_UNAVAILABLE','No fue posible generar un nombre de usuario único.');
+    if (!displayName) throw new AuthError('NAME_UNAVAILABLE','No fue posible generar un nombre de usuario ├║nico.');
     const salt=crypto.getRandomValues(new Uint8Array(16));
     const user: StoredAuthUser={id:crypto.randomUUID(),email,displayName,role,createdAt:new Date().toISOString(),salt:[...salt],passwordHash:await derive(password,salt)};
     try {await putUserIfAbsent(user);} catch(error) {
-      if (await getUser(email)) throw new AuthError('EMAIL_ALREADY_EXISTS','Este correo ya está registrado.','email');
+      if (await getUser(email)) throw new AuthError('EMAIL_ALREADY_EXISTS','Este correo ya est├í registrado.','email');
       throw error;
     }
     const session: AuthSession={user:publicUser(user),authenticatedAt:new Date().toISOString()};
@@ -49,10 +49,10 @@ export const localAuthService: AuthPort = {
     const email=normalizeEmail(rawEmail);
     validateLogin(email,password);
     const stored=await getUser(email);
-    const error=new AuthError('INVALID_CREDENTIALS','Correo o contraseña incorrectos.');
+    const error=new AuthError('INVALID_CREDENTIALS','Correo o contrase├▒a incorrectos.');
     if(!stored) throw error;
     if (!Array.isArray(stored.salt) || stored.salt.length!==16 || !Array.isArray(stored.passwordHash) || stored.passwordHash.length!==32) {
-      throw new AuthError('CORRUPT_USER', 'El registro de usuario está dañado; no se puede iniciar sesión.');
+      throw new AuthError('CORRUPT_USER', 'El registro de usuario est├í da├▒ado; no se puede iniciar sesi├│n.');
     }
     const computed=await derive(password,new Uint8Array(stored.salt));
     if(!equalBytes(computed,stored.passwordHash)) throw error;
@@ -64,7 +64,7 @@ export const localAuthService: AuthPort = {
   async getCurrentSession():Promise<AuthSession|null> {
     const session=await readSession();
     if (!session) return null;
-    if(!isSession(session)) {await clearSession();throw new AuthError('CORRUPT_SESSION','La sesión local no es válida.');}
+    if(!isSession(session)) {await clearSession();throw new AuthError('CORRUPT_SESSION','La sesi├│n local no es v├ílida.');}
     const stored=await getUser(session.user.email);
     if (!stored || stored.id!==session.user.id || stored.role!==session.user.role || !['reader','publisher','moderator'].includes(stored.role)) {await clearSession();return null;}
     return {user:publicUser(stored),authenticatedAt:session.authenticatedAt};
@@ -74,8 +74,8 @@ export const localAuthService: AuthPort = {
 /** Cloud adapter must be configured by the platform team with Firebase verification and REST API.
  * Local IndexedDB identity is NEVER a server-side authorization credential. */
 export function requireLocalRole(session:AuthSession|null,role:UserRole):void {
-  if(!session) throw new AuthError('UNAUTHENTICATED','Debes iniciar sesión.');
-  if(session.user.role!==role) throw new AuthError('FORBIDDEN','No tienes autorización para esta función.');
+  if(!session) throw new AuthError('UNAUTHENTICATED','Debes iniciar sesi├│n.');
+  if(session.user.role!==role) throw new AuthError('FORBIDDEN','No tienes autorizaci├│n para esta funci├│n.');
 }
 
 /** Sprint 1 Moderator fixture. Explicit setup, only bundled in Vite development. */
@@ -111,3 +111,51 @@ export async function seedLocalModeratorForTests(password: string): Promise<Auth
   }
   return publicUser(user);
 }
+
+// UI compatibility facade: the existing screens can keep their result shape
+// while the underlying credential store remains the IndexedDB/PBKDF2 service.
+import type { AuthResult, RegisterRole, AuthValidationErrors } from '../types/auth';
+
+function uiAuthError(error: unknown): AuthResult<never> {
+  if (error instanceof AuthError) {
+    const field = error.field === 'requestedRole' ? 'role' : error.field;
+    const supported: (keyof AuthValidationErrors)[] = ['email', 'password', 'role', 'general'];
+    return {
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+        ...(supported.includes(field as keyof AuthValidationErrors)
+          ? { field: field as keyof AuthValidationErrors }
+          : { field: 'general' as const }),
+      },
+    };
+  }
+  return {
+    success: false,
+    error: { code: 'AUTH_UNAVAILABLE', message: 'Authentication is temporarily unavailable.', field: 'general' },
+  };
+}
+
+export const authService = {
+  async register(email: string, password: string, requestedRole: RegisterRole): Promise<AuthResult<AuthUser>> {
+    try {
+      const session = await localAuthService.register(email, password, requestedRole);
+      // AuthPage invites the user to log in after registration.
+      await localAuthService.logout();
+      return { success: true, data: session.user, message: 'Registration successful. You can now log in.' };
+    } catch (error) {
+      return uiAuthError(error);
+    }
+  },
+  async login(email: string, password: string): Promise<AuthResult<AuthSession>> {
+    try {
+      return { success: true, data: await localAuthService.login(email, password) };
+    } catch (error) {
+      return uiAuthError(error);
+    }
+  },
+  logout: () => localAuthService.logout(),
+  getCurrentSession: () => localAuthService.getCurrentSession(),
+  hasRole: (role: UserRole) => localAuthService.hasRole(role),
+};

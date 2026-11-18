@@ -41,7 +41,7 @@ async function identityToolkit(endpoint: 'signUp' | 'signInWithPassword', email:
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const code = (data && typeof data === 'object' && 'error' in data && (data as {error?: {message?: string}}).error?.message) || '';
-    if (code.startsWith('EMAIL_EXISTS')) throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'Este correo ya está registrado.', 'email', 409);
+    if (typeof code === 'string' && code.startsWith('EMAIL_EXISTS')) throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'Este correo ya está registrado.', 'email', 409);
     if (endpoint === 'signInWithPassword') throw new AuthCloudError('INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.', undefined, 401);
     throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'No fue posible crear la cuenta.', undefined, 502);
   }

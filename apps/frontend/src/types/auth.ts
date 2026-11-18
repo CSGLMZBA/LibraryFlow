@@ -12,3 +12,15 @@ export interface AuthPort {
 export class AuthError extends Error {
   constructor(public readonly code: string, message: string, public readonly field?: string) { super(message); this.name = 'AuthError'; }
 }
+
+// Compatibility types for the Sprint 1 authentication UI in develop.
+export type RegisterRole = PublicRegisterRole;
+export interface AuthValidationErrors {
+  email?: string;
+  password?: string;
+  role?: string;
+  general?: string;
+}
+export type AuthResult<T> =
+  | { success: true; data: T; message?: string }
+  | { success: false; error: { code: string; message: string; field?: keyof AuthValidationErrors } };
