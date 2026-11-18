@@ -1,57 +1,154 @@
+import { useState } from "react";
+
+import CatalogPage from "./pages/CatalogPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AuthPage } from "./pages/AuthPage";
 import { PublisherDashboardPage } from "./pages/PublisherDashboardPage";
 
 function WorkspaceShell() {
+  // Obtener la información de autenticación.
   const { user, isAuthenticated, logout } = useAuth();
+
+  // Permite consultar el catálogo como visitante.
+  const [showGuestCatalog, setShowGuestCatalog] = useState(false);
+
+  // Permite cambiar entre el catálogo y el panel del publicador.
+  const [showPublisherDashboard, setShowPublisherDashboard] =
+    useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+
+      {/* Encabezado principal */}
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
+
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-indigo-600">LibraryFlow</h1>
-            <p className="text-xs text-slate-500">Sprint 1 — Book Sharing &amp; Discovery</p>
+            <h1 className="text-xl font-bold tracking-tight text-indigo-600">
+              LibraryFlow
+            </h1>
+
+            <p className="text-xs text-slate-500">
+              Sprint 1 — Book Sharing &amp; Discovery
+            </p>
           </div>
 
+          {/* Mostrar información al iniciar sesión */}
           {isAuthenticated && user && (
             <div className="flex items-center gap-4">
+
               <div className="text-right text-sm">
-                <p className="font-medium text-slate-900">{user.displayName}</p>
-                <p className="text-xs capitalize text-slate-500">Role: {user.role}</p>
+                <p className="font-medium text-slate-900">
+                  {user.displayName}
+                </p>
+
+                <p className="text-xs capitalize text-slate-500">
+                  Role: {user.role}
+                </p>
               </div>
+
+              {/* Botón para cerrar sesión */}
               <button
                 type="button"
-                onClick={() => void logout()}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onClick={() => {
+                  setShowPublisherDashboard(false);
+                  void logout();
+                }}
+                className="rounded-lg border border-slate-300
+                           bg-white px-3 py-1.5 text-sm
+                           font-medium text-slate-700
+                           hover:bg-slate-100"
               >
                 Log out
               </button>
+
             </div>
           )}
         </div>
       </header>
 
+      {/* Contenido principal */}
       <main className="mx-auto max-w-6xl px-4 py-8">
+
+        {/* CASO 1: USUARIO NO AUTENTICADO */}
         {!isAuthenticated || !user ? (
-          <AuthPage />
-        ) : user.role === "publisher" ? (
-          <PublisherDashboardPage publisher={user} />
+
+          showGuestCatalog ? (
+
+            // Catálogo público para visitantes.
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowGuestCatalog(false)}
+                className="mb-6 text-sm font-medium text-indigo-600 hover:underline"
+              >
+                Volver al inicio de sesión
+              </button>
+
+              <CatalogPage />
+            </div>
+
+          ) : (
+
+            // Mostrar primero la pantalla de login.
+            <div>
+              <AuthPage />
+
+              <div className="mt-6 text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowGuestCatalog(true)}
+                  className="text-sm font-medium text-indigo-600 hover:underline"
+                >
+                  Explorar catálogo sin iniciar sesión
+                </button>
+              </div>
+            </div>
+
+          )
+
         ) : (
-          <section
-            aria-labelledby="role-notice-heading"
-            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
-            <h2 id="role-notice-heading" className="text-lg font-semibold text-slate-900">
-              {user.role === "moderator" ? "Moderator Session Active" : "Reader Session Active"}
-            </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Signed in as <span className="font-medium text-slate-900">{user.email}</span> (Role:{" "}
-              <span className="font-medium capitalize text-indigo-600">{user.role}</span>).
-              Publisher upload and metadata tools are restricted to Publisher accounts.
-            </p>
-          </section>
+
+          /* CASO 2: USUARIO AUTENTICADO */
+          <div>
+
+            {/* Herramientas exclusivas del publicador */}
+            {user.role === "publisher" && (
+              <div className="mb-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShowPublisherDashboard(
+                      (previous) => !previous
+                    )
+                  }
+                  className="rounded-lg bg-indigo-600
+                             px-4 py-2 font-medium
+                             text-white hover:bg-indigo-700"
+                >
+                  {showPublisherDashboard
+                    ? "Volver al catálogo"
+                    : "Mis publicaciones"}
+                </button>
+              </div>
+            )}
+
+            {/* Mostrar panel del publicador o catálogo */}
+            {user.role === "publisher" &&
+            showPublisherDashboard ? (
+
+              <PublisherDashboardPage publisher={user} />
+
+            ) : (
+
+              // Página principal después de iniciar sesión.
+              <CatalogPage />
+
+            )}
+
+          </div>
         )}
+
       </main>
     </div>
   );
