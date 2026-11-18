@@ -164,7 +164,6 @@ export function AuthPage() {
             name="password"
             type="password"
             autoComplete={mode === "login" ? "current-password" : "new-password"}
-            maxLength={20}
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -181,7 +180,7 @@ export function AuthPage() {
           />
           {mode === "register" && !errors.password && (
             <p id="auth-password-hint" className="mt-1 text-xs text-slate-500">
-              8–20 characters with uppercase, lowercase, number, and special character.
+              8–128 characters with uppercase, lowercase, number, and special character.
             </p>
           )}
           {errors.password && (

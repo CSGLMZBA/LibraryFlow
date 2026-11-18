@@ -1,6 +1,7 @@
 import { AuthError, type AuthPort, type AuthSession, type AuthUser, type PublicRegisterRole, type UserRole } from '../types/auth';
+import { createCloudAuthService } from './auth-cloud-adapter';
 import { normalizeEmail, validateLogin, validateRegistration } from '../schemas/auth-schema';
-import { clearSession, getAllUsers, getUser, putUserIfAbsent, readSession, saveSession, type StoredAuthUser } from '../repositories/auth-indexeddb';
+import { clearSession, getUser, insertAuthUser, readSession, saveSession, type StoredAuthUser } from '../repositories/auth-indexeddb';
 
 async function derive(password: string, salt: Uint8Array): Promise<number[]> {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), {name:'PBKDF2'}, false, ['deriveBits']);
@@ -21,26 +22,18 @@ function isSession(value: unknown): value is AuthSession {
   return typeof v.user.id==='string' && typeof v.user.email==='string' &&
     (v.user.role==='reader'||v.user.role==='publisher'||v.user.role==='moderator') && typeof v.authenticatedAt==='string';
 }
+async function createLocalUser(email: string, password: string, role: UserRole): Promise<StoredAuthUser> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return insertAuthUser({
+    id: crypto.randomUUID(), email, role, createdAt: new Date().toISOString(),
+    salt: [...salt], passwordHash: await derive(password, salt)
+  });
+}
 export const localAuthService: AuthPort = {
   async register(rawEmail: string, password: string, role: PublicRegisterRole): Promise<AuthSession> {
     const email=normalizeEmail(rawEmail);
     validateRegistration(email,password,role);
-    const users=await getAllUsers();
-    if (users.some(user=>user.email===email)) throw new AuthError('EMAIL_ALREADY_EXISTS','Este correo ya est├í registrado.','email');
-    const base=email.split('@')[0];
-    let displayName='';
-    for(let i=0;i<10000;i++) {
-      const suffix=String(crypto.getRandomValues(new Uint32Array(1))[0] % 9000 + 1000);
-      const candidate=`${base}${suffix}`;
-      if(!users.some(u=>u.displayName.toLowerCase()===candidate.toLowerCase())) { displayName=candidate; break; }
-    }
-    if (!displayName) throw new AuthError('NAME_UNAVAILABLE','No fue posible generar un nombre de usuario ├║nico.');
-    const salt=crypto.getRandomValues(new Uint8Array(16));
-    const user: StoredAuthUser={id:crypto.randomUUID(),email,displayName,role,createdAt:new Date().toISOString(),salt:[...salt],passwordHash:await derive(password,salt)};
-    try {await putUserIfAbsent(user);} catch(error) {
-      if (await getUser(email)) throw new AuthError('EMAIL_ALREADY_EXISTS','Este correo ya est├í registrado.','email');
-      throw error;
-    }
+    const user = await createLocalUser(email, password, role);
     const session: AuthSession={user:publicUser(user),authenticatedAt:new Date().toISOString()};
     await saveSession(session);
     return session;
@@ -49,10 +42,10 @@ export const localAuthService: AuthPort = {
     const email=normalizeEmail(rawEmail);
     validateLogin(email,password);
     const stored=await getUser(email);
-    const error=new AuthError('INVALID_CREDENTIALS','Correo o contrase├▒a incorrectos.');
+    const error=new AuthError('INVALID_CREDENTIALS','Correo o contraseña incorrectos.');
     if(!stored) throw error;
     if (!Array.isArray(stored.salt) || stored.salt.length!==16 || !Array.isArray(stored.passwordHash) || stored.passwordHash.length!==32) {
-      throw new AuthError('CORRUPT_USER', 'El registro de usuario est├í da├▒ado; no se puede iniciar sesi├│n.');
+      throw new AuthError('CORRUPT_USER', 'El registro de usuario está dañado; no se puede iniciar sesión.');
     }
     const computed=await derive(password,new Uint8Array(stored.salt));
     if(!equalBytes(computed,stored.passwordHash)) throw error;
@@ -64,7 +57,7 @@ export const localAuthService: AuthPort = {
   async getCurrentSession():Promise<AuthSession|null> {
     const session=await readSession();
     if (!session) return null;
-    if(!isSession(session)) {await clearSession();throw new AuthError('CORRUPT_SESSION','La sesi├│n local no es v├ílida.');}
+    if(!isSession(session)) {await clearSession();throw new AuthError('CORRUPT_SESSION','La sesión local no es válida.');}
     const stored=await getUser(session.user.email);
     if (!stored || stored.id!==session.user.id || stored.role!==session.user.role || !['reader','publisher','moderator'].includes(stored.role)) {await clearSession();return null;}
     return {user:publicUser(stored),authenticatedAt:session.authenticatedAt};
@@ -74,8 +67,8 @@ export const localAuthService: AuthPort = {
 /** Cloud adapter must be configured by the platform team with Firebase verification and REST API.
  * Local IndexedDB identity is NEVER a server-side authorization credential. */
 export function requireLocalRole(session:AuthSession|null,role:UserRole):void {
-  if(!session) throw new AuthError('UNAUTHENTICATED','Debes iniciar sesi├│n.');
-  if(session.user.role!==role) throw new AuthError('FORBIDDEN','No tienes autorizaci├│n para esta funci├│n.');
+  if(!session) throw new AuthError('UNAUTHENTICATED','Debes iniciar sesión.');
+  if(session.user.role!==role) throw new AuthError('FORBIDDEN','No tienes autorización para esta función.');
 }
 
 /** Sprint 1 Moderator fixture. Explicit setup, only bundled in Vite development. */
@@ -89,27 +82,14 @@ export async function seedLocalModeratorForTests(password: string): Promise<Auth
     if (existing.role !== 'moderator') throw new AuthError('SEED_CONFLICT', 'Correo de prueba ocupado.');
     return publicUser(existing);
   }
-  const users = await getAllUsers();
-  let displayName = '';
-  for (let suffix = 1000; suffix <= 9999; suffix++) {
-    const proposed = `moderator${suffix}`;
-    if (!users.some(user => user.displayName.toLowerCase() === proposed.toLowerCase())) {
-      displayName = proposed;
-      break;
-    }
-  }
-  if (!displayName) throw new AuthError('NAME_UNAVAILABLE', 'No hay nombre de prueba disponible.');
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  const user: StoredAuthUser = {
-    id:crypto.randomUUID(), email, displayName, role:'moderator',
-    createdAt:new Date().toISOString(), salt:[...salt], passwordHash:await derive(password,salt)
-  };
-  try {await putUserIfAbsent(user);} catch {
+  try {
+    return publicUser(await createLocalUser(email, password, 'moderator'));
+  } catch (error) {
+    if (!(error instanceof AuthError) || error.code !== 'EMAIL_ALREADY_EXISTS') throw error;
     const stored = await getUser(email);
     if (stored?.role === 'moderator') return publicUser(stored);
-    throw new AuthError('SEED_CONFLICT', 'No se pudo preparar el moderador.');
+    throw new AuthError('SEED_CONFLICT', 'Correo de prueba ocupado.');
   }
-  return publicUser(user);
 }
 
 // UI compatibility facade: the existing screens can keep their result shape
@@ -137,12 +117,17 @@ function uiAuthError(error: unknown): AuthResult<never> {
   };
 }
 
+// Local development stays offline unless the Firebase-backed REST API is selected.
+const configuredAuth = (import.meta as ImportMeta & { env?: { VITE_AUTH_MODE?: string } }).env?.VITE_AUTH_MODE === 'cloud'
+  ? createCloudAuthService('')
+  : localAuthService;
+
 export const authService = {
   async register(email: string, password: string, requestedRole: RegisterRole): Promise<AuthResult<AuthUser>> {
     try {
-      const session = await localAuthService.register(email, password, requestedRole);
+      const session = await configuredAuth.register(email, password, requestedRole);
       // AuthPage invites the user to log in after registration.
-      await localAuthService.logout();
+      await configuredAuth.logout();
       return { success: true, data: session.user, message: 'Registration successful. You can now log in.' };
     } catch (error) {
       return uiAuthError(error);
@@ -150,12 +135,12 @@ export const authService = {
   },
   async login(email: string, password: string): Promise<AuthResult<AuthSession>> {
     try {
-      return { success: true, data: await localAuthService.login(email, password) };
+      return { success: true, data: await configuredAuth.login(email, password) };
     } catch (error) {
       return uiAuthError(error);
     }
   },
-  logout: () => localAuthService.logout(),
-  getCurrentSession: () => localAuthService.getCurrentSession(),
-  hasRole: (role: UserRole) => localAuthService.hasRole(role),
+  logout: () => configuredAuth.logout(),
+  getCurrentSession: () => configuredAuth.getCurrentSession(),
+  hasRole: (role: UserRole) => configuredAuth.hasRole(role),
 };

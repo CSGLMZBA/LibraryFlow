@@ -22,7 +22,8 @@
 
 1. Preparar Firebase Authentication email/password y Firestore, habilitar cuenta de servicio con permisos mínimos.
 2. Definir en backend las variables `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_WEB_API_KEY` en entorno seguro.
-3. En modo cloud ejecutar API y probar `POST /api/v1/auth/register` con reader/publisher, comprobar retorno `201` y custom claims reales. Probar intento `moderator` -> `400`.
+3. Para probar la UI en modo cloud, iniciar el backend en el puerto 3000 y Vite con la variable de entorno `VITE_AUTH_MODE=cloud`. El proxy de desarrollo envía `/api/v1/auth` al backend. En despliegue, servir la API bajo ese mismo origen. Sin esta variable se usa IndexedDB.
+   En modo cloud ejecutar API y probar `POST /api/v1/auth/register` con reader/publisher, comprobar retorno `201` y custom claims reales. Probar intento `moderator` -> `400`.
 4. Probar correo duplicado -> `409`, credenciales incorrectas -> `401` con mensaje genérico, y ausencia de token -> `401`.
 5. Probar token válido en `GET /session`, token falso -> `401`; logout y revocación.
 6. Integrar el `AuthContext` de Dante con el adaptador escogido y verificar que renderiza roles, error de validación y login correctamente.

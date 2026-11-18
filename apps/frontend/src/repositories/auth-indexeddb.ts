@@ -32,9 +32,32 @@ export async function transaction<T>(store: 'users' | 'sessions', mode: IDBTrans
 export function getUser(email: string): Promise<StoredAuthUser | undefined> {
   return transaction('users','readonly',(os,done)=>{const req=os.get(email);req.onsuccess=()=>done(req.result as StoredAuthUser | undefined);});
 }
-export function putUserIfAbsent(user: StoredAuthUser): Promise<void> {
-  // add(), not put(): an existing email causes the transaction to abort.
-  return transaction('users','readwrite',(os,done)=>{const req=os.add(user);req.onsuccess=()=>done();});
+export async function insertAuthUser(user: Omit<StoredAuthUser, 'displayName'>): Promise<StoredAuthUser> {
+  const base = user.email.split('@')[0];
+  const start = crypto.getRandomValues(new Uint32Array(1))[0] % 9000;
+  // IndexedDB serializes write transactions on this store across tabs.
+  const result = await transaction<StoredAuthUser | 'duplicate' | 'exhausted'>('users', 'readwrite', (store, done) => {
+    const read = store.getAll();
+    read.onsuccess = () => {
+      const users: StoredAuthUser[] = read.result;
+      if (users.some(existing => existing.email === user.email)) {
+        done('duplicate');
+        return;
+      }
+      const names = new Set(users.map(existing => existing.displayName?.toLowerCase()));
+      for (let offset = 0; offset < 9000; offset++) {
+        const displayName = base + (1000 + (start + offset) % 9000);
+        if (names.has(displayName)) continue;
+        const record = { ...user, displayName };
+        store.add(record).onsuccess = () => done(record);
+        return;
+      }
+      done('exhausted');
+    };
+  });
+  if (result === 'duplicate') throw new AuthError('EMAIL_ALREADY_EXISTS', 'Este correo ya está registrado.', 'email');
+  if (result === 'exhausted') throw new AuthError('NAME_UNAVAILABLE', 'No hay un nombre de usuario disponible.');
+  return result;
 }
 export function getAllUsers(): Promise<StoredAuthUser[]> {
   return transaction('users','readonly',(os,done)=>{const req=os.getAll();req.onsuccess=()=>done(req.result as StoredAuthUser[]);});
