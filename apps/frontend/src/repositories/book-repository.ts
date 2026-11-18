@@ -1,8 +1,9 @@
 import type { BookCategory, BookGenre, BookRecord, StoredBookEntry } from "../types/book";
 
 const DB_NAME = "LibraryFlowDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const BOOKS_STORE = "books";
+const COMMENTS_STORE = "comments";
 
 export const SEEDED_CATEGORIES: BookCategory[] = [
   { id: "cat-fiction", name: "Fiction" },
@@ -32,6 +33,10 @@ function openLibraryDatabase(): Promise<IDBDatabase> {
         const store = db.createObjectStore(BOOKS_STORE, { keyPath: "id" });
         store.createIndex("ownerId", "ownerId", { unique: false });
         store.createIndex("status", "status", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(COMMENTS_STORE)) {
+        const commentStore = db.createObjectStore(COMMENTS_STORE, { keyPath: "id" });
+        commentStore.createIndex("bookId", "bookId", { unique: false });
       }
     };
 
