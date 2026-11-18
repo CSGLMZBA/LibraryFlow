@@ -56,6 +56,13 @@ Install dependencies from the repository root:
 ```bash
 npm install
 ```
+Build the shared package before starting the apps (required on a fresh clone):
+
+```bash
+npm run build --workspace @library-flow/shared
+```
+
+Copy `.env.example` to `.env` and fill in the values. Never commit `.env`.
 
 Start the frontend:
 
