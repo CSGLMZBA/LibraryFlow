@@ -28,7 +28,7 @@ export async function approveBook(
   try {
     const data = await moderationService.approveBook(
       request.params.bookId as string,
-      request.headers["x-user-id"] as string,
+      response.locals.auth.uid as string,
     );
     response.json({ success: true, data });
   } catch (error) {
@@ -44,7 +44,7 @@ export async function rejectBook(
     const data = await moderationService.rejectBook(
       request.params.bookId as string,
       request.body.reason,
-      request.headers["x-user-id"] as string,
+      response.locals.auth.uid as string,
     );
     response.json({ success: true, data });
   } catch (error) {
@@ -60,7 +60,7 @@ export async function removeComment(
     const data = await moderationService.removeComment(
       request.params.commentId as string,
       request.body.reason,
-      request.headers["x-user-id"] as string,
+      response.locals.auth.uid as string,
     );
     response.json({ success: true, data });
   } catch (error) {
