@@ -46,6 +46,12 @@ export class BookRepository {
       .map((book) => this.clone(book));
   }
 
+  async findPending(): Promise<Book[]> {
+    return Array.from(this.books.values())
+      .filter((book) => book.status === "pending")
+      .map((book) => this.clone(book));
+  }
+
   async update(id: string, updates: Partial<Book>): Promise<Book | null> {
     const currentBook = this.books.get(id);
     if (!currentBook) {
