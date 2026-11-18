@@ -9,7 +9,8 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
-    "express": "^5.0.1"
+    "express": "^5.0.1",
+    "firebase-admin": "^13.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

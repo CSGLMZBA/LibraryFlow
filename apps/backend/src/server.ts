@@ -1,6 +1,7 @@
 import express from "express";
 import { moderatorGuard } from "./middleware/moderator-guard.js";
 import { removeComment } from "./controllers/moderation-controller.js";
+import { authRouter } from "./routes/auth-routes.js";
 import { bookRouter } from "./routes/book-routes.js";
 import { classificationRouter } from "./routes/classification-routes.js";
 import { moderationRouter } from "./routes/moderation-routes.js";
@@ -8,8 +9,9 @@ import { moderationRouter } from "./routes/moderation-routes.js";
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
 
+app.use("/api/v1/auth", authRouter);
 app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/classifications", classificationRouter);
 app.use("/api/v1/moderation", moderationRouter);

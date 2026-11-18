@@ -1,29 +1,26 @@
-export type UserRole = "reader" | "publisher" | "moderator";
-
-export type RegisterRole = Extract<UserRole, "reader" | "publisher">;
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  displayName: string;
-  role: UserRole;
-  createdAt: string;
+export type UserRole = 'reader' | 'publisher' | 'moderator';
+export type PublicRegisterRole = Exclude<UserRole, 'moderator'>;
+export interface AuthUser { id: string; email: string; displayName: string; role: UserRole; createdAt: string }
+export interface AuthSession { user: AuthUser; authenticatedAt: string }
+export interface AuthPort {
+  register(email: string, password: string, requestedRole: PublicRegisterRole): Promise<AuthSession>;
+  login(email: string, password: string): Promise<AuthSession>;
+  logout(): Promise<void>;
+  getCurrentSession(): Promise<AuthSession | null>;
+  hasRole(role: UserRole): Promise<boolean>;
+}
+export class AuthError extends Error {
+  constructor(public readonly code: string, message: string, public readonly field?: string) { super(message); this.name = 'AuthError'; }
 }
 
-export interface AuthSession {
-  user: AuthUser;
-  token: string;
-  authenticatedAt: string;
-}
-
+// Compatibility types for the Sprint 1 authentication UI in develop.
+export type RegisterRole = PublicRegisterRole;
 export interface AuthValidationErrors {
   email?: string;
   password?: string;
   role?: string;
   general?: string;
 }
-
 export type AuthResult<T> =
   | { success: true; data: T; message?: string }
   | { success: false; error: { code: string; message: string; field?: keyof AuthValidationErrors } };
-  
