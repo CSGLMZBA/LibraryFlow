@@ -7,9 +7,9 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "npm run build -w @library-flow/shared && npm run build -w @library-flow/backend -w @library-flow/frontend",
     "dev:frontend": "npm run dev --workspace @library-flow/frontend",
     "dev:backend": "npm run dev --workspace @library-flow/backend",
-    "typecheck": "npm run typecheck --workspaces"
+    "typecheck": "npm run typecheck -w @library-flow/shared && npm run typecheck -w @library-flow/backend -w @library-flow/frontend"
   }
 }

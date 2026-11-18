@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "composite": true,
+    "tsBuildInfoFile": "./node_modules/.tmp/shared.tsbuildinfo",
     "outDir": "dist",
     "rootDir": "src",
     "target": "ES2022",
