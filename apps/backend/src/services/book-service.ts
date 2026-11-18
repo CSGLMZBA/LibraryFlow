@@ -1,0 +1,158 @@
+import {
+  BOOK_AUTHOR_MAX_LENGTH,
+  BOOK_MAX_FILE_SIZE_BYTES,
+  BOOK_TITLE_MAX_LENGTH,
+} from "@library-flow/shared";
+import type {
+  Book,
+  BookFilterQuery,
+  CreateBookDto,
+  UpdateBookMetadataDto,
+} from "@library-flow/shared";
+import {
+  bookRepository as defaultBookRepository,
+  BookRepository,
+} from "../repositories/book-repository.js";
+
+export class BookService {
+  public constructor(
+    private readonly repository: BookRepository = defaultBookRepository,
+  ) {}
+
+  async createBook(dto: CreateBookDto, ownerId: string): Promise<Book> {
+    const title = this.validateText(
+      dto.title,
+      "title",
+      BOOK_TITLE_MAX_LENGTH,
+    );
+    const author = this.validateText(
+      dto.author,
+      "author",
+      BOOK_AUTHOR_MAX_LENGTH,
+    );
+
+    if (dto.fileType !== "epub" && dto.fileType !== "pdf") {
+      throw new Error("Book file type must be epub or pdf.");
+    }
+
+    if (
+      !Number.isInteger(dto.fileSizeBytes) ||
+      dto.fileSizeBytes < 0 ||
+      dto.fileSizeBytes > BOOK_MAX_FILE_SIZE_BYTES
+    ) {
+      throw new Error(
+        `Book file size must be between 0 and ${BOOK_MAX_FILE_SIZE_BYTES} bytes.`,
+      );
+    }
+
+    if (!ownerId.trim()) {
+      throw new Error("Book owner is required.");
+    }
+
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const book: Book = {
+      id,
+      title,
+      author,
+      ownerId,
+      status: "pending",
+      accessKey: crypto.randomUUID(),
+      shareableUrl: `/books/${id}`,
+      fileUrl: "",
+      fileType: dto.fileType,
+      fileSizeBytes: dto.fileSizeBytes,
+      categoryIds: [...dto.categoryIds],
+      genreIds: [...dto.genreIds],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    return this.repository.save(book);
+  }
+
+  async getApprovedCatalog(filters?: BookFilterQuery): Promise<Book[]> {
+    return this.repository.findApproved(filters);
+  }
+
+  async getBookDetails(
+    id: string,
+    requesterId?: string,
+    isModerator = false,
+  ): Promise<Book> {
+    const book = await this.repository.findById(id);
+    if (!book) {
+      throw new Error("Book not found.");
+    }
+
+    if (
+      book.status === "approved" ||
+      isModerator ||
+      book.ownerId === requesterId
+    ) {
+      return book;
+    }
+
+    throw new Error("You are not authorized to view this book.");
+  }
+
+  async updateBookMetadata(
+    id: string,
+    dto: UpdateBookMetadataDto,
+    requesterId: string,
+    isModerator = false,
+  ): Promise<Book> {
+    const book = await this.repository.findById(id);
+    if (!book) {
+      throw new Error("Book not found.");
+    }
+
+    if (!isModerator && book.ownerId !== requesterId) {
+      throw new Error("You are not authorized to update this book.");
+    }
+
+    const updates: Partial<Book> = {};
+    if (dto.title !== undefined) {
+      updates.title = this.validateText(
+        dto.title,
+        "title",
+        BOOK_TITLE_MAX_LENGTH,
+      );
+    }
+    if (dto.author !== undefined) {
+      updates.author = this.validateText(
+        dto.author,
+        "author",
+        BOOK_AUTHOR_MAX_LENGTH,
+      );
+    }
+    if (dto.categoryIds !== undefined) {
+      updates.categoryIds = [...dto.categoryIds];
+    }
+    if (dto.genreIds !== undefined) {
+      updates.genreIds = [...dto.genreIds];
+    }
+
+    updates.updatedAt = new Date().toISOString();
+    const updatedBook = await this.repository.update(id, updates);
+    if (!updatedBook) {
+      throw new Error("Book could not be updated.");
+    }
+    return updatedBook;
+  }
+
+  private validateText(value: string, field: string, maxLength: number): string {
+    const normalizedValue = value.trim();
+    if (
+      normalizedValue.length === 0 ||
+      normalizedValue.length > maxLength
+    ) {
+      throw new Error(
+        `${field} must contain between 1 and ${maxLength} characters.`,
+      );
+    }
+    return normalizedValue;
+  }
+}
+
+export const bookService = new BookService();
