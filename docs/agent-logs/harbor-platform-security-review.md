@@ -36,6 +36,11 @@ Manual run on Windows, Node.js 24, from a fresh clone of `develop`:
 | PLAT-007 | Low | Backend reads `FIREBASE_WEB_API_KEY`, which is not in the approved SPEC-001 configuration list. | Open — needs product owner approval |
 | PLAT-008 | Low | No backend production start script, Supabase configuration, or deployment files existed. | Start script and config added in PR #13 (`netlify.toml`, `render.yaml`); live deployment pending credentials |
 | PLAT-009 | Info | Vite warns that the frontend bundle is 554 kB (above 500 kB). | Not blocking |
+| PLAT-010 | Medium | Malformed JSON requests return Express's default HTML error page with a stack trace and local file paths. No global error handler exists in `server.ts`. | Open — add JSON error handler (SPEC-001 §11 error shape) |
+
+## Pull requests reviewed
+- PR #11 (juan7679): build OK, `/health` OK, moderation route without auth returns 401. Approved.
+- PR #12 (lexuscruz): build OK, `/health` OK, login without Firebase config returns 503 safely. Approved. Also fixes shared build order; compatible with PR #13.
 
 ## Positive observations
 - `.env` and `.env.*` are ignored by Git; no secrets were found committed.
