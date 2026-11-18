@@ -32,7 +32,7 @@ export async function createBook(
   response: Response,
 ): Promise<void> {
   try {
-    const ownerId = request.headers["x-user-id"] as string;
+    const ownerId = response.locals.auth.uid as string;
     const book = await bookService.createBook(request.body, ownerId);
     response.status(201).json({ success: true, data: book });
   } catch (error) {
@@ -47,8 +47,8 @@ export async function getBookDetails(
   try {
     const book = await bookService.getBookDetails(
       request.params.bookId as string,
-      request.headers["x-user-id"] as string,
-      request.headers["x-user-role"] === "moderator",
+      response.locals.auth?.uid as string | undefined,
+      response.locals.auth?.role === "moderator",
     );
     response.json({ success: true, data: book });
   } catch (error) {
@@ -64,8 +64,8 @@ export async function updateBook(
     const book = await bookService.updateBookMetadata(
       request.params.bookId as string,
       request.body,
-      request.headers["x-user-id"] as string,
-      request.headers["x-user-role"] === "moderator",
+      response.locals.auth.uid as string,
+      response.locals.auth.role === "moderator",
     );
     response.json({ success: true, data: book });
   } catch (error) {

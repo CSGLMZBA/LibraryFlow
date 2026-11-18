@@ -31,7 +31,8 @@ export async function addComment(
   response: Response,
 ): Promise<void> {
   try {
-    const authorId = request.headers["x-user-id"] as string;
+    const authorId = response.locals.auth.uid as string;
+    // TODO: Read display name from the verified identity once it is available.
     const authorDisplayName = request.headers[
       "x-user-display-name"
     ] as string;
