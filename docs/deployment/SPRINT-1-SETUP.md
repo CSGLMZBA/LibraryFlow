@@ -82,10 +82,10 @@ production.
 First create or register the account through Firebase Authentication. It must
 already exist in the Firebase project before it can receive the moderator role.
 
-Set `MODERATOR_EMAIL` in the local `.env` file:
+Set `MODERATOR_UID` in the local `.env` file:
 
 ```text
-MODERATOR_EMAIL=admin@example.com
+MODERATOR_UID=<existing-firebase-authentication-uid>
 ```
 
 The Firebase service-account variables in the same `.env` file must also be
@@ -98,7 +98,7 @@ npm run admin:moderator
 You can override the environment value for a one-time assignment:
 
 ```bash
-npm run admin:moderator -- admin@example.com
+npm run admin:moderator -- <existing-firebase-authentication-uid>
 ```
 
 The script verifies that the Firebase account exists, assigns the

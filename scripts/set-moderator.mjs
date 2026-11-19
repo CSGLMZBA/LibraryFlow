@@ -9,10 +9,10 @@ function requireEnvironment(name) {
   return value;
 }
 
-const email = process.argv[2]?.trim() || process.env.MODERATOR_EMAIL?.trim();
-if (!email) {
+const uid = process.argv[2]?.trim() || process.env.MODERATOR_UID?.trim();
+if (!uid) {
   throw new Error(
-    "Set MODERATOR_EMAIL in .env or pass the account email: npm run admin:moderator -- moderator@example.com",
+    "Set MODERATOR_UID in .env or pass the existing Firebase UID: npm run admin:moderator -- FIREBASE_UID",
   );
 }
 
@@ -28,21 +28,19 @@ if (!getApps().length) {
 }
 
 const auth = getAuth();
-let user;
-
 try {
-  user = await auth.getUserByEmail(email);
+  await auth.getUser(uid);
 } catch (error) {
   if (error?.code === "auth/user-not-found") {
     throw new Error(
-      `Firebase Authentication account not found: ${email}. Create or register the account first.`,
+      `Firebase Authentication account not found for UID: ${uid}. Register the account first.`,
     );
   }
   throw error;
 }
 
-await auth.setCustomUserClaims(user.uid, { role: "moderator" });
-await auth.revokeRefreshTokens(user.uid);
+await auth.setCustomUserClaims(uid, { role: "moderator" });
+await auth.revokeRefreshTokens(uid);
 
-console.log(`Moderator role assigned to ${email}.`);
+console.log(`Moderator role assigned to Firebase UID ${uid}.`);
 console.log("The account must sign out and sign in again to receive a fresh token.");
