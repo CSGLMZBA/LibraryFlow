@@ -66,7 +66,7 @@ FIREBASE_PROJECT_ID=<project-id>
 FIREBASE_CLIENT_EMAIL=<service-account-email>
 FIREBASE_PRIVATE_KEY=<private-key-with-\n-escaped-newlines>
 FIREBASE_WEB_API_KEY=<web-api-key>
-CORS_ORIGIN=https://<your-netlify-site>.netlify.app
+CORS_ORIGIN=https://<your-netlify-site>.netlify.app,*.netlify.app
 ```
 
 Set custom claims through the backend registration/login flow. Public

@@ -9,13 +9,25 @@ import { moderationRouter } from "./routes/moderation-routes.js";
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 
-const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173")
+const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,*.netlify.app")
   .split(",")
-  .map((origin) => origin.trim());
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+function isOriginAllowed(origin: string): boolean {
+  return allowedOrigins.some((allowedOrigin) => {
+    if (allowedOrigin === "*") return true;
+    if (allowedOrigin.startsWith("*.") || allowedOrigin.startsWith("*.")) {
+      const suffix = allowedOrigin.slice(1);
+      return origin.endsWith(suffix);
+    }
+    return origin === allowedOrigin;
+  });
+}
 
 app.use((request, response, next) => {
   const origin = request.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin && isOriginAllowed(origin)) {
     response.setHeader("Access-Control-Allow-Origin", origin);
     response.setHeader("Vary", "Origin");
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
