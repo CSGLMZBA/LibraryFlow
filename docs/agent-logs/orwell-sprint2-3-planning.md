@@ -42,10 +42,6 @@ The plan minimizes feature dependencies by assigning most persistence,
 presentation, infrastructure, and verification work as independent bounded
 packages. Shared contracts and explicit integration handoffs remain mandatory.
 
-Sprint 2 and Sprint 3 are each limited to a maximum of 10 Copilot credits.
-Carlos's integration, planning, conflict review, and final demo work are included
-in that maximum.
-
 ## Agent Instruction Notice
 
 All agents working on Sprint 2 or Sprint 3 must reread:

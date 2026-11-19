@@ -34,18 +34,6 @@ Sprint 3 is complete only when all items below are true:
 | Account lifecycle | US-REA-017, US-REA-019, US-REA-020 | Deletion grace period, token lifecycle, logout |
 | Quality and release | Cross-cutting | Accessibility, responsive UI, backup, rollback, monitoring |
 
-## Maximum Agent Cost
-
-Limit the entire sprint to **10 Copilot credits across all implementation
-agents**. Keep tasks cheap:
-
-- 6–10 bounded implementation tasks;
-- no task larger than 3–4 source files;
-- shared contracts and UI components reused;
-- one integration round after individual work;
-- one QA round after integration;
-- no speculative features beyond the backlog/specification.
-
 ## Team Responsibilities
 
 | Owner | Independent deliverable | Small collaboration | Maximum dependencies |

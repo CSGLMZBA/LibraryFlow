@@ -31,20 +31,6 @@ receive publisher status only after administrator approval.
 | Platform moderation | US-MOD-004, US-MOD-007, US-MOD-008, US-MOD-011 | Bans, publisher revocation, book deletion, account restoration |
 | Deployment | Sprint platform stories | Netlify, Render, health, CORS, secrets, backup, and rollback |
 
-## Maximum Agent Cost
-
-Limit the entire sprint to **10 Copilot credits across all implementation
-agents**. Prefer:
-
-- one bounded task per owner;
-- 1–3 file changes per task;
-- existing patterns and utilities;
-- one integration pass instead of many exploratory passes;
-- tests added beside implementation rather than broad rewrites.
-
-The Product Owner's planning and integration work is included in the same
-10-credit limit.
-
 ## Team Responsibilities
 
 | Owner | Independent deliverable | Small collaboration | Minimum integration dependency |

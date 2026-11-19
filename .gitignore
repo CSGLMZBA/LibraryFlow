@@ -11,3 +11,6 @@ coverage/
 *.local
 .DS_Store
 *.tsbuildinfo
+
+# Private owner-only planning note.
+OWNER-PLANNING.md
