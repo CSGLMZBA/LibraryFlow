@@ -1,13 +1,20 @@
 # LibraryFlow Product Backlog
 
-Approved Sprint 1 backlog and future-product roadmap for LibraryFlow.
+Approved product roadmap for LibraryFlow.
+
+> [!IMPORTANT]
+> The status of `publisher` is restricted. Public registration creates a
+> `reader` or, if explicitly requested and approved by an administrator,
+> begins a pending `publisher` application. No user may upload books merely
+> by selecting a publisher role.
 
 ## Backlog overview
 
 | Priority | Items |
 |---|---:|
-| Essential for the first viable product | PB-001 to PB-009 |
-| Later | PB-010 to PB-016 |
+| Sprint 1 — functional MVP | PB-001 to PB-009 |
+| Sprint 2 — production readiness and access control | PB-017 to PB-022 |
+| Sprint 3 — complete platform | PB-010 to PB-016 |
 
 ## MVP backlog
 
@@ -40,22 +47,28 @@ These items are considered essential for the first usable version of the product
   uppercase letter, lowercase letter, number, and special character; titles are
   limited to 100 characters.
 
-## Future backlog
+## Sprint 2 and Sprint 3 Backlog
 
 These items are explicitly excluded from the first viable product and are
 planned for later stages.
 
 | ID | Capability | Priority | Related users | Value |
 |---|---|---|---|---|
-| PB-010 | Create and manage book collections | Later | Readers, Publishers | Helps users organize related books and series. |
-| PB-011 | Save books to favorites | Later | Readers, Publishers | Makes it easier to return to and track books. |
-| PB-012 | Notify users about favorited book updates | Later | Readers, Publishers | Keeps users informed about new chapters and changes. |
-| PB-013 | Rate books | Later | Readers | Provides useful feedback about books. |
-| PB-014 | Follow publishers | Later | Readers | Helps readers keep up with publishers they follow. |
-| PB-015 | Expand moderation of content and users | Later | Moderators | Adds broader safety, account, and platform administration beyond Sprint 1. |
-| PB-016 | Set book prices and use a dummy purchase flow | Later | Publishers, Readers | Supports future purchase and payment-flow testing without real transactions. |
+| PB-010 | Create and manage book collections | Sprint 3 | Readers, Publishers | Organize related books and series. |
+| PB-011 | Save books to favorites | Sprint 3 | Readers, Publishers | Quickly return to saved books. |
+| PB-012 | Notify users about favorited book updates | Sprint 3 | Readers, Publishers | Notify interested readers without exposing other users. |
+| PB-013 | Rate books | Sprint 3 | Readers | Provide useful feedback with a one-rating-per-reader model. |
+| PB-014 | Follow publishers | Sprint 3 | Readers | Let readers follow approved publishers. |
+| PB-015 | Expand moderation of content and users | Sprint 2/Sprint 3 | Moderators | Ban users, remove publishers/books, restore accounts, and maintain audit evidence. |
+| PB-016 | Set book prices and use a dummy purchase flow | Sprint 3 | Publishers, Readers | Demonstrate pricing and purchase behavior without real payments. |
+| PB-017 | Admin-approved publisher applications | Sprint 2 | Readers, Publishers, Moderators | Prevent unverified users from uploading and consuming bucket storage. |
+| PB-018 | Cloud synchronization and conflict handling | Sprint 2 | Product team | Keep Firestore and IndexedDB changes stable and explicit. |
+| PB-019 | Scheduled rejection and deletion operations | Sprint 2 | Moderators, Publishers | Complete 24-hour cleanup safely and idempotently. |
+| PB-020 | Admin account management and auditability | Sprint 2 | Moderators | Provide administrative controls and traceable actions. |
+| PB-021 | Secure session, token, logout, and account-deletion lifecycle | Sprint 2 | Readers, Publishers, Moderators | Complete authentication lifecycle behavior. |
+| PB-022 | Deployment, observability, backup, and release verification | Sprint 2 | Product team | Make Netlify, Render, Firebase, Firestore, and Supabase operational. |
 
-## Planning notes
+## Planning Notes
 
 > [!NOTE]
 > Purchasing, pricing, and payment are represented by a dummy system for future
@@ -67,7 +80,12 @@ planned for later stages.
 - **Before implementation:** Define and approve acceptance criteria and the
   relevant specification.
 - **Execution:** The system must be deployment-ready and testable locally.
-- **Scope control:** No future backlog item may be implemented as part of Sprint
-  1 without explicit product-owner approval.
+- **Scope control:** Sprint 2 and Sprint 3 items require their corresponding
+  specification and acceptance register before implementation.
+- **Publisher security:** Public registration never grants publisher status.
+  Publisher privileges require an approved application and server-side role
+  grant by an administrator.
+- **Language:** Sprint 2 and Sprint 3 documentation, source comments, UI text,
+  test names, commits, and agent logs must be in English.
 - **Validation:** Product indicators are measured through the acceptance tests
   defined in `docs/product/product-goal.md`.

@@ -27,6 +27,12 @@ JORGE ENRIQUEZ RICO
 - [Sprint 1 specification](docs/specs/SPEC-001.md)
 - [Project structure specification](docs/specs/SPEC-002-project-structure.md)
 - [Sprint 1](docs/sprints/SPRINT-001.md)
+- [Sprint 2 - Production Readiness](docs/sprints/SPRINT-002.md)
+- [Sprint 3 - Complete Platform](docs/sprints/SPRINT-003.md)
+- [Sprint 2 Specification](docs/specs/SPEC-002.md)
+- [Sprint 3 Specification](docs/specs/SPEC-003.md)
+- [Sprint 2 Acceptance Register](docs/testing/S2-ACCEPTANCE-REGISTER.md)
+- [Sprint 3 Acceptance Register](docs/testing/S3-ACCEPTANCE-REGISTER.md)
 
 ## Project structure
 
