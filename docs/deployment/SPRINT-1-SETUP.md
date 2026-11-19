@@ -150,6 +150,11 @@ VITE_AUTH_MODE=cloud
 VITE_API_BASE_URL=https://<render-service>.onrender.com
 ```
 
+`VITE_AUTH_MODE` and `VITE_API_BASE_URL` are intentionally public browser
+configuration. `netlify.toml` excludes those variable names from Netlify secret
+scanning. Configure them in the Netlify dashboard or build environment, never
+add Firebase private keys or Supabase service-role secrets to `VITE_*` variables.
+
 Deploy from the repository. Netlify redirects all frontend routes to
 `index.html`. The browser sends API calls to the Render URL configured by
 `VITE_API_BASE_URL`.
