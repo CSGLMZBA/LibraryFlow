@@ -2,7 +2,7 @@ services:
   - type: web
     name: libraryflow-api
     runtime: node
-    buildCommand: npm install && npm run build --workspace @library-flow/backend
+    buildCommand: npm install && npm run build --workspace @library-flow/shared && npm run build --workspace @library-flow/backend
     startCommand: npm run start --workspace @library-flow/backend
     healthCheckPath: /health
     envVars:

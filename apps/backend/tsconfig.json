@@ -1,23 +1,13 @@
 {
   "compilerOptions": {
-    "composite": true,
     "outDir": "dist",
     "rootDir": "src",
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "baseUrl": "../..",
-    "paths": {
-      "@library-flow/shared": ["packages/shared/src/index.ts"]
-    },
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "references": [
-    {
-      "path": "../../packages/shared"
-    }
-  ],
   "include": ["src"]
 }
