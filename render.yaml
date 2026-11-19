@@ -11,7 +11,7 @@ services:
       - key: APP_MODE
         value: cloud
       - key: CORS_ORIGIN
-        value: "https://library-flow-cgmb.netlify.app"
+        sync: false
       - key: FIREBASE_PROJECT_ID
         sync: false
       - key: FIREBASE_CLIENT_EMAIL
