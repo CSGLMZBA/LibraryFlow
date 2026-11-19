@@ -77,6 +77,37 @@ Create an initial moderator explicitly in Firebase Console or Admin SDK, set
 the custom claim `role: "moderator"`, and disable public reset/admin actions in
 production.
 
+### Provision a moderator account
+
+First create or register the account through Firebase Authentication. It must
+already exist in the Firebase project before it can receive the moderator role.
+
+Set `MODERATOR_EMAIL` in the local `.env` file:
+
+```text
+MODERATOR_EMAIL=admin@example.com
+```
+
+The Firebase service-account variables in the same `.env` file must also be
+configured. Then run:
+
+```bash
+npm run admin:moderator
+```
+
+You can override the environment value for a one-time assignment:
+
+```bash
+npm run admin:moderator -- admin@example.com
+```
+
+The script verifies that the Firebase account exists, assigns the
+`role: "moderator"` custom claim, and revokes existing refresh tokens. The
+account must sign out and sign in again to obtain a fresh token.
+
+Keep `.env` and service-account credentials out of Git. Do not add a public
+endpoint for setting moderator roles.
+
 ## 4. Firestore
 
 Enable Firestore Native mode in the same Firebase project. Add least-privilege

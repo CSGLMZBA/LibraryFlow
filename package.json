@@ -13,6 +13,7 @@
     "test:sprint1": "npx tsx --test docs/testing/auth-validation.test.mjs docs/testing/s1-cross-cutting.test.mjs docs/testing/s1-domain-acceptance.test.mjs",
     "test": "npm run test:sprint1",
     "start": "npm run dev:backend",
+    "admin:moderator": "node --env-file=.env scripts/set-moderator.mjs",
     "typecheck": "npm run typecheck -w @library-flow/shared && npm run typecheck -w @library-flow/backend -w @library-flow/frontend"
   }
 }
