@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc -b",
+    "build": "npm run build --prefix ../../packages/shared && tsc -b",
     "start": "node dist/server.js",
     "typecheck": "tsc -b --pretty false"
   },
