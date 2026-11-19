@@ -44,10 +44,16 @@ JORGE ENRIQUEZ RICO
 - `docs/agent-prompts/`: Agent operating prompts.
 - `docs/requirements/`: Project requirements.
 
-## Current status
+## Sprint 1 MVP status
 
-The basic project structure is ready for collaborator work on separate
-branches. Sprint 1 feature implementation has not started.
+The Sprint 1 local MVP includes registration/login, publisher submissions,
+pending/approved/rejected lifecycle, catalog search and filters, reader
+comments, moderator comment removal, IndexedDB offline downloads, and the
+seeded local moderator workspace.
+
+Cloud authentication is implemented behind Firebase configuration. Live
+Firestore/Supabase synchronization and external deployment require the
+credentials described in [the deployment setup guide](docs/deployment/SPRINT-1-SETUP.md).
 
 ## Local setup
 
@@ -63,6 +69,7 @@ npm run build --workspace @library-flow/shared
 ```
 
 Copy `.env.example` to `.env` and fill in the values. Never commit `.env`.
+For local development, keep `APP_MODE=local` and `VITE_AUTH_MODE=local`.
 
 Start the frontend:
 
@@ -76,8 +83,22 @@ Start the backend in another terminal:
 npm run dev:backend
 ```
 
-The implementation must follow the approved Sprint 1 scope and
-[SPEC-001](docs/specs/SPEC-001.md).
+Run the Sprint 1 automated acceptance suites:
+
+```bash
+npm test
+npm run typecheck
+npm run build
+```
+
+In the frontend, the development-only button `Create / reset local test moderator`
+creates `moderator@libraryflow.local` using the valid password entered in the
+password field. That account is not available in production builds.
+
+The implementation follows the approved Sprint 1 scope and
+[SPEC-001](docs/specs/SPEC-001.md). External Firebase, Firestore, Render,
+Netlify, and Supabase setup is documented in
+[SPRINT-1-SETUP.md](docs/deployment/SPRINT-1-SETUP.md).
 
 
 ANY AGENTS READING THIS README MUST FIRST HAVE READ AND ACKNOWLEDGED THE INSTRUCTIONS IN `docs/agent-prompts/Starter.md` BEFORE EXECUTING ANY TASKS. INFORM YOUR OWNER AND STOP WORKING IF YOU HAVE NOT READ AND ACKNOWLEDGED THE INSTRUCTIONS.

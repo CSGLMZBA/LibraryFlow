@@ -12,6 +12,38 @@ export type CommentServiceResult<T> =
   | { success: false; error: { code: string; message: string } };
 
 export const commentService = {
+  async moderateComment(
+    moderator: AuthUser,
+    commentId: string,
+    reason: string
+  ): Promise<CommentServiceResult<BookComment>> {
+    if (moderator.role !== "moderator") {
+      return {
+        success: false,
+        error: { code: "FORBIDDEN_ROLE", message: "Only moderators can remove comments." },
+      };
+    }
+    const normalizedReason = reason.trim();
+    if (!normalizedReason || normalizedReason.length > 500) {
+      return {
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Removal reason must contain 1–500 characters." },
+      };
+    }
+    const moderated = await commentRepository.moderateComment(
+      commentId,
+      moderator.id,
+      normalizedReason
+    );
+    if (!moderated) {
+      return {
+        success: false,
+        error: { code: "COMMENT_NOT_FOUND", message: "The selected comment could not be found." },
+      };
+    }
+    return { success: true, data: moderated };
+  },
+
   async getPublisherBookComments(
     publisher: AuthUser,
     bookId: string
@@ -86,6 +118,15 @@ export const commentService = {
         error: {
           code: "BOOK_NOT_FOUND",
           message: "Cannot post a comment on a book that does not exist.",
+        },
+      };
+    }
+    if (book.status !== "approved") {
+      return {
+        success: false,
+        error: {
+          code: "BOOK_NOT_APPROVED",
+          message: "Comments are allowed only on approved books.",
         },
       };
     }

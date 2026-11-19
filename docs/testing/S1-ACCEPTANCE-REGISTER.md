@@ -7,13 +7,13 @@ This register is the QA verification source of truth for Sprint 1 (`S1-DOC-02` a
 
 | ID | Scope / story | Acceptance coverage | Specification | Owner | Evidence required | Status |
 |---|---|---|---|---|---|---|
-| S1-AC-001 | PB-001 / `US-REA-010`, `US-MOD-010` | Registration, login, validation, roles, seeded accounts, session persistence | SPEC-001 §§3, 6, 11 | Bryan, Dante | Auth tests and invalid-credential manual check | In progress |
+| S1-AC-001 | PB-001 / `US-REA-010`, `US-MOD-010` | Registration, login, validation, roles, seeded accounts, session persistence | SPEC-001 §§3, 6, 11 | Bryan, Dante, Carlos | Auth tests and invalid-credential manual check | Automated suites passed; cloud/manual sign-off pending |
 | S1-AC-002 | PB-002 / `US-PUB-001` | EPUB/PDF validation, 20 MB boundary, ownership, pending state, metadata update | SPEC-001 §§5, 8, 9 | Juan, Dante | API/service tests and upload boundary checks | In progress |
 | S1-AC-003 | PB-002 / `US-MOD-006` | Approval/rejection visibility, reason, notification, deletion job | SPEC-001 §§8, 11.2 | Juan, Jorge | Moderation tests and scheduled-job retry evidence | In progress |
 | S1-AC-004 | PB-003 / `US-REA-001`, `US-REA-011`, `US-PUB-002` | Case-insensitive query, combined filters, approved-only catalog, empty state | SPEC-001 §9 | Juan, Karlo | Query tests and empty-state manual check | In progress |
 | S1-AC-005 | PB-004 / `US-PUB-004` | Owner-only metadata update and identity preservation | SPEC-001 §§5, 9 | Juan, Dante | Authorization and persistence tests | In progress |
 | S1-AC-006 | PB-005 / `US-MOD-001`, `US-MOD-002`, `US-PUB-005` | Controlled category/genre references, rename preservation, filters | SPEC-001 §§5, 9, 12 | Juan, Dante, Karlo | Valid/invalid reference tests | In progress |
-| S1-AC-007 | PB-006 / `US-REA-012`, `US-PUB-003`, `US-MOD-003` | Reader creation, publisher visibility, newest-first order, moderator removal audit and notification | SPEC-001 §§3, 9, 12 | Juan, Dante, Jorge | Comment and moderation tests | Failed (DEF-001) |
+| S1-AC-007 | PB-006 / `US-REA-012`, `US-PUB-003`, `US-MOD-003` | Reader creation, publisher visibility, newest-first order, moderator removal audit and notification | SPEC-001 §§3, 9, 12 | Juan, Dante, Jorge, Carlos | Comment and moderation tests | Passed (DEF-001 resolved) |
 | S1-AC-008 | PB-007 / `US-REA-003` | Download states, retry, quota failure cleanup, offline reading | SPEC-001 §§5, 10 | Juan, Karlo | IndexedDB/download tests and offline manual check | In progress |
 | S1-AC-009 | Cross-cutting / `FIELD_RULES.md` | Reload persistence, local/cloud boundary, malformed-data recovery, error shape, field rules | SPEC-001 §§7, 11.2, 15 | Cesar, Jorge | Regression and configuration evidence | Passed |
 
@@ -116,11 +116,12 @@ No acceptance item is marked `Passed` until implementation exists and the verifi
 | 2026-11-18 | `S1-AC-001` (`TC-001`–`TC-004`) | `npx tsx --test docs/testing/auth-validation.test.mjs` | Pass (9/9) | Automated auth validation and guard tests pass; manual invalid-credential UI check pending for final sign-off. |
 | 2026-11-18 | `S1-AC-009` (`TC-034`, `TC-035`, `TC-037`, `TC-038`) | `npx tsx --test docs/testing/s1-cross-cutting.test.mjs` | Pass (4/4) | Verified shared field limits (`limits.ts`), IndexedDB reload persistence, corrupt-record resilience, and offline quota cleanup (`QuotaExceededError`). |
 | 2026-11-18 | `S1-AC-002`–`S1-AC-006` (`TC-008`–`TC-024`) | `npx tsx --test docs/testing/s1-domain-acceptance.test.mjs` | Pass (4/5 suites) | Book upload/20MB boundary, moderation approval/rejection +24h schedule, owner-only metadata updates, search filters, and unique classifications passed[cite: 10]; UI manual checks pending. |
-| 2026-11-18 | `S1-AC-007` (`TC-027`, `TC-030`) | `npx tsx --test docs/testing/s1-domain-acceptance.test.mjs` | Fail (1/5 suites) | Backend comment creation and moderation soft-delete/notification passed, but frontend `commentRepository.getCommentsByBookId` returns oldest-first (`DEF-001`)[cite: 10]. |
+| 2026-11-18 | `S1-AC-007` (`TC-027`, `TC-030`) | `npx tsx --test docs/testing/s1-domain-acceptance.test.mjs` | Pass (1/1 suite) | Frontend and backend comment creation, soft-delete/moderation audit, notification behavior, and newest-first ordering pass after `DEF-001` was resolved. |
+| 2026-11-18 | Sprint 1 MVP integration | `npm run typecheck`, `npm run build`, `npm test`, backend health and error-shape checks | Pass (18/18 automated tests) | Added moderator workspace, reader comment posting, seeded local moderator setup, global JSON error handling, cloud auth base URL, setup/deployment documentation, and production build verification. |
 
 ## 4. Defect Log (`S1-QA-01`)
 
 | Defect ID | Related AC / TC | Severity | Summary | Assigned Owner | Status | Re-test Evidence |
 |---|---|---|---|---|---|---|
-| DEF-001 | `S1-AC-007` / `TC-027` (`US-REA-012` `CA-004`) | Medium | `apps/frontend/src/repositories/comment-repository.ts` sorts comments ascending (`a.createdAt.localeCompare(b.createdAt)`) instead of descending newest-first (`b.createdAt.localeCompare(a.createdAt)`)[cite: 10]. | Karlo / Dante (Frontend) | Open | Pending fix and re-run of `npx tsx --test docs/testing/s1-domain-acceptance.test.mjs` |
-| DEF-002 | `S1-AC-009` (`SPEC-002` §2, `SPEC-000` §6.3) | Low | Repository hygiene: `.gitkeep` placeholders remain in populated directories (`apps/frontend/src/*`, `packages/shared/src/*`) and `packages/shared/tsconfig.tsbuildinfo` is tracked in Git[cite: 9]. | Jorge / Juan | Open | Pending cleanup check on `develop` |
+| DEF-001 | `S1-AC-007` / `TC-027` (`US-REA-012` `CA-004`) | Medium | Frontend comment repository incorrectly sorted comments oldest-first. | Carlos / Integrator | Resolved | Re-run passed 18/18 Sprint 1 automated tests; newest-first order is verified. |
+| DEF-002 | `S1-AC-009` (`SPEC-002` §2, `SPEC-000` §6.3) | Low | Repository hygiene includes leftover `.gitkeep` placeholders and generated build caches. | Carlos / Integrator | Resolved | Populated `.gitkeep` placeholders removed; generated build caches are excluded and no build cache is tracked. |

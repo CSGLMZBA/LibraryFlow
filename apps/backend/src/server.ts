@@ -40,6 +40,28 @@ app.get("/health", (_request, response) => {
   response.json({ status: "ok", service: "library-flow-api" });
 });
 
+app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
+  if (error instanceof SyntaxError) {
+    response.status(400).json({
+      success: false,
+      error: {
+        code: "INVALID_JSON",
+        message: "The request body contains malformed JSON.",
+      },
+    });
+    return;
+  }
+
+  console.error(error);
+  response.status(500).json({
+    success: false,
+    error: {
+      code: "INTERNAL_ERROR",
+      message: "The server could not complete the request.",
+    },
+  });
+});
+
 app.listen(port, () => {
   console.log(`LibraryFlow API listening on port ${port}`);
 });

@@ -12,7 +12,11 @@ export function createCloudAuthService(apiBaseUrl: string): AuthPort {
     let response: Response;
     try {
       response = await fetch(`${base}/api/v1/auth/${path}`, {
-        method, headers: {'Content-Type':'application/json', ...(token ? {Authorization:`Bearer ${token}`} : {})},
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? {Authorization: `Bearer ${token}`} : {}),
+        },
         ...(body === undefined ? {} : {body:JSON.stringify(body)})
       });
     } catch {throw new AuthError('AUTH_UNAVAILABLE', 'No hay conexión con el servidor de autenticación.');}

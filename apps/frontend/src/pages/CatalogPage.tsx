@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { COMMENT_MAX_LENGTH, type BookComment } from "@library-flow/shared";
 import BookCard from "../components/BookCard";
 import BookReader from "../components/BookReader";
 import { bookRepository } from "../repositories/book-repository";
@@ -11,8 +12,12 @@ import {
 } from "../services/offline-book-service";
 import { filterCatalogBooks } from "../utils/filter-catalog-books";
 import type { BookRecord } from "../types/book";
+import { useAuth } from "../contexts/AuthContext";
+import { commentRepository } from "../repositories/comment-repository";
+import { commentService } from "../services/comment-service";
 
 export default function CatalogPage() {
+  const { user } = useAuth();
   const [books, setBooks] = useState<BookRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +28,9 @@ export default function CatalogPage() {
   const [readingBook, setReadingBook] = useState<OfflineBook | null>(null);
   const [downloadStates, setDownloadStates] = useState<Record<string, DownloadState>>({});
   const [downloadErrors, setDownloadErrors] = useState<Record<string, string>>({});
+  const [comments, setComments] = useState<BookComment[]>([]);
+  const [commentText, setCommentText] = useState("");
+  const [commentError, setCommentError] = useState<string | null>(null);
 
   const categories = useMemo(() => bookRepository.getCategories(), []);
   const genres = useMemo(() => bookRepository.getGenres(), []);
@@ -55,6 +63,34 @@ export default function CatalogPage() {
   }, []);
 
   useEffect(() => { void loadCatalog(); }, [loadCatalog]);
+
+  useEffect(() => {
+    if (!selectedBook) {
+      setComments([]);
+      setCommentText("");
+      setCommentError(null);
+      return;
+    }
+    void commentRepository.getCommentsByBookId(selectedBook.id)
+      .then(setComments)
+      .catch(() => setComments([]));
+  }, [selectedBook]);
+
+  async function postComment() {
+    if (!selectedBook || !user) return;
+    setCommentError(null);
+    const result = await commentService.addReaderComment(
+      selectedBook.id,
+      { id: user.id, displayName: user.displayName },
+      { content: commentText },
+    );
+    if (!result.success) {
+      setCommentError(result.error.message);
+      return;
+    }
+    setCommentText("");
+    setComments(await commentRepository.getCommentsByBookId(selectedBook.id));
+  }
 
   const filteredBooks = useMemo(
     () => filterCatalogBooks(books, { search, categoryId, genreId }),
@@ -203,6 +239,44 @@ export default function CatalogPage() {
                   Guardar archivo en el equipo
                 </button>
               </div>
+              {user?.role === "reader" && (
+                <div className="mt-5 border-t border-indigo-200 pt-5">
+                  <h4 className="font-semibold text-slate-900">Reader comments</h4>
+                  {commentError && <p role="alert" className="mt-2 text-sm text-red-700">{commentError}</p>}
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      value={commentText}
+                      onChange={(event) => setCommentText(event.target.value)}
+                      maxLength={COMMENT_MAX_LENGTH}
+                      placeholder="Share an opinion..."
+                      className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void postComment()}
+                      disabled={!commentText.trim()}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    >
+                      Post
+                    </button>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">{commentText.length}/{COMMENT_MAX_LENGTH}</p>
+                  {comments.length === 0 ? (
+                    <p className="mt-3 text-sm text-slate-500">No comments yet.</p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {comments.map((comment) => (
+                        <li key={comment.id} className="rounded-lg bg-white p-3">
+                          <p className="text-sm text-slate-800">{comment.content}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {comment.authorDisplayName} · {new Date(comment.createdAt).toLocaleString()}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </section>
           )}
           {filteredBooks.length === 0 ? (

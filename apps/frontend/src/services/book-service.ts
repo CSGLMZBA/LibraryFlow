@@ -46,6 +46,71 @@ function generateUniqueAccessKey(
 }
 
 export const bookService = {
+  async listPendingBooks(moderator: AuthUser): Promise<BookRecord[]> {
+    if (moderator.role !== "moderator") return [];
+    const books = await bookRepository.getAllBooks();
+    return books
+      .filter((book) => book.status === "pending-approval")
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  async approveBook(
+    moderator: AuthUser,
+    bookId: string
+  ): Promise<BookOperationResult<BookRecord>> {
+    if (moderator.role !== "moderator") {
+      return {
+        success: false,
+        error: { code: "FORBIDDEN_ROLE", message: "Only moderators can approve books.", field: "general" },
+      };
+    }
+    const stored = await bookRepository.getStoredEntryById(bookId);
+    if (!stored) {
+      return {
+        success: false,
+        error: { code: "BOOK_NOT_FOUND", message: "The selected book could not be found.", field: "general" },
+      };
+    }
+    const updated = { ...stored, status: "approved" as const, updatedAt: new Date().toISOString() };
+    const saved = await bookRepository.saveBookEntry(updated);
+    return { success: true, data: saved, message: `"${saved.title}" is now public.` };
+  },
+
+  async rejectBook(
+    moderator: AuthUser,
+    bookId: string,
+    reason: string
+  ): Promise<BookOperationResult<BookRecord>> {
+    if (moderator.role !== "moderator") {
+      return {
+        success: false,
+        error: { code: "FORBIDDEN_ROLE", message: "Only moderators can reject books.", field: "general" },
+      };
+    }
+    const normalizedReason = reason.trim();
+    if (!normalizedReason || normalizedReason.length > 500) {
+      return {
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Rejection reason must contain 1–500 characters.", field: "general" },
+      };
+    }
+    const stored = await bookRepository.getStoredEntryById(bookId);
+    if (!stored) {
+      return {
+        success: false,
+        error: { code: "BOOK_NOT_FOUND", message: "The selected book could not be found.", field: "general" },
+      };
+    }
+    const updated = {
+      ...stored,
+      status: "rejected" as const,
+      rejectionReason: normalizedReason,
+      updatedAt: new Date().toISOString(),
+    };
+    const saved = await bookRepository.saveBookEntry(updated);
+    return { success: true, data: saved, message: `"${saved.title}" was rejected and the owner was notified.` };
+  },
+
   getAvailableCategories(): BookCategory[] {
     return bookRepository.getCategories();
   },

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { validateLoginInput, validateRegisterInput } from "../schemas/auth-schema";
+import { seedLocalModeratorForTests } from "../services/auth-service";
 import type { AuthValidationErrors, RegisterRole } from "../types/auth";
 
 type AuthMode = "login" | "register";
@@ -16,6 +17,30 @@ export function AuthPage() {
   const [errors, setErrors] = useState<AuthValidationErrors>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSeedingModerator, setIsSeedingModerator] = useState(false);
+
+  const seedModerator = async () => {
+    setErrors({});
+    setStatusMessage(null);
+    setIsSeedingModerator(true);
+    try {
+      await seedLocalModeratorForTests(password || "Sprint1Moderator!");
+      setEmail("moderator@libraryflow.local");
+      setMode("login");
+      setStatusMessage(
+        "Seeded local moderator created. Use the same password entered below to sign in."
+      );
+    } catch (error) {
+      setErrors({
+        general:
+          error instanceof Error
+            ? error.message
+            : "Could not create the seeded moderator.",
+      });
+    } finally {
+      setIsSeedingModerator(false);
+    }
+  };
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -227,6 +252,22 @@ export function AuthPage() {
               : "Create Account"}
         </button>
       </form>
+      {(import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV === true && (
+        <div className="mt-4 border-t border-slate-200 pt-4">
+          <button
+            type="button"
+            onClick={() => void seedModerator()}
+            disabled={isSeedingModerator}
+            className="w-full rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60"
+          >
+            {isSeedingModerator ? "Creating test moderator..." : "Create / reset local test moderator"}
+          </button>
+          <p className="mt-2 text-xs text-slate-500">
+            Development only. Enter a valid password above; the seeded moderator account uses
+            moderator@libraryflow.local.
+          </p>
+        </div>
+      )}
     </section>
   );
 }

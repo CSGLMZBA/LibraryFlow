@@ -29,6 +29,17 @@ function openLibraryDatabase(): Promise<IDBDatabase> {
 }
 
 export const commentRepository = {
+  async getAllComments(): Promise<BookComment[]> {
+    const db = await openLibraryDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(COMMENTS_STORE, "readonly");
+      const request = tx.objectStore(COMMENTS_STORE).getAll();
+      request.onsuccess = () => resolve((request.result as BookComment[]) ?? []);
+      request.onerror = () =>
+        reject(request.error ?? new Error("Failed to load comments from IndexedDB."));
+    });
+  },
+
   async getCommentsByBookId(bookId: string): Promise<BookComment[]> {
     const db = await openLibraryDatabase();
     return new Promise((resolve, reject) => {
@@ -42,7 +53,7 @@ export const commentRepository = {
         // CA-004: Exclude comments soft-deleted by a moderator (US-MOD-003)
         const visibleComments = allForBook
           .filter((comment) => !comment.isDeleted)
-          .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
         resolve(visibleComments);
       };
       request.onerror = () =>
@@ -60,6 +71,35 @@ export const commentRepository = {
       request.onsuccess = () => resolve(comment);
       request.onerror = () =>
         reject(request.error ?? new Error("Failed to save comment to IndexedDB."));
+    });
+  },
+
+  async moderateComment(commentId: string, moderatorId: string, reason: string): Promise<BookComment | null> {
+    const db = await openLibraryDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(COMMENTS_STORE, "readwrite");
+      const store = tx.objectStore(COMMENTS_STORE);
+      const getRequest = store.get(commentId);
+      getRequest.onerror = () =>
+        reject(getRequest.error ?? new Error("Failed to load the comment."));
+      getRequest.onsuccess = () => {
+        const existing = getRequest.result as BookComment | undefined;
+        if (!existing) {
+          resolve(null);
+          return;
+        }
+        const moderated: BookComment = {
+          ...existing,
+          isDeleted: true,
+          moderationReason: reason,
+          moderatedBy: moderatorId,
+          moderatedAt: new Date().toISOString(),
+        };
+        const putRequest = store.put(moderated);
+        putRequest.onsuccess = () => resolve(moderated);
+        putRequest.onerror = () =>
+          reject(putRequest.error ?? new Error("Failed to moderate the comment."));
+      };
     });
   },
 };

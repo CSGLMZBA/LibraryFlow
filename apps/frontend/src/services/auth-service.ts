@@ -119,7 +119,9 @@ function uiAuthError(error: unknown): AuthResult<never> {
 
 // Local development stays offline unless the Firebase-backed REST API is selected.
 const configuredAuth = (import.meta as ImportMeta & { env?: { VITE_AUTH_MODE?: string } }).env?.VITE_AUTH_MODE === 'cloud'
-  ? createCloudAuthService('')
+  ? createCloudAuthService(
+      (import.meta as ImportMeta & { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? '',
+    )
   : localAuthService;
 
 export const authService = {

@@ -4,6 +4,7 @@ import CatalogPage from "./pages/CatalogPage";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AuthPage } from "./pages/AuthPage";
 import { PublisherDashboardPage } from "./pages/PublisherDashboardPage";
+import ModeratorDashboardPage from "./pages/ModeratorDashboardPage";
 
 function WorkspaceShell() {
   // Obtener la información de autenticación.
@@ -132,9 +133,14 @@ function WorkspaceShell() {
                 </button>
               </div>
             )}
+            {user.role === "moderator" && (
+              <ModeratorDashboardPage moderator={user} />
+            )}
 
             {/* Mostrar panel del publicador o catálogo */}
-            {user.role === "publisher" &&
+            {user.role === "moderator" ? (
+              <ModeratorDashboardPage moderator={user} />
+            ) : user.role === "publisher" &&
             showPublisherDashboard ? (
 
               <PublisherDashboardPage publisher={user} />
