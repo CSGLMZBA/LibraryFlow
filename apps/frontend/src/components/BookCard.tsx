@@ -1,8 +1,8 @@
 
 /**
- * PB-003 - Tarjeta visual de un libro.
- * Muestra los datos proporcionados por el catálogo.
- * No consulta APIs ni bases de datos.
+ * PB-003 - Visual card for a book.
+ * Displays data supplied by the catalog.
+ * It does not query APIs or databases.
  */
 
 type BookCardProps = {
@@ -16,7 +16,7 @@ export default function BookCard({
 }: BookCardProps) {
   return (
     <article className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      {/* Imagen genérica mientras no exista una portada */}
+      {/* Generic image until a cover exists */}
       <div
         className="flex h-40 items-center justify-center bg-blue-50"
         aria-hidden="true"
@@ -24,14 +24,14 @@ export default function BookCard({
         <span className="text-5xl">📖</span>
       </div>
 
-      {/* Información del libro */}
+      {/* Book information */}
       <div className="p-4">
         <h3 className="text-lg font-semibold text-gray-900">
           {title}
         </h3>
 
         <p className="mt-2 text-sm text-gray-600">
-          Autor: {author}
+          Author: {author}
         </p>
       </div>
     </article>

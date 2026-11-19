@@ -42,10 +42,10 @@ export const localAuthService: AuthPort = {
     const email=normalizeEmail(rawEmail);
     validateLogin(email,password);
     const stored=await getUser(email);
-    const error=new AuthError('INVALID_CREDENTIALS','Correo o contraseña incorrectos.');
+    const error=new AuthError('INVALID_CREDENTIALS','Incorrect email or password.');
     if(!stored) throw error;
     if (!Array.isArray(stored.salt) || stored.salt.length!==16 || !Array.isArray(stored.passwordHash) || stored.passwordHash.length!==32) {
-      throw new AuthError('CORRUPT_USER', 'El registro de usuario está dañado; no se puede iniciar sesión.');
+      throw new AuthError('CORRUPT_USER', 'The user record is damaged and cannot be signed in.');
     }
     const computed=await derive(password,new Uint8Array(stored.salt));
     if(!equalBytes(computed,stored.passwordHash)) throw error;
@@ -57,7 +57,7 @@ export const localAuthService: AuthPort = {
   async getCurrentSession():Promise<AuthSession|null> {
     const session=await readSession();
     if (!session) return null;
-    if(!isSession(session)) {await clearSession();throw new AuthError('CORRUPT_SESSION','La sesión local no es válida.');}
+    if(!isSession(session)) {await clearSession();throw new AuthError('CORRUPT_SESSION','The local session is invalid.');}
     const stored=await getUser(session.user.email);
     if (!stored || stored.id!==session.user.id || stored.role!==session.user.role || !['reader','publisher','moderator'].includes(stored.role)) {await clearSession();return null;}
     return {user:publicUser(stored),authenticatedAt:session.authenticatedAt};
@@ -67,19 +67,19 @@ export const localAuthService: AuthPort = {
 /** Cloud adapter must be configured by the platform team with Firebase verification and REST API.
  * Local IndexedDB identity is NEVER a server-side authorization credential. */
 export function requireLocalRole(session:AuthSession|null,role:UserRole):void {
-  if(!session) throw new AuthError('UNAUTHENTICATED','Debes iniciar sesión.');
-  if(session.user.role!==role) throw new AuthError('FORBIDDEN','No tienes autorización para esta función.');
+  if(!session) throw new AuthError('UNAUTHENTICATED','You must sign in.');
+  if(session.user.role!==role) throw new AuthError('FORBIDDEN','You are not authorized to use this feature.');
 }
 
 /** Sprint 1 Moderator fixture. Explicit setup, only bundled in Vite development. */
 export async function seedLocalModeratorForTests(password: string): Promise<AuthUser> {
-  if ((import.meta as ImportMeta & {env?: {DEV?: boolean}}).env?.DEV !== true) throw new AuthError('FORBIDDEN', 'Solo disponible en modo desarrollo.');
+  if ((import.meta as ImportMeta & {env?: {DEV?: boolean}}).env?.DEV !== true) throw new AuthError('FORBIDDEN', 'Available only in development mode.');
   const email = 'moderator@libraryflow.local';
   // Reuse the already-approved credential rules without granting registration privileges.
   validateRegistration(email, password, 'reader');
   const existing = await getUser(email);
   if (existing) {
-    if (existing.role !== 'moderator') throw new AuthError('SEED_CONFLICT', 'Correo de prueba ocupado.');
+    if (existing.role !== 'moderator') throw new AuthError('SEED_CONFLICT', 'Test email is already in use.');
     return publicUser(existing);
   }
   try {
@@ -88,7 +88,7 @@ export async function seedLocalModeratorForTests(password: string): Promise<Auth
     if (!(error instanceof AuthError) || error.code !== 'EMAIL_ALREADY_EXISTS') throw error;
     const stored = await getUser(email);
     if (stored?.role === 'moderator') return publicUser(stored);
-    throw new AuthError('SEED_CONFLICT', 'Correo de prueba ocupado.');
+    throw new AuthError('SEED_CONFLICT', 'Test email is already in use.');
   }
 }
 

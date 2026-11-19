@@ -190,7 +190,7 @@ test('S1-AC-003 (TC-014, TC-015): approve exposes book; reject notifies owner an
 
   await assert.rejects(() => modService.rejectBook(b2.id, '   ', 'mod-1'), /Moderation reason/);
 
-  const rejected = await modService.rejectBook(b2.id, 'Contenido duplicado sin autorización', 'mod-1');
+  const rejected = await modService.rejectBook(b2.id, 'Duplicated content without authorization', 'mod-1');
   assert.equal(rejected.status, 'rejected');
   assert.ok(rejected.scheduledDeletionDate);
   const diffHours =
@@ -228,7 +228,7 @@ test('S1-AC-004 & S1-AC-005 (TC-017..TC-022): owner-only metadata update, identi
   assert.equal(updated.ownerId, 'pub-owner');
   assert.equal(updated.createdAt, created.createdAt);
 
-  // Búsqueda insensible a mayúsculas + filtros combinados
+  // Case-insensitive search plus combined filters
   const match = await bookService.getApprovedCatalog({
     search: 'oppenheim',
     categoryId: 'cat-1',
@@ -275,7 +275,7 @@ test('S1-AC-007 (TC-027, TC-030): comment creation, moderation audit, notificati
   assert.equal(afterMod.length, 0);
   assert.equal(notificationRepo.list().at(-1)?.type, 'comment_removed');
 
-  // Verificar orden cronológico descendente (más reciente primero) en el repositorio frontend
+  // Verify descending chronological order (newest first) in the frontend repository
   const records = new Map([
     ['old', { id: 'old', bookId: 'b-order', authorId: 'u1', authorDisplayName: 'U1', content: 'Old', createdAt: '2026-11-18T08:00:00.000Z', isDeleted: false }],
     ['new', { id: 'new', bookId: 'b-order', authorId: 'u2', authorDisplayName: 'U2', content: 'New', createdAt: '2026-11-18T12:00:00.000Z', isDeleted: false }],
@@ -310,6 +310,6 @@ test('S1-AC-007 (TC-027, TC-030): comment creation, moderation audit, notificati
   assert.equal(
     frontendList[0]?.id,
     'new',
-    'DEFECTO US-REA-012 CA-004: commentRepository ordena ascendente (más antiguo primero) en lugar de descendente (más reciente primero)',
+    'US-REA-012 CA-004 defect: commentRepository sorts ascending (oldest first) instead of descending (newest first)',
   );
 });

@@ -7,20 +7,20 @@ import { PublisherDashboardPage } from "./pages/PublisherDashboardPage";
 import ModeratorDashboardPage from "./pages/ModeratorDashboardPage";
 
 function WorkspaceShell() {
-  // Obtener la información de autenticación.
+  // Get authentication state.
   const { user, isAuthenticated, logout } = useAuth();
 
-  // Permite consultar el catálogo como visitante.
+  // Allow visitors to browse the catalog.
   const [showGuestCatalog, setShowGuestCatalog] = useState(false);
 
-  // Permite cambiar entre el catálogo y el panel del publicador.
+  // Switch between the catalog and publisher dashboard.
   const [showPublisherDashboard, setShowPublisherDashboard] =
     useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
 
-      {/* Encabezado principal */}
+      {/* Main header */}
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
 
@@ -34,7 +34,7 @@ function WorkspaceShell() {
             </p>
           </div>
 
-          {/* Mostrar información al iniciar sesión */}
+          {/* Signed-in account information */}
           {isAuthenticated && user && (
             <div className="flex items-center gap-4">
 
@@ -48,7 +48,7 @@ function WorkspaceShell() {
                 </p>
               </div>
 
-              {/* Botón para cerrar sesión */}
+              {/* Sign-out button */}
               <button
                 type="button"
                 onClick={() => {
@@ -68,22 +68,22 @@ function WorkspaceShell() {
         </div>
       </header>
 
-      {/* Contenido principal */}
+      {/* Main content */}
       <main className="mx-auto max-w-6xl px-4 py-8">
 
-        {/* CASO 1: USUARIO NO AUTENTICADO */}
+        {/* Case 1: unauthenticated user */}
         {!isAuthenticated || !user ? (
 
           showGuestCatalog ? (
 
-            // Catálogo público para visitantes.
+            // Public catalog for visitors.
             <div>
               <button
                 type="button"
                 onClick={() => setShowGuestCatalog(false)}
                 className="mb-6 text-sm font-medium text-indigo-600 hover:underline"
               >
-                Volver al inicio de sesión
+                Back to sign in
               </button>
 
               <CatalogPage />
@@ -91,7 +91,7 @@ function WorkspaceShell() {
 
           ) : (
 
-            // Mostrar primero la pantalla de login.
+            // Show the login screen first.
             <div>
               <AuthPage />
 
@@ -101,7 +101,7 @@ function WorkspaceShell() {
                   onClick={() => setShowGuestCatalog(true)}
                   className="text-sm font-medium text-indigo-600 hover:underline"
                 >
-                  Explorar catálogo sin iniciar sesión
+                  Browse catalog without signing in
                 </button>
               </div>
             </div>
@@ -110,10 +110,10 @@ function WorkspaceShell() {
 
         ) : (
 
-          /* CASO 2: USUARIO AUTENTICADO */
+          /* Case 2: authenticated user */
           <div>
 
-            {/* Herramientas exclusivas del publicador */}
+            {/* Publisher-only tools */}
             {user.role === "publisher" && (
               <div className="mb-6 flex justify-end">
                 <button
@@ -128,16 +128,12 @@ function WorkspaceShell() {
                              text-white hover:bg-indigo-700"
                 >
                   {showPublisherDashboard
-                    ? "Volver al catálogo"
-                    : "Mis publicaciones"}
+                    ? "Back to catalog"
+                    : "My publications"}
                 </button>
               </div>
             )}
-            {user.role === "moderator" && (
-              <ModeratorDashboardPage moderator={user} />
-            )}
-
-            {/* Mostrar panel del publicador o catálogo */}
+            {/* Show moderator, publisher, or catalog workspace */}
             {user.role === "moderator" ? (
               <ModeratorDashboardPage moderator={user} />
             ) : user.role === "publisher" &&
@@ -147,7 +143,7 @@ function WorkspaceShell() {
 
             ) : (
 
-              // Página principal después de iniciar sesión.
+              // Main page after sign-in.
               <CatalogPage />
 
             )}

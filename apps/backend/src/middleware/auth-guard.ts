@@ -8,11 +8,11 @@ export function createAuthGuard(verify: VerifySessionToken, requiredRole?: Verif
   return async (req:Request,res:Response,next:NextFunction):Promise<void> => {
     const header=req.headers.authorization;
     const token=header?.startsWith('Bearer ') ? header.slice(7) : '';
-    if(!token) {res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'Se requiere iniciar sesión.'}});return;}
+    if(!token) {res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'Sign-in is required.'}});return;}
     try {
       const identity=await verify(token);
       if(!identity || !identity.uid || !['reader','publisher','moderator'].includes(identity.role)) {
-        res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'Sesión inválida.'}});return;
+        res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'Invalid session.'}});return;
       }
       if(requiredRole && identity.role!==requiredRole) {
         res.status(403).json({success:false,error:{code:'FORBIDDEN',message:'Acceso no autorizado.'}});return;
@@ -20,7 +20,7 @@ export function createAuthGuard(verify: VerifySessionToken, requiredRole?: Verif
       res.locals.auth=identity;
       next();
     } catch {
-      res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'No se pudo validar la sesión.'}});
+      res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'The session could not be validated.'}});
     }
   };
 }

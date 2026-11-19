@@ -40,7 +40,7 @@ export default function BookReader({ book, onClose }: BookReaderProps) {
         renditionRef.current = rendition;
         await rendition.display();
       } catch {
-        if (!cancelled) setError("No fue posible abrir este archivo. Comprueba que sea un PDF o EPUB válido.");
+        if (!cancelled) setError("Could not open this file. Verify that it is a valid PDF or EPUB.");
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -60,23 +60,23 @@ export default function BookReader({ book, onClose }: BookReaderProps) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 id="offline-reader-title" className="text-2xl font-bold text-slate-900">{book.title}</h2>
-          <p className="text-sm text-slate-600">{book.author} · Copia guardada sin conexión</p>
+          <p className="text-sm text-slate-600">{book.author} · Offline copy saved</p>
         </div>
         <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2 hover:bg-slate-50">
-          Volver al catálogo
+          Back to catalog
         </button>
       </div>
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{error}</p>}
-      {isLoading && <p role="status">Abriendo libro...</p>}
+      {isLoading && <p role="status">Opening book...</p>}
       {book.fileFormat === "pdf" && pdfUrl && (
-        <iframe src={pdfUrl} title={`Lectura de ${book.title}`} className="h-[72vh] w-full rounded-xl border border-slate-300" />
+        <iframe src={pdfUrl} title={`Reading ${book.title}`} className="h-[72vh] w-full rounded-xl border border-slate-300" />
       )}
       {book.fileFormat === "epub" && (
         <>
           <div ref={viewerRef} className="h-[68vh] w-full rounded-xl border border-slate-300 bg-white" />
           <div className="flex justify-center gap-3">
-            <button type="button" onClick={() => void renditionRef.current?.prev()} disabled={isLoading || Boolean(error)} className="rounded-lg bg-slate-200 px-5 py-2 disabled:opacity-50">Página anterior</button>
-            <button type="button" onClick={() => void renditionRef.current?.next()} disabled={isLoading || Boolean(error)} className="rounded-lg bg-indigo-600 px-5 py-2 text-white disabled:opacity-50">Página siguiente</button>
+            <button type="button" onClick={() => void renditionRef.current?.prev()} disabled={isLoading || Boolean(error)} className="rounded-lg bg-slate-200 px-5 py-2 disabled:opacity-50">Previous page</button>
+            <button type="button" onClick={() => void renditionRef.current?.next()} disabled={isLoading || Boolean(error)} className="rounded-lg bg-indigo-600 px-5 py-2 text-white disabled:opacity-50">Next page</button>
           </div>
         </>
       )}

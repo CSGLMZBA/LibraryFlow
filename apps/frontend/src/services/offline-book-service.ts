@@ -27,7 +27,7 @@ function openOfflineDatabase(): Promise<IDBDatabase> {
       }
     };
     request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error ?? new Error("No se pudo abrir la biblioteca offline."));
+    request.onerror = () => reject(request.error ?? new Error("Could not open the offline library."));
   });
 }
 
@@ -38,7 +38,7 @@ export async function listOfflineBookIds(): Promise<string[]> {
       const request = db.transaction(OFFLINE_STORE, "readonly")
         .objectStore(OFFLINE_STORE).getAllKeys();
       request.onsuccess = () => resolve(request.result.map(String));
-      request.onerror = () => reject(request.error ?? new Error("No se pudieron consultar las descargas."));
+      request.onerror = () => reject(request.error ?? new Error("Could not retrieve downloads."));
     });
   } finally {
     db.close();
@@ -52,7 +52,7 @@ export async function getOfflineBook(bookId: string): Promise<OfflineBook | null
       const request = db.transaction(OFFLINE_STORE, "readonly")
         .objectStore(OFFLINE_STORE).get(bookId);
       request.onsuccess = () => resolve((request.result as OfflineBook | undefined) ?? null);
-      request.onerror = () => reject(request.error ?? new Error("No se pudo leer el libro offline."));
+      request.onerror = () => reject(request.error ?? new Error("Could not read the offline book."));
     });
   } finally {
     db.close();
@@ -60,24 +60,24 @@ export async function getOfflineBook(bookId: string): Promise<OfflineBook | null
 }
 
 /**
- * Versión local: el archivo original debe existir en LibraryFlowDB en este navegador.
- * En modo nube debe sustituirse la lectura de origen por un endpoint autorizado.
- * El estado Completed solo se asigna tras completarse la transacción IndexedDB.
+ * Local mode: the original file must exist in LibraryFlowDB in this browser.
+ * Cloud mode must replace the source lookup with an authorized endpoint.
+ * Completed is set only after the IndexedDB transaction completes.
  */
 export async function downloadBookForOffline(book: BookRecord): Promise<void> {
   if (book.status !== "approved") {
-    throw new Error("Solo se pueden descargar libros aprobados.");
+    throw new Error("Only approved books can be downloaded.");
   }
 
   const stored = await bookRepository.getStoredEntryById(book.id);
   if (!stored || stored.status !== "approved" || !(stored.fileBlob instanceof Blob)) {
-    throw new Error("El archivo no está disponible en este navegador. Se necesita la descarga desde el servidor.");
+    throw new Error("The file is unavailable in this browser. Download it from the server.");
   }
   if (stored.fileBlob.size === 0 || stored.fileBlob.size > MAX_FILE_SIZE) {
-    throw new Error("El archivo está vacío o supera los 20 MB permitidos.");
+    throw new Error("The file is empty or exceeds the 20 MB limit.");
   }
   if (stored.fileFormat !== "pdf" && stored.fileFormat !== "epub") {
-    throw new Error("Formato no compatible. Solo PDF o EPUB.");
+    throw new Error("Unsupported format. Only PDF or EPUB is allowed.");
   }
 
   const offlineCopy: OfflineBook = {
@@ -95,13 +95,13 @@ export async function downloadBookForOffline(book: BookRecord): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(OFFLINE_STORE, "readwrite");
       tx.oncomplete = () => resolve();
-      tx.onabort = () => reject(tx.error ?? new Error("No se pudo completar la descarga offline."));
-      tx.onerror = () => reject(tx.error ?? new Error("Error al guardar el libro offline."));
+      tx.onabort = () => reject(tx.error ?? new Error("Could not complete the offline download."));
+      tx.onerror = () => reject(tx.error ?? new Error("Could not save the offline book."));
       tx.objectStore(OFFLINE_STORE).put(offlineCopy);
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "QuotaExceededError") {
-      throw new Error("No hay espacio suficiente en el navegador. Libera almacenamiento e inténtalo de nuevo.");
+      throw new Error("Not enough browser storage. Free space and try again.");
     }
     throw error;
   } finally {

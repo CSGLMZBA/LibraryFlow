@@ -1,37 +1,35 @@
-# Checklist de S1-AUTH-01 (Bryan) — verificación antes del PR
+# S1-AUTH-01 - Pre-PR verification checklist
 
-## Automatizado (sin Firebase)
+## Automated, without Firebase
 
-1. En VS Code, desde la raíz del repo: `npm.cmd install`.
-2. Ejecutar `npm.cmd run typecheck`.
-3. Ejecutar `node --import tsx --test docs/testing/auth-validation.test.mjs`.
-4. Guardar capturas o salida con fecha; no marcar QA como Passed sin ejecutarlas.
+1. From the repository root, run `npm install`.
+2. Run `npm run typecheck`.
+3. Run `node --import tsx --test docs/testing/auth-validation.test.mjs`.
+4. Save dated output and do not mark QA passed without executed evidence.
 
-## Mock IndexedDB (navegador)
+## Mock IndexedDB
 
-1. `npm.cmd run dev:frontend`, abrir `http://localhost:5173` y DevTools Console (solo datos de prueba).
-2. Importar `const {localAuthService: auth, seedLocalModeratorForTests} = await import('/src/services/auth-service.ts')`.
-3. Registrar correo de prueba único con contraseña inventada (`reader`), obtener sesión y comprobar `hasRole('reader')`.
-4. `await auth.logout()` y comprobar `await auth.getCurrentSession() === null`.
-5. `await auth.login(correo, contrasena)` y verificar persistencia tras recargar.
-6. Probar correo repetido, formato inválido, contraseña inválida, rol `moderator` por registro público (debe rechazarse).
-7. Crear moderador con `await seedLocalModeratorForTests('ClaveDePrueba123!')`, iniciar sesión con `moderator@libraryflow.local` y la contraseña de prueba, comprobar `await auth.hasRole('moderator') === true`.
-8. Cerrar sesión. Nunca registrar la contraseña de prueba como una credencial de producción.
+1. Run `npm run dev:frontend`, open `http://localhost:5173`, and open the browser console.
+2. Import `const { localAuthService: auth, seedLocalModeratorForTests } = await import('/src/services/auth-service.ts')`.
+3. Register a unique reader email with a valid test password and verify `hasRole('reader')`.
+4. Run `await auth.logout()` and verify `await auth.getCurrentSession() === null`.
+5. Log in again and verify the session survives reload.
+6. Test duplicate email, invalid format, weak password, and public `moderator` registration.
+7. Create a moderator with `await seedLocalModeratorForTests('TestModerator123!')`, sign in with `moderator@libraryflow.local`, and verify the moderator role.
+8. Log out. Never use a real production credential as a test password.
 
-## Cloud (requerirá proyecto y colaboración)
+## Cloud mode
 
-1. Preparar Firebase Authentication email/password y Firestore, habilitar cuenta de servicio con permisos mínimos.
-2. Definir en backend las variables `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_WEB_API_KEY` en entorno seguro.
-3. Para probar la UI en modo cloud, iniciar el backend en el puerto 3000 y Vite con la variable de entorno `VITE_AUTH_MODE=cloud`. El proxy de desarrollo envía `/api/v1/auth` al backend. En despliegue, servir la API bajo ese mismo origen. Sin esta variable se usa IndexedDB.
-   En modo cloud ejecutar API y probar `POST /api/v1/auth/register` con reader/publisher, comprobar retorno `201` y custom claims reales. Probar intento `moderator` -> `400`.
-4. Probar correo duplicado -> `409`, credenciales incorrectas -> `401` con mensaje genérico, y ausencia de token -> `401`.
-5. Probar token válido en `GET /session`, token falso -> `401`; logout y revocación.
-6. Integrar el `AuthContext` de Dante con el adaptador escogido y verificar que renderiza roles, error de validación y login correctamente.
-7. Probar guards en las rutas reales de Juan/Jorge: `reader` no puede crear libros ni moderar, `publisher` no puede aprobar, `moderator` puede acceder solo a lo autorizado.
-8. Registrar evidencia con César y añadir la traza `US-REA-010` CA-001–004, 006–007 y `US-MOD-010` CA-001.
+1. Prepare Firebase Authentication email/password and Firestore.
+2. Configure `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, and `FIREBASE_WEB_API_KEY` securely.
+3. Start the backend and frontend with `VITE_AUTH_MODE=cloud`.
+4. Verify reader/publisher registration, duplicate-email `409`, invalid-login `401`, missing-token `401`, and token revocation.
+5. Integrate the authentication context with the selected adapter and verify login and role rendering.
+6. Verify reader/publisher/moderator route guards.
+7. Record evidence for `US-REA-010` and `US-MOD-010`.
 
-## Limitaciones explícitas
+## Explicit limitations
 
-- No hay claves Firebase incluidas; el código no puede funcionar en nube sin configuración externa.
-- La persistencia de sesión cloud después de recarga depende de un adaptador con Firebase JS SDK/refresh que todavía debe coordinarse.
-- El contrato de `packages/shared` aún está en PR de Juan, y su integración no debe realizarse a espaldas de la arquitectura del equipo.
+- No Firebase keys are included in source.
+- Cloud persistence after reload requires Firebase SDK/refresh-token integration.
+- External credentials are required for live Firebase and Firestore verification.

@@ -11,7 +11,7 @@ function handleError(error: unknown, response: Response): void {
     response.status(status).json({success:false, error:{code:error.code, message:error.message, ...(error.field ? {field:error.field} : {})}});
     return;
   }
-  response.status(503).json({success:false, error:{code:'AUTH_UNAVAILABLE', message:'No fue posible comunicarse con el servicio de autenticación.'}});
+  response.status(503).json({success:false, error:{code:'AUTH_UNAVAILABLE', message:'Could not communicate with the authentication service.'}});
 }
 function tokenFrom(request: Request): string {
   const value = request.headers.authorization;

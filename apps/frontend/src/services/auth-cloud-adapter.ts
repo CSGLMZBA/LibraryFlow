@@ -19,17 +19,17 @@ export function createCloudAuthService(apiBaseUrl: string): AuthPort {
         },
         ...(body === undefined ? {} : {body:JSON.stringify(body)})
       });
-    } catch {throw new AuthError('AUTH_UNAVAILABLE', 'No hay conexión con el servidor de autenticación.');}
+    } catch {throw new AuthError('AUTH_UNAVAILABLE', 'Cannot connect to the authentication server.');}
     const result: unknown = await response.json().catch(() => null);
-    if (!result || typeof result !== 'object') throw new AuthError('INVALID_RESPONSE', 'Respuesta inválida del servidor.');
+    if (!result || typeof result !== 'object') throw new AuthError('INVALID_RESPONSE', 'Invalid server response.');
     const payload = result as {success?: boolean; data?: T; error?: {code?: string; message?: string; field?: string}};
     if (!response.ok || !payload.success || payload.data === undefined) {
-      throw new AuthError(payload.error?.code ?? 'AUTH_ERROR', payload.error?.message ?? 'Operación no disponible.', payload.error?.field);
+      throw new AuthError(payload.error?.code ?? 'AUTH_ERROR', payload.error?.message ?? 'Operation unavailable.', payload.error?.field);
     }
     return payload.data;
   }
   function setSession(value: AuthSession & {token?: string}): AuthSession {
-    if (!value.token || !value.user?.id) throw new AuthError('INVALID_RESPONSE', 'Falta el token de sesión.');
+    if (!value.token || !value.user?.id) throw new AuthError('INVALID_RESPONSE', 'The session token is missing.');
     token = value.token;
     const {token: _secret, ...safeSession} = value;
     current = safeSession;

@@ -17,7 +17,7 @@ function authAdmin() {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-    if (!projectId) throw new AuthCloudError('CONFIGURATION_ERROR', 'Firebase no está configurado.', undefined, 503);
+    if (!projectId) throw new AuthCloudError('CONFIGURATION_ERROR', 'Firebase is not configured.', undefined, 503);
     initializeApp({
       credential: clientEmail && privateKey ? cert({projectId, clientEmail, privateKey}) : applicationDefault(),
       projectId
@@ -28,7 +28,7 @@ function authAdmin() {
 
 async function identityToolkit(endpoint: 'signUp' | 'signInWithPassword', email: string, password: string): Promise<{idToken: string}> {
   const apiKey = process.env.FIREBASE_WEB_API_KEY;
-  if (!apiKey) throw new AuthCloudError('CONFIGURATION_ERROR', 'Falta FIREBASE_WEB_API_KEY.', undefined, 503);
+  if (!apiKey) throw new AuthCloudError('CONFIGURATION_ERROR', 'FIREBASE_WEB_API_KEY is missing.', undefined, 503);
   let response: Response;
   try {
     response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:${endpoint}?key=${encodeURIComponent(apiKey)}`, {
@@ -36,17 +36,17 @@ async function identityToolkit(endpoint: 'signUp' | 'signInWithPassword', email:
       body: JSON.stringify({email, password, returnSecureToken: true})
     });
   } catch {
-    throw new AuthCloudError('AUTH_PROVIDER_UNAVAILABLE', 'Proveedor de autenticación no disponible.', undefined, 503);
+    throw new AuthCloudError('AUTH_PROVIDER_UNAVAILABLE', 'Authentication provider unavailable.', undefined, 503);
   }
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
     const code = (data && typeof data === 'object' && 'error' in data && (data as {error?: {message?: string}}).error?.message) || '';
-    if (typeof code === 'string' && code.startsWith('EMAIL_EXISTS')) throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'Este correo ya está registrado.', 'email', 409);
-    if (endpoint === 'signInWithPassword') throw new AuthCloudError('INVALID_CREDENTIALS', 'Correo o contraseña incorrectos.', undefined, 401);
-    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'No fue posible crear la cuenta.', undefined, 502);
+    if (typeof code === 'string' && code.startsWith('EMAIL_EXISTS')) throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'This email is already registered.', 'email', 409);
+    if (endpoint === 'signInWithPassword') throw new AuthCloudError('INVALID_CREDENTIALS', 'Incorrect email or password.', undefined, 401);
+    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'Could not create the account.', undefined, 502);
   }
   if (!data || typeof data !== 'object' || !('idToken' in data) || typeof (data as {idToken: unknown}).idToken !== 'string') {
-    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'Respuesta inválida del proveedor.', undefined, 502);
+    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'Invalid authentication provider response.', undefined, 502);
   }
   return {idToken: (data as {idToken: string}).idToken};
 }
@@ -77,8 +77,8 @@ export async function registerCloud(email: string, password: string, role: 'read
     created = await admin.createUser({email, password});
   } catch (error) {
     const code = (error as {code?: string}).code;
-    if (code === 'auth/email-already-exists') throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'Este correo ya está registrado.', 'email', 409);
-    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'No fue posible crear la cuenta.', undefined, 502);
+    if (code === 'auth/email-already-exists') throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'This email is already registered.', 'email', 409);
+    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'Could not create the account.', undefined, 502);
   }
   let reservedName: string | null = null;
   try {
@@ -97,7 +97,7 @@ export async function registerCloud(email: string, password: string, role: 'read
       });
       if (accepted) {reservedName = candidate; break;}
     }
-    if (!reservedName) throw new AuthCloudError('NAME_UNAVAILABLE', 'No hay nombre de usuario disponible.', undefined, 409);
+    if (!reservedName) throw new AuthCloudError('NAME_UNAVAILABLE', 'No username is available.', undefined, 409);
     await admin.updateUser(created.uid, {displayName: reservedName});
     await admin.setCustomUserClaims(created.uid, {role});
     const signed = await identityToolkit('signInWithPassword', email, password);
@@ -133,10 +133,10 @@ export async function verifyFirebaseIdentity(token: string): Promise<VerifiedIde
   }
 }
 export async function currentCloudSession(token: string): Promise<CloudSession> {
-  try {return await toSession(token);} catch {throw new AuthCloudError('UNAUTHENTICATED', 'Sesión inválida.', undefined, 401);}
+  try {return await toSession(token);} catch {throw new AuthCloudError('UNAUTHENTICATED', 'Invalid session.', undefined, 401);}
 }
 export async function logoutCloud(token: string): Promise<void> {
   const identity = await verifyFirebaseIdentity(token);
-  if (!identity) throw new AuthCloudError('UNAUTHENTICATED', 'Sesión inválida.', undefined, 401);
+  if (!identity) throw new AuthCloudError('UNAUTHENTICATED', 'Invalid session.', undefined, 401);
   await authAdmin().revokeRefreshTokens(identity.uid);
 }

@@ -6,7 +6,7 @@ export interface CatalogFilters {
   genreId: string;
 }
 
-// Coincidencia conjunta: texto, categoría y género; nunca mostrar no aprobados.
+// Match text, category, and genre together; never return unapproved books.
 export function filterCatalogBooks(books: BookRecord[], filters: CatalogFilters): BookRecord[] {
   const query = filters.search.trim().toLocaleLowerCase();
   return books.filter((book) =>

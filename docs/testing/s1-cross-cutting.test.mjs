@@ -27,7 +27,7 @@ import {
   listOfflineBookIds,
 } from '../../apps/frontend/src/services/offline-book-service.ts';
 
-// --- Mock ligero de IndexedDB en memoria para simular recargas, corrupción y cuota ---
+// --- Lightweight in-memory IndexedDB mock for reload, corruption, and quota tests ---
 function createIndexedDBMock() {
   const databases = new Map();
   const state = { simulateQuotaError: false };
@@ -243,7 +243,7 @@ test('S1-AC-009 (TC-034): auth session, books, and comments persist across simul
     bookId: 'book-persist-1',
     authorId: 'u-reader-1',
     authorDisplayName: inserted.displayName,
-    content: 'Excelente libro técnico.',
+    content: 'Excellent technical book.',
     createdAt: '2026-11-18T10:05:00.000Z',
     isDeleted: false,
   });
@@ -260,7 +260,7 @@ test('S1-AC-009 (TC-034): auth session, books, and comments persist across simul
   assert.equal(restoredBooks[0].title, 'Clean Architecture');
   assert.equal('fileBlob' in restoredBooks[0], false);
   assert.equal(restoredComments.length, 1);
-  assert.equal(restoredComments[0].content, 'Excelente libro técnico.');
+  assert.equal(restoredComments[0].content, 'Excellent technical book.');
 });
 
 test('S1-AC-009 (TC-035): malformed or corrupt IndexedDB records do not crash repositories', async () => {
@@ -308,11 +308,11 @@ test('S1-AC-009 (TC-037): offline boundary works without network and enforces qu
   idbMock.__state.simulateQuotaError = true;
   await assert.rejects(
     () => downloadBookForOffline(bookRecord),
-    /No hay espacio suficiente/,
+    /Not enough browser storage/,
   );
   assert.equal(await getOfflineBook('book-offline-1'), null);
 
-  // 2) Reintentar tras liberar cuota: debe completarse y leerse offline
+  // 2) Retry after freeing quota: it should complete and be readable offline
   idbMock.__state.simulateQuotaError = false;
   await downloadBookForOffline(bookRecord);
 

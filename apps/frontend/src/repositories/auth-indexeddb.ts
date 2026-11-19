@@ -4,7 +4,7 @@ const DB_NAME = 'libraryflow-auth-sprint1';
 const DB_VERSION = 1;
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    if (typeof indexedDB === 'undefined') { reject(new AuthError('STORAGE_UNAVAILABLE', 'IndexedDB no está disponible.')); return; }
+    if (typeof indexedDB === 'undefined') { reject(new AuthError('STORAGE_UNAVAILABLE', 'IndexedDB is unavailable.')); return; }
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
@@ -12,8 +12,8 @@ function open(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains('sessions')) db.createObjectStore('sessions');
     };
     req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(new AuthError('STORAGE_ERROR', 'No se puede acceder al almacenamiento local.'));
-    req.onblocked = () => reject(new AuthError('STORAGE_BLOCKED', 'Cierra las demás pestañas de LibraryFlow.'));
+    req.onerror = () => reject(new AuthError('STORAGE_ERROR', 'Cannot access local storage.'));
+    req.onblocked = () => reject(new AuthError('STORAGE_BLOCKED', 'Close the other LibraryFlow tabs.'));
   });
 }
 export async function transaction<T>(store: 'users' | 'sessions', mode: IDBTransactionMode, task: (os: IDBObjectStore, done: (v: T) => void) => void): Promise<T> {
@@ -24,9 +24,9 @@ export async function transaction<T>(store: 'users' | 'sessions', mode: IDBTrans
     const tx = db.transaction(store, mode);
     try { task(tx.objectStore(store), v => {result = v; hasResult = true;}); }
     catch (e) { tx.abort(); reject(e); }
-    tx.oncomplete = () => {db.close(); if (hasResult) resolve(result!); else reject(new AuthError('STORAGE_ERROR', 'No se completó la operación.'));};
-    tx.onerror = () => {db.close(); reject(new AuthError('STORAGE_ERROR', 'La operación de almacenamiento falló.'));};
-    tx.onabort = () => {db.close(); reject(new AuthError('STORAGE_ERROR', 'Se canceló la operación de almacenamiento.'));};
+    tx.oncomplete = () => {db.close(); if (hasResult) resolve(result!); else reject(new AuthError('STORAGE_ERROR', 'The operation did not complete.'));};
+    tx.onerror = () => {db.close(); reject(new AuthError('STORAGE_ERROR', 'The storage operation failed.'));};
+    tx.onabort = () => {db.close(); reject(new AuthError('STORAGE_ERROR', 'The storage operation was cancelled.'));};
   });
 }
 export function getUser(email: string): Promise<StoredAuthUser | undefined> {
@@ -55,8 +55,8 @@ export async function insertAuthUser(user: Omit<StoredAuthUser, 'displayName'>):
       done('exhausted');
     };
   });
-  if (result === 'duplicate') throw new AuthError('EMAIL_ALREADY_EXISTS', 'Este correo ya está registrado.', 'email');
-  if (result === 'exhausted') throw new AuthError('NAME_UNAVAILABLE', 'No hay un nombre de usuario disponible.');
+  if (result === 'duplicate') throw new AuthError('EMAIL_ALREADY_EXISTS', 'This email is already registered.', 'email');
+  if (result === 'exhausted') throw new AuthError('NAME_UNAVAILABLE', 'No username is available.');
   return result;
 }
 export function getAllUsers(): Promise<StoredAuthUser[]> {
