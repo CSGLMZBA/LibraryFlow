@@ -2,22 +2,29 @@
 
 These instructions apply to every agent working in this repository. Follow
 them literally. They define the Spec-Driven Development workflow for
-LibraryFlow.
+LibraryFlow. They are generic: each agent must use its own assigned identity,
+owner, responsibilities, and task dependencies.
 
 ## 1. Agent identity and authority
 
-- Agent name: **Orwell**.
-- Owner: **Carlos Gabriel Martinez Bazaldua**.
+- Before development, ask the owner to assign or confirm the agent's singular
+  name and provide the owner's name.
+- Do not assume another agent's name, owner, branch, responsibilities, or
+  task. Never copy identity data from another agent's log.
 - The agent is an AI assistant using Copilot SDK in VS Code with access to the
-  real repository at `/home/main/Dev/LibraryFlow`.
+  real repository.
 - Do not push to a remote repository without explicit owner authorization.
 - Do not claim that a command, test, build, deployment, review, or acceptance
   scenario ran unless its output was actually observed.
 - Ask the owner for clarification before acting when the task, scope, owner,
   dependency, contract, or expected result is ambiguous.
-- Before implementation, report no more than five concise points covering:
+- Before implementation, report no more than five concise points covering the
   bounded task, owner, dependencies, affected files/routes, and verification.
   Wait for owner confirmation before generating code or running tests.
+- After reading the applicable documentation, provide the owner a prioritized
+  summary of the relevant activities, user stories, functionality,
+  specifications, dependencies, and verification commands. Ask the owner to
+  confirm they understand the work before implementation.
 
 ## 2. Scope and implementation discipline
 
@@ -44,7 +51,8 @@ Before any implementation task:
    branch and worktree changes.
 3. Pull the latest `develop` branch with fast-forward-only behavior. Do not
    discard unrelated work or use destructive reset/checkout commands.
-4. Verify the baseline with:
+4. Read the relevant agent logs and documentation, then ask the owner to
+   authorize the baseline commands. Verify the baseline with:
 
    ```text
    npm run typecheck
@@ -54,8 +62,9 @@ Before any implementation task:
 
 5. If the baseline cannot compile or tests fail, stop implementation, record
    the failure in an agent log, report it to the owner, and wait for direction.
-6. Read recent relevant files under `docs/agent-logs/` and the relevant
-   user stories and field rules before editing.
+6. Confirm the required functionality exists before writing dependent code. If
+   it does not exist, record a blocking issue and continue only with unrelated
+   unblocked work.
 
 Do not install dependencies unless a changed dependency manifest requires it or
 the selected verification fails because a package is missing.
@@ -74,8 +83,8 @@ Before any Sprint 2 task, read:
 
 The implementation contract is normative. Do not invent a route, DTO, error
 code, state, persistence shape, environment variable, or role behavior that is
-not in the contract. Update the contract and acceptance register first if a
-new one is necessary.
+not in the contract. If a new one is necessary, report the ambiguity and obtain
+owner approval before updating the contract and acceptance register.
 
 Sprint 2 always enforces these rules:
 
@@ -139,7 +148,9 @@ Sprint 3 always enforces these rules:
 
 Every implementation task must use a stable ID from
 [SPRINT-002-003-TASK-BOARD.md](../sprints/SPRINT-002-003-TASK-BOARD.md), or the
-owner must approve adding one before work starts.
+owner must approve adding one before work starts. The task must be assigned to
+the current agent and owner; do not perform another agent's task without an
+explicit handoff.
 
 Record in the task and agent log:
 
@@ -156,8 +167,8 @@ Record in the task and agent log:
 Do not begin implementation while a required dependency is incomplete. A
 contract-only handoff may be reviewed, but the dependent task remains
 `Blocked` until its dependency is done. Shared DTOs and route names are owned
-by the persistence owner and require Carlos's approval before UI consumers
-change.
+by the persistence owner and require the integration owner designated in the
+applicable sprint plan to approve changes before UI consumers change.
 
 ## 7. Verification and evidence
 
@@ -193,7 +204,7 @@ issue reference, and retest date.
 - Create focused commits with exactly:
 
   ```text
-  <type>(<scope>) [Carlos Gabriel Martinez Bazaldua]: <description>
+  <type>(<scope>) [<owner>]: <description>
   ```
 
 - Include this trailer in every commit unless the owner explicitly says not
@@ -223,4 +234,23 @@ Stop and ask the owner before proceeding when:
 The project is not complete because documentation or code exists. Sprint 2 and
 Sprint 3 are complete only when their acceptance registers contain dated
 evidence, all required deployment checks pass, no critical/high security issue
-remains, and Carlos approves the final demo and release evidence.
+remains, and the designated product owner approves the final demo and release
+evidence.
+
+## 10. First-task readiness response
+
+Before receiving a first implementation task, the agent may create or update
+only a readiness log stating that it understands these instructions and is
+ready to receive a bounded task. It must not modify implementation files or
+run commands/tests merely because it has read this prompt.
+
+When a bounded task is assigned, the agent must report:
+
+1. Agent name and owner.
+2. Task-board ID, sprint, and bounded objective.
+3. Relevant user stories, specifications, contract sections, and dependencies.
+4. Files/routes expected to change.
+5. Exact verification commands or manual scenarios.
+
+The owner must confirm that summary before implementation begins. If the owner
+has not supplied a name, task, or confirmation, stop and ask for it.
