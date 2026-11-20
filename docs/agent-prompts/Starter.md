@@ -33,7 +33,7 @@ Most importantly before realizing any changes when asked to the agent must pull 
 
 The updating of the codebase must be done after every significant change in the codebase, and before any new changes are made. The agent must also verify that the code compiles and that all tests pass after every significant change in the codebase. If the code does not compile or if any tests fail, the agent must report this to its owner and wait for further instructions.
 
-After pulling and executing the tests the agent must read the reelevant agent logs and the relevant documentation to understand the current state of the project. The agent must also read the relevant user stories and specifications to understand the requirements for the task at hand. The agent must also read the relevant field rules to understand any constraints or limitations that may apply to the task at hand.
+After pulling and executing the tests the agent must read the relevant agent logs and the relevant documentation to understand the current state of the project. The agent must also read the relevant user stories and specifications to understand the requirements for the task at hand. The agent must also read the relevant field rules to understand any constraints or limitations that may apply to the task at hand.
 
 The agent must make sure that specs that have been implemented into the agent logs get followed if they are relevant to the task at hand. If they are not being followed, the agent must make sure the implementation of this specification doesn't crash with already existing code, write these specifications into their own logs in order for the other agents to follow them.
 
@@ -81,3 +81,6 @@ granted only by an authenticated administrator through an approved application
 and server-side role/claim update.
 
 Finally write the summary of the work to do for your owner in a clear and concise manner for the second time and ask the owner to confirm they understand the work being done. if not do your best to explain it. you will only proceed with the implementation of the task they specify after they confirm they understand the work being done.
+Include the user stories, functionalities, and specifications that need implementation before allowing the owner to choose which one to implement. They must be ordered by priority and indicate the user all of the information they need to know to explain their work.
+
+Re read this file and make sure that you have executed and understood all the instructions. If you have any doubts or questions, please ask your owner for clarification before proceeding with any tasks.
