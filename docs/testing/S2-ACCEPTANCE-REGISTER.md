@@ -18,3 +18,19 @@ Sprint 2 is pending implementation and deployed evidence.
 | S2-AC-010 | Deployment | Netlify/Render/Firebase/Firestore/Supabase health evidence | Pending |
 
 No item may be marked passed without a dated command or manual scenario.
+
+## Evidence Record Format
+
+For every passed item, record:
+
+- acceptance ID and linked story/contract section;
+- date and environment;
+- actor role and test account type;
+- route or UI path;
+- exact command or manual steps;
+- expected result and actual result;
+- artifact path, screenshot, or deployment URL;
+- reviewer and disposition.
+
+An item remains `Pending` when any required field is missing. A failed item
+must include the failure, owner, issue reference, and retest date.

@@ -99,3 +99,16 @@ Create:
 - a deployed demo log in `docs/agent-logs/`
 
 No item is passed until the test or manual scenario is executed and dated.
+
+## Implementation Contract
+
+Agents must implement against
+[SPEC-002-CONTRACTS.md](../specs/SPEC-002-CONTRACTS.md). It is the shared
+contract for routes, DTOs, validation, state transitions, revisions,
+conflicts, storage, jobs, authentication, deployment variables, handoffs, and
+verification. The application status `expired` is valid for an unresolved
+30-day pending application and never grants publisher privileges.
+
+Execution tasks, dependencies, acceptance IDs, and verification commands are
+tracked in
+[SPRINT-002-003-TASK-BOARD.md](./SPRINT-002-003-TASK-BOARD.md).

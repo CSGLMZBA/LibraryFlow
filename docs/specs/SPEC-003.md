@@ -88,3 +88,12 @@ The product is complete only if all of these are true:
 - Netlify and Render are healthy;
 - Firebase, Firestore, and Supabase are configured and verified;
 - the final browser demo passes from registration through moderation and offline use.
+
+## 10. Normative Implementation Contract
+
+The detailed Sprint 3 implementation contract is in
+[SPEC-003-CONTRACTS.md](./SPEC-003-CONTRACTS.md). It defines shared DTOs,
+routes, validation, authorization, idempotency, offline mutation behavior,
+error codes, empty/loading/error/offline UI states, handoffs, and verification
+evidence. That contract is part of SPEC-003 and must be updated before any
+agent introduces a new route, state, or persistence shape.

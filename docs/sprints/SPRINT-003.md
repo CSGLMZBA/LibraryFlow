@@ -95,3 +95,15 @@ Create:
 - final product-owner sign-off.
 
 The sprint is not complete if an item is documented but never executed.
+
+## Implementation Contract
+
+Agents must implement against
+[SPEC-003-CONTRACTS.md](../specs/SPEC-003-CONTRACTS.md). It is the shared
+contract for domain routes, DTOs, validation, ownership, ratings, favorites,
+follows, pricing, credits, dummy purchases, idempotency, offline behavior,
+accessibility states, handoffs, and verification evidence.
+
+Execution tasks, dependencies, acceptance IDs, and verification commands are
+tracked in
+[SPRINT-002-003-TASK-BOARD.md](./SPRINT-002-003-TASK-BOARD.md).

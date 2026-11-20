@@ -115,3 +115,13 @@ Sprint 2 is complete only when the acceptance suite and manual evidence confirm:
 - scheduled deletion is idempotent;
 - Netlify and Render communicate through configured CORS;
 - deployment health, logs, backup, and rollback evidence exist.
+
+## 10. Normative Implementation Contract
+
+The detailed Sprint 2 implementation contract is in
+[SPEC-002-CONTRACTS.md](./SPEC-002-CONTRACTS.md). It defines the API envelope,
+status codes, DTOs, validation limits, state transitions, revision/conflict
+behavior, storage paths, deletion jobs, authentication lifecycle,
+notifications, environment variables, ownership handoffs, and verification
+commands. That contract is part of SPEC-002 and must be updated before any
+agent introduces a new route, state, or persistence shape.

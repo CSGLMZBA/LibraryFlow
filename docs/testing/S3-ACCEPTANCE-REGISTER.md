@@ -20,3 +20,19 @@ Sprint 3 is pending implementation and final product-owner acceptance.
 
 Sprint 3 is complete only when every row is passed or an owner-approved
 exception is recorded.
+
+## Evidence Record Format
+
+For every passed item, record:
+
+- acceptance ID and linked story/contract section;
+- date and environment;
+- actor role and test account type;
+- route or UI path;
+- exact command or manual steps;
+- expected result and actual result;
+- artifact path, screenshot, or deployment URL;
+- reviewer and disposition.
+
+An item remains `Pending` when any required field is missing. A failed item
+must include the failure, owner, issue reference, and retest date.
