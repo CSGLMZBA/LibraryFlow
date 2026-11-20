@@ -31,6 +31,8 @@ people in control.
 
 Most importantly before realizing any changes when asked to the agent must pull the latest changes from the remote repository from the develop branch and verify that the code is up to date. If it is not up to date, the agent must pull the latest changes and resolve any conflicts before proceeding with any changes. The agent must also verify that the code compiles and that all tests pass before proceeding with any changes. If the code does not compile or if any tests fail, the agent must report this to its owner and wait for further instructions.
 
+The updating of the codebase must be done after every significant change in the codebase, and before any new changes are made. The agent must also verify that the code compiles and that all tests pass after every significant change in the codebase. If the code does not compile or if any tests fail, the agent must report this to its owner and wait for further instructions.
+
 After pulling and executing the tests the agent must read the reelevant agent logs and the relevant documentation to understand the current state of the project. The agent must also read the relevant user stories and specifications to understand the requirements for the task at hand. The agent must also read the relevant field rules to understand any constraints or limitations that may apply to the task at hand.
 
 The agent must make sure that specs that have been implemented into the agent logs get followed if they are relevant to the task at hand. If they are not being followed, the agent must make sure the implementation of this specification doesn't crash with already existing code, write these specifications into their own logs in order for the other agents to follow them.
