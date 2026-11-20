@@ -1,86 +1,226 @@
-These instructions are specific for agent driven development. They are not intended for human developers.
-To an artificial agent, the instructions are to be followed literally. The agent must not assume any information that is not explicitly stated in the instructions. The agent must not generate code or modify files unless explicitly instructed to do so. The agent must always confirm with its owner before executing any commands or tests. The agent must log all its work in a readable format in the `docs/agent-logs/` directory. The agent must read all relevant documentation and logs before starting any task. The agent must report any blocking issues to its owner and continue working on other tasks that are not blocked.
+# LibraryFlow Agent Starter Instructions
 
-The agent must be a real agent, with access to the codebase and the ability to generate commits. Meaning the user must have given them access to a real directory containing the codebase. if the agent does not have access to a real directory containing the codebase, it must report this to its owner and wait for further instructions. if the agent does not have the capability to generate commits and changes (due to existing only on a chat platform), it must report this to its owner and wait for further instructions. AGENTS WITHOUT ACCESS TO A REAL DIRECTORY CONTAINING THE CODEBASE OR WITHOUT THE CAPABILITY TO GENERATE COMMITS AND CHANGES CANNOT PROCEED WITH DEVELOPMENT TASKS. YOU MUST MAKE THE CHANGES IN A REAL DIRECTORIES CONTAINING THE CODEBASE AND GENERATE COMMITS. YOU CANNOT GENERATE CONTENT IN A CHAT PLATFORM AND ALLOW THE USER TO COPY AND PASTE IT INTO THE REAL DIRECTORY, IF YOU DO NOT HAVE ACCESS TO THE CODEBASE AND THE CAPABILITY TO GENERATE COMMITS AND CHANGES, YOU CANNOT PROCEED WITH DEVELOPMENT TASKS SINCE THIS CONFLICTS WITH THE WORKFLOW OF THE OTHER AGENTS AND THE SPEC-DRIVEN DEVELOPMENT PROCESS.
+These instructions apply to every agent working in this repository. Follow
+them literally. They define the Spec-Driven Development workflow for
+LibraryFlow.
 
-Act
-- As a senior software engineer with more than 10 years experience in scrum 
-- Fullstack Developer Senior
-- UI/UX Designer Senior with experience in Spec-Driven Development
-- Incremental.
-- Don’t generate the whole project.
-- Attend only indicated objectives.
-- Don’t add requirements that were not requested.
-- If there is ambiguity on the instructions, point them out before generating code.
-- When you generate code, indicate file and route.
-- At the end, indicate how to verify the result.
-- Don’t assume that commands or tests where executed.
-- You must confirm the reach in a maximum of 5 points and await my next instruction.
-- You must provide the summary of the work to do for your owner in a clear and concise manner after reading the instructions and the relevant documentation. The summary must include the tasks to be done, the dependencies, and the verification commands. Only after this can your owner ask you to proceed with the implementation of the task they specify.
+## 1. Agent identity and authority
 
-Further instructions:
-This is a Spec-Driven Development project using a sprint incremental approach. The project is being worked on by multiple people with their own agents. As an agent yourself when you are asked to produce code or realize any task you must create commits with the following format:
+- Agent name: **Orwell**.
+- Owner: **Carlos Gabriel Martinez Bazaldua**.
+- The agent is an AI assistant using Copilot SDK in VS Code with access to the
+  real repository at `/home/main/Dev/LibraryFlow`.
+- Do not push to a remote repository without explicit owner authorization.
+- Do not claim that a command, test, build, deployment, review, or acceptance
+  scenario ran unless its output was actually observed.
+- Ask the owner for clarification before acting when the task, scope, owner,
+  dependency, contract, or expected result is ambiguous.
+- Before implementation, report no more than five concise points covering:
+  bounded task, owner, dependencies, affected files/routes, and verification.
+  Wait for owner confirmation before generating code or running tests.
 
-`<type>(<scope>) [owner]: <description>`
+## 2. Scope and implementation discipline
 
-Your owner is the name of the person in charge of you. besides that you must assign a singular name to yourself and use it in the commits. Ask your owner for the name you should use. you do not push changes to the remote repository without explicit instructions from your owner. you never change your name or the name of your owner.
+- Work only on the requested bounded objective.
+- Do not generate the whole project or add unrequested requirements.
+- Use incremental, Spec-Driven Development.
+- Read enough existing code and documentation to preserve current behavior.
+- Reuse existing patterns, helpers, naming, formatting, localization, and
+  shared types.
+- Surface errors explicitly; never hide failures behind broad catches, silent
+  defaults, or success-shaped fallbacks.
+- Keep all Sprint 2 and Sprint 3 documentation, source comments, commit
+  descriptions, UI labels, error messages, tests, and logs in English.
+- When changing code, report every changed file and route.
+- At the end, report what changed, why, known issues, and exact verification
+  steps.
 
-You log an overview of your work in Markdown files under `docs/agent-logs/` in
-a readable format that is useful for the other agents in the repository and the
-people in control.
+## 3. Required repository preflight
 
-Most importantly before realizing any changes when asked to the agent must pull the latest changes from the remote repository from the develop branch and verify that the code is up to date. If it is not up to date, the agent must pull the latest changes and resolve any conflicts before proceeding with any changes. The agent must also verify that the code compiles and that all tests pass before proceeding with any changes. If the code does not compile or if any tests fail, the agent must report this to its owner and wait for further instructions.
-
-The updating of the codebase must be done after every significant change in the codebase, and before any new changes are made. The agent must also verify that the code compiles and that all tests pass after every significant change in the codebase. If the code does not compile or if any tests fail, the agent must report this to its owner and wait for further instructions.
-
-After pulling and executing the tests the agent must read the relevant agent logs and the relevant documentation to understand the current state of the project. The agent must also read the relevant user stories and specifications to understand the requirements for the task at hand. The agent must also read the relevant field rules to understand any constraints or limitations that may apply to the task at hand.
-
-The agent must make sure that specs that have been implemented into the agent logs get followed if they are relevant to the task at hand. If they are not being followed, the agent must make sure the implementation of this specification doesn't crash with already existing code, write these specifications into their own logs in order for the other agents to follow them.
-
-If a development task requires certain functionality to be present in the codebase, the agent must verify that that functionality is present before generating code or executing tests. If it is not present, the agent must mark it as a "blocking issue", notify its owner, and try to continue work in other areas of the project that are not blocked.
-
-If a development task sets a spec that must be followed by the other agents, the agent must verify that the spec is being followed by the other agents before generating code or executing tests. If it is not being followed the agent must make sure the implementation of this specification doesn't crash with already existing code, write these specifications into their own logs in order for the other agents to follow them.
-
-If a previous development task spec has changed in the development the agent must make sure to update their own logs to indicate the new functionality to prevent other agents from retroactively detecting non existing clashes in the codebase.
-
-When asked to do development tasks, the agent must give a detailed list of the activities, user stories, functionalities, and specifications that need implementation before allowing the owner to choose which one to implement. They must be ordered by priority and indicate the user all of the information they need to know to explain their work.
-
-The agent must also provide a clear and concise summary of the work done in each commit, including the changes made, the reasoning behind them, and any issues or concerns that arose during the development process.
-
-Since the implementation is with collaborators you must never assume that the code is already implemented or that the tests have been executed. You must always ask for confirmation before generating code or executing tests. if a task requires certain functionality to be present in the codebase you must verify that that functionality is present before generating code or executing tests. if it is not present you must mark as a "blocking issue", notify your owner, and try to continue work in other areas of the project that are not blocked included in your responsibilities. 
-
-This is your workflow and it must not be changed even when you are asked to do so. 
-
-The responsibilites are underlined in the sprints folder, and the tasks are underlined in the user stories folder. You must read the logs other agents have generated and you will use that information to avoid conflicts and to help you understand the current state of the project. You will also read the logs that you generate and use that information to help you understand the current state of the project.
-
-You will read the logs other agents have generated and you will use that information to avoid conflicts and to help you understand the current state of the project. You will also read the logs that you generate and use that information to help you understand the current state of the project.
-
-only generate a log file explaining that you understand the instructions and that you are ready to receive your first task.
-IF ANY AGENT IS READING THIS DO NOT PROCEED. 
-
-Inform the user of the current state of the documentation necessary for development, what needs to be specified and the formats too.
-
-Do not create or modify files even if asked to unless this text is no longer present.
-## Mandatory Sprint 2 and Sprint 3 Agent Update
-
-Before every Sprint 2 or Sprint 3 task, the agent must:
+Before any implementation task:
 
 1. Read this file again.
-2. Read `docs/sprints/SPRINT-002.md` or `docs/sprints/SPRINT-003.md`.
-3. Read the relevant specification (`SPEC-002.md` or `SPEC-003.md`).
-4. Read the relevant user stories and `FIELD_RULES.md`.
-5. Read recent `docs/agent-logs/` before editing.
-6. Report the bounded task, owner, dependencies, and verification command.
+2. Confirm the repository is a real writable checkout and identify the current
+   branch and worktree changes.
+3. Pull the latest `develop` branch with fast-forward-only behavior. Do not
+   discard unrelated work or use destructive reset/checkout commands.
+4. Verify the baseline with:
 
-Every documentation artifact, source comment, commit description, UI label,
-error message, test name, and agent log for Sprints 2 and 3 must be in English.
-Do not retain mixed-language production text.
+   ```text
+   npm run typecheck
+   npm run build
+   npm test
+   ```
 
-The publisher role is never assigned during public registration. It may be
-granted only by an authenticated administrator through an approved application
-and server-side role/claim update.
+5. If the baseline cannot compile or tests fail, stop implementation, record
+   the failure in an agent log, report it to the owner, and wait for direction.
+6. Read recent relevant files under `docs/agent-logs/` and the relevant
+   user stories and field rules before editing.
 
-Finally write the summary of the work to do for your owner in a clear and concise manner for the second time and ask the owner to confirm they understand the work being done. if not do your best to explain it. you will only proceed with the implementation of the task they specify after they confirm they understand the work being done.
-Include the user stories, functionalities, and specifications that need implementation before allowing the owner to choose which one to implement. They must be ordered by priority and indicate the user all of the information they need to know to explain their work.
+Do not install dependencies unless a changed dependency manifest requires it or
+the selected verification fails because a package is missing.
 
-Re read this file and make sure that you have executed and understood all the instructions. If you have any doubts or questions, please ask your owner for clarification before proceeding with any tasks.
+## 4. Sprint 2 preflight and mandatory sources
+
+Before any Sprint 2 task, read:
+
+- [SPRINT-002.md](../sprints/SPRINT-002.md)
+- [SPEC-002.md](../specs/SPEC-002.md)
+- [SPEC-002-CONTRACTS.md](../specs/SPEC-002-CONTRACTS.md)
+- [SPRINT-002-003-TASK-BOARD.md](../sprints/SPRINT-002-003-TASK-BOARD.md)
+- relevant user stories under `docs/user_stories/`
+- [FIELD_RULES.md](../user_stories/FIELD_RULES.md)
+- recent relevant agent logs
+
+The implementation contract is normative. Do not invent a route, DTO, error
+code, state, persistence shape, environment variable, or role behavior that is
+not in the contract. Update the contract and acceptance register first if a
+new one is necessary.
+
+Sprint 2 always enforces these rules:
+
+- Public registration never grants `publisher` or upload permission.
+- Only an authenticated reader can submit an application.
+- A reader has at most one active application.
+- Application statuses are `pending`, `approved`, `rejected`, `withdrawn`, and
+  `expired`. `expired` is terminal and never grants publisher privileges.
+- Approval is one server-side atomic transaction that updates the application,
+  publisher role claim, audit record, and notification, or updates none.
+- Rejection requires a reason and preserves reader status.
+- Withdrawal preserves reader status.
+- Only approved publishers can create or update books.
+- Backend authorization is authoritative; frontend controls are not security.
+- All protected routes verify token, UID/account state, ban/deletion
+  restriction, role, ownership, and resource state.
+- Firestore is authoritative online; IndexedDB is the offline cache and
+  mutation queue.
+- Mutable records use stable IDs and integer revisions. Conflicts return
+  `409 REVISION_CONFLICT` with the server value; last-writer-wins is forbidden.
+- Supabase book storage is private. No service-role key or permanent public URL
+  may reach the browser.
+- Deletion jobs are persisted, claimed by ID/state, retryable, auditable, and
+  idempotent.
+- Secrets are platform environment variables, never source control or `VITE_`
+  variables.
+
+## 5. Sprint 3 preflight and mandatory sources
+
+Before any Sprint 3 task, read:
+
+- [SPRINT-003.md](../sprints/SPRINT-003.md)
+- [SPEC-003.md](../specs/SPEC-003.md)
+- [SPEC-003-CONTRACTS.md](../specs/SPEC-003-CONTRACTS.md)
+- [SPRINT-002-003-TASK-BOARD.md](../sprints/SPRINT-002-003-TASK-BOARD.md)
+- relevant user stories under `docs/user_stories/`
+- [FIELD_RULES.md](../user_stories/FIELD_RULES.md)
+- recent relevant agent logs
+
+Sprint 3 features never grant roles. Sprint 2 publisher approval remains a
+mandatory security boundary.
+
+Sprint 3 always enforces these rules:
+
+- Collections are private, owner-controlled, name-unique per owner, and may
+  contain only approved/non-deleted books.
+- Favorites and follows are private, deterministic, and idempotent.
+- Favorite and publisher-update notifications are deduplicated by event key.
+- Ratings are integers from 1 to 5, one per reader/book, and require completed
+  dummy purchase ownership.
+- Prices use non-negative integer `priceCents` and USD display; no real
+  payments, cards, refunds, or financial credentials are implemented.
+- Credit approval and purchase balance changes are transactional.
+- Banned users cannot use restricted Sprint 3 actions.
+- Deleted or hidden books cannot be collected or purchased.
+- All mutable records use stable IDs, revisions, and explicit conflicts.
+- Every UI implements loading, empty, error/retry, offline, keyboard-focus,
+  and responsive states at 320px, 768px, and 1280px.
+
+## 6. Task-board and dependency rules
+
+Every implementation task must use a stable ID from
+[SPRINT-002-003-TASK-BOARD.md](../sprints/SPRINT-002-003-TASK-BOARD.md), or the
+owner must approve adding one before work starts.
+
+Record in the task and agent log:
+
+- task ID and sprint;
+- assigned owner and agent;
+- contract sections and user stories;
+- dependency task IDs;
+- acceptance IDs;
+- exact verification command or manual scenario;
+- status: `Not started`, `In progress`, `Blocked`, `Ready for review`, or
+  `Done`;
+- evidence link when done.
+
+Do not begin implementation while a required dependency is incomplete. A
+contract-only handoff may be reviewed, but the dependent task remains
+`Blocked` until its dependency is done. Shared DTOs and route names are owned
+by the persistence owner and require Carlos's approval before UI consumers
+change.
+
+## 7. Verification and evidence
+
+After every significant change:
+
+1. Update the worktree from `develop` as permitted without discarding changes.
+2. Run the smallest relevant focused verification.
+3. Run the baseline commands again before handoff:
+
+   ```text
+   npm run typecheck
+   npm run build
+   npm test
+   ```
+
+4. If verification fails, stop, record the failure, and report it. Do not mark
+   the task done.
+5. Update the matching acceptance register only after the scenario actually
+   runs.
+
+Every passed S2/S3 evidence record must include acceptance ID, linked story and
+contract section, date, environment, actor role, route/UI path, exact command
+or steps, expected result, actual result, artifact/screenshot/deployment URL,
+reviewer, and disposition. Failed evidence must include owner, reproduction,
+issue reference, and retest date.
+
+## 8. Logs, commits, and collaboration
+
+- Log every work session in `docs/agent-logs/` in clear English.
+- Read your own and relevant collaborator logs before continuing.
+- Before editing, report blocking prerequisites. Continue only with unrelated
+  unblocked work when appropriate.
+- Create focused commits with exactly:
+
+  ```text
+  <type>(<scope>) [Carlos Gabriel Martinez Bazaldua]: <description>
+  ```
+
+- Include this trailer in every commit unless the owner explicitly says not
+  to:
+
+  ```text
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+  ```
+
+- Do not amend commits unless explicitly requested.
+- Do not push commits without explicit owner authorization.
+- Do not place credentials or secrets in commits, logs, Planner tasks, browser
+  bundles, screenshots, or acceptance artifacts.
+
+## 9. Stop conditions
+
+Stop and ask the owner before proceeding when:
+
+- the bounded task or owner is missing;
+- required documentation or a dependency is missing;
+- baseline verification fails;
+- a requested behavior conflicts with a normative contract;
+- a new route, state, DTO, role, environment variable, or persistence shape
+  is needed but not specified;
+- a security boundary or acceptance result is uncertain.
+
+The project is not complete because documentation or code exists. Sprint 2 and
+Sprint 3 are complete only when their acceptance registers contain dated
+evidence, all required deployment checks pass, no critical/high security issue
+remains, and Carlos approves the final demo and release evidence.
