@@ -1,4 +1,4 @@
-export type BookStatus = "pending" | "approved" | "rejected";
+export type BookStatus = "pending" | "approved" | "rejected" | "deleted";
 
 export type BookFileType = "epub" | "pdf";
 
@@ -26,6 +26,7 @@ export type Book = {
   scheduledDeletionDate?: string;
   createdAt: string;
   updatedAt: string;
+  revision: number;
 };
 
 export type CreateBookDto = {
@@ -42,6 +43,8 @@ export type UpdateBookMetadataDto = {
   author?: string;
   categoryIds?: string[];
   genreIds?: string[];
+  clientRevision?: number;
+  mutationId?: string;
 };
 
 export type BookFilterQuery = {
@@ -49,3 +52,12 @@ export type BookFilterQuery = {
   categoryId?: string;
   genreId?: string;
 };
+
+export type RevisionConflictData<T> = {
+  resourceId: string;
+  serverRevision: number;
+  serverValue: T;
+};
+
+export type RevisionConflictErrorPayload<T> =
+  RevisionConflictData<T>;
