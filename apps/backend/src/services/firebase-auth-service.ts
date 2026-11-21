@@ -69,7 +69,7 @@ async function toSession(token: string): Promise<CloudSession> {
   };
 }
 
-export async function registerCloud(email: string, password: string, role: 'reader' | 'publisher'): Promise<CloudSession> {
+export async function registerCloud(email: string, password: string, _requestedRole: 'reader' | 'publisher'): Promise<CloudSession> {
   const admin = authAdmin();
   let created: Awaited<ReturnType<typeof admin.createUser>>;
   try {
@@ -99,7 +99,9 @@ export async function registerCloud(email: string, password: string, role: 'read
     }
     if (!reservedName) throw new AuthCloudError('NAME_UNAVAILABLE', 'No username is available.', undefined, 409);
     await admin.updateUser(created.uid, {displayName: reservedName});
-    await admin.setCustomUserClaims(created.uid, {role});
+    // Public registration must never grant publisher privileges.
+// Publisher claims are assigned only after moderator approval.
+    await admin.setCustomUserClaims(created.uid, {role: 'reader'});
     const signed = await identityToolkit('signInWithPassword', email, password);
     return await toSession(signed.idToken);
   } catch (error) {
