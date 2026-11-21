@@ -10,7 +10,7 @@ Sprint 2 is pending implementation and deployed evidence.
 | S2-AC-002 | Administrator approval | UID claims and reader-to-publisher transition evidence | Passed |
 | S2-AC-003 | Administrator rejection | Reason, notification, reader role unchanged | Passed |
 | S2-AC-004 | Upload authorization | Reader/pending/rejected cannot call upload APIs | Pending |
-| S2-AC-005 | Cloud synchronization | Reload, stable IDs, revision/conflict evidence | Pending |
+| S2-AC-005 | Cloud synchronization | Reload, stable IDs, revision/conflict evidence | Passed |
 | S2-AC-006 | Supabase storage | Private file, 20 MB, approved visibility | Pending |
 | S2-AC-007 | Scheduled cleanup | 24-hour rejection/deletion job and retry evidence | Pending |
 | S2-AC-008 | Moderation | Ban, publisher revoke, book delete, audit records | Pending |
@@ -57,5 +57,29 @@ must include the failure, owner, issue reference, and retest date.
   `docs/testing/s2-publisher-application.test.mjs`
 - Work log:
   `docs/agent-logs/vulcan-publisher-applications.md`
+- Reviewer: Juan Carlos Zúñiga Alfaro
+- Disposition: Passed
+
+## Passed Evidence — S2-T03 Firestore Revisions and Mutation Idempotency
+
+- Acceptance ID: `S2-AC-005`
+- Linked stories: Stable-ID cloud synchronization and revision/conflict behavior
+- Contract: `SPEC-002-CONTRACTS.md` §3 and §4
+- Date: 2026-11-21
+- Environment: Local
+- Actor role: Publisher and moderator
+- Route/UI path: `BookService` repository and revision update paths
+- Exact command: `npx tsx --test docs/testing/s2-revisions-conflicts.test.mjs`
+- Expected result:
+  New books start at revision 1; matching revisions increment to 2; stale
+  revisions return `RevisionConflictError` with the server revision and value;
+  identical mutation IDs return the cached result; moderator deletion marks
+  the book deleted and increments revision.
+- Actual result:
+  5 tests passed, 0 failed.
+- Artifact:
+  `docs/testing/s2-revisions-conflicts.test.mjs`
+- Work log:
+  `docs/agent-logs/vulcan-firestore-revisions.md`
 - Reviewer: Juan Carlos Zúñiga Alfaro
 - Disposition: Passed
