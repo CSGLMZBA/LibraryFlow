@@ -206,3 +206,73 @@ must include the failure, owner, issue reference, and retest date.
 - Work log: `docs/agent-logs/vulcan-firestore-revisions.md`
 - Reviewer: Juan Carlos Zúñiga Alfaro
 - Disposition: Passed
+
+## S2-T01 incremental verification — 2026-11-21
+
+- Acceptance: S2-AC-009 (partial); US-REA-010, US-REA-019, US-REA-020;
+  SPEC-002-CONTRACTS.md sections 1.1–1.3 and 6.
+- Environment: Work Linux, Node.js 24.22.3; mocked Firebase client/admin and
+  HTTP transport. Actor: reader; wrong-role publisher access is rejected.
+- Paths: /api/v1/auth/session, /refresh, /logout (adapter/service calls).
+- Command: npm test, with focused cases in s2-auth-lifecycle.test.mjs,
+  s2-auth-registration.test.mjs and s1-cross-cutting.test.mjs.
+- Expected: restore/renew tokens, verify roles and revoked credentials,
+  clear SDK state on logout, deny late restoration, preserve errors on outages,
+  and prevent local public publisher registration.
+- Actual: focused automated scenarios pass. Live Firebase/browser scenarios,
+  inactivity expiry and account lifecycle remain pending.
+- Artifacts: docs/testing/s2-auth-lifecycle.test.mjs;
+  docs/testing/S2-AUTH-SESSION-HANDOFF.md;
+  docs/agent-logs/codex-s2-t01-session-2026-11-21.md.
+- Reviewer: team review pending. Disposition: Partial; S2-AC-009 stays Pending.
+- Baseline defect: nonexistent approve import in
+  s2-publisher-application.test.mjs prevented module loading. Removed the
+  unused import and reran the baseline successfully; no application service
+  implementation was changed. Owner of this correction: Bryan.
+
+## S2-T01 / S2-T06 contract amendment and behavioral evidence
+
+- Owner authorization: Bryan requested modification of the MD and continuation
+  of his Sprint 2 implementation; SPEC-002-CONTRACTS.md section 10 documents
+  the resulting clarification for integration review.
+- Acceptance/story mapping: S2-AC-009, TC-S2-044–052; US-REA-019/020/017 and
+  US-MOD-011; SPEC-002-CONTRACTS.md sections 1, 6 and 10.
+- Environment: Work Linux, Node.js 24.22.3; reader and moderator fixtures;
+  controlled clocks, transactional memory test storage and mocked Firebase/HTTP.
+- Paths: /api/v1/auth/session, /refresh, /logout;
+  /api/v1/account/deletion-request, /deletion-cancel;
+  /api/v1/moderation/accounts/:uid/restore.
+- Command: npm run typecheck; npm run build; npm test.
+- Observed result: typecheck/build passed; Sprint 1 20 passed, Sprint 2 88
+  passed, 0 failures. 42 unrelated inherited placeholder assertions remain.
+- Expected and actual: 30-minute boundary/replay denial, renewed-token
+  replacement, revocation, 30-day job and queued-email creation, restricted
+  accounts, cancellation/worker boundary, moderator permission/revision checks
+  and public-field redaction behave as covered by the focused suites.
+- Artifacts: s2-account-policy.test.mjs, s2-account-routes.test.mjs,
+  s2-auth-lifecycle.test.mjs, s2-auth-routes.test.mjs and
+  S2-AUTH-SESSION-HANDOFF.md.
+- Review disposition: automated service/router checks passed; independent
+  reviewer and live Firebase/Firestore/browser evidence pending. S2-AC-009
+  remains Pending. Queued email is not proof of delivery; permanent deletion,
+  settings UI, cloud rules deployment and delivery worker remain cross-owner
+  handoffs rather than fabricated passed scenarios.
+
+### Bryan S2-T01 / S2-T06 moderator-request clarification — 2026-11-22
+
+- Owner: Bryan Alessandro Peralta Gutierrez; agent: Codex.
+- Contract: SPEC-002-CONTRACTS.md sections 6 and 10 now distinguish a user
+  cancellation request from moderator approval, as clarified by the team.
+- Verified deletion-pending login exposes the request action. Submission
+  returns 202 pending without clearing restrictions or issuing a session.
+  An active moderator lists and explicitly approves a request with the
+  current account revision. No self restoration is permitted.
+- Automated checks: typecheck and production build passed; Sprint 1 20 and
+  Sprint 2 97 passed, 0 failures. Nine added behavioral checks cover request
+  idempotency, moderator-only approval/listing, missing requests, deadlines,
+  claimed jobs, frontend transport and selective recovery error exposure.
+- Evidence: s2-account-policy.test.mjs, s2-account-routes.test.mjs,
+  s2-auth-lifecycle.test.mjs and s2-auth-routes.test.mjs.
+- Limits: 42 inherited unrelated placeholders are not acceptance evidence.
+  No live Firebase, Firestore emulator, deployed browser, email delivery or
+  permanent erasure evidence is claimed. S2-AC-009 remains Pending.
