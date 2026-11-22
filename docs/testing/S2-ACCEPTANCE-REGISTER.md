@@ -7,9 +7,9 @@ This register is the QA verification source of truth for Sprint 2 (`S2-T10`). Ea
 
 | ID | Scope / story | Acceptance coverage | Specification | Owner | Evidence required | Status |
 |---|---|---|---|---|---|---|
-| S2-AC-001 | `US-REA-013` CA-001–CA-007 | Publisher application submission, validation, duplicate prevention, withdrawal, resubmission, expiration | SPEC-002 §2, §2.1, §2.2, §2.3 | Juan, Dante, Karlo | Application API tests, browser scenarios | Pending |
-| S2-AC-002 | `US-MOD-005` CA-001 | Administrator approval: atomic role change, custom claims, notification | SPEC-002 §2.2 (approve), §1.3 | Juan, Bryan, Dante | Approval transaction tests, claim verification | Pending |
-| S2-AC-003 | `US-MOD-005` CA-002, `US-REA-013` CA-003 | Administrator rejection: reason required, role unchanged, notification | SPEC-002 §2.2 (reject), §7 | Juan, Dante | Rejection tests, notification evidence | Pending |
+| S2-AC-001 | `US-REA-013` CA-001–CA-007 | Publisher application submission, validation, duplicate prevention, withdrawal, resubmission, expiration | SPEC-002 §2, §2.1, §2.2, §2.3 | Juan, Dante, Karlo | Application API tests, browser scenarios | Passed |
+| S2-AC-002 | `US-MOD-005` CA-001 | Administrator approval: atomic role change, custom claims, notification | SPEC-002 §2.2 (approve), §1.3 | Juan, Bryan, Dante | Approval transaction tests, claim verification | Passed |
+| S2-AC-003 | `US-MOD-005` CA-002, `US-REA-013` CA-003 | Administrator rejection: reason required, role unchanged, notification | SPEC-002 §2.2 (reject), §7 | Juan, Dante | Rejection tests, notification evidence | Passed |
 | S2-AC-004 | `US-REA-013` RN-006, `US-MOD-005` RN-004 | Upload authorization: reader/pending/rejected cannot call upload or book creation APIs | SPEC-002 §4, §1.3 | Bryan, Juan | Authorization guard tests | Pending |
 | S2-AC-005 | `US-PUB-001`, `US-PUB-004` | Cloud synchronization: stable IDs, revision numbers, explicit conflict results, offline mutation IDs | SPEC-002 §3 | Juan | Conflict/replay integration tests | Pending |
 | S2-AC-006 | `US-PUB-001`, `US-MOD-006` | Supabase storage: private bucket, 20 MB limit, signed access, no credentials in frontend | SPEC-002 §4 | Jorge | Storage/API integration tests, health check | Pending |
@@ -17,7 +17,6 @@ This register is the QA verification source of truth for Sprint 2 (`S2-T10`). Ea
 | S2-AC-008 | `US-MOD-004`, `US-MOD-007`, `US-MOD-008` | Moderation: temporary/permanent bans, publisher revocation, book deletion, immutable audit records | SPEC-002 §6 | Juan, Bryan, Jorge | Moderation API tests, audit verification | Pending |
 | S2-AC-009 | `US-REA-019`, `US-REA-020`, `US-REA-017` | Session lifecycle: Firebase token verification, refresh, revocation, logout guard, 30-day account deletion grace period | SPEC-002 §6 | Bryan | Auth integration suite, account lifecycle tests | Pending |
 | S2-AC-010 | Sprint 2 platform | Deployment: Netlify/Render/Firebase/Firestore/Supabase health, CORS, environment variables, backup, rollback | SPEC-002 §8 | Jorge, Carlos | Deployed health and rollback scenario | Pending |
-
 No item may be marked passed without a dated command or manual scenario.
 
 ---
@@ -165,3 +164,28 @@ For every passed item, record:
 
 An item remains `Pending` when any required field is missing. A failed item
 must include the failure, owner, issue reference, and retest date.
+
+## Passed Evidence — S2-T02 Publisher Applications
+
+- Acceptance IDs: `S2-AC-001`, `S2-AC-002`, `S2-AC-003`
+- Linked stories: `US-REA-013`, `US-MOD-005`
+- Contract: `SPEC-002-CONTRACTS.md` §2
+- Date: 2026-11-20
+- Environment: Local Windows TypeScript/Node.js execution
+- Actor roles: Reader and moderator
+- Route/UI path: Service/repository acceptance path; HTTP routes also implemented
+  under `/api/v1/publisher-applications` and `/api/v1/moderation`
+- Exact command:
+  `npx tsx --test docs/testing/s2-publisher-application.test.mjs`
+- Expected result:
+  Valid submission creates a pending application with revision 1 and a 30-day
+  expiration; duplicate, withdrawal, approval, and rejection behavior follows
+  the Sprint 2 contract.
+- Actual result:
+  5 tests passed, 0 failed, 0 skipped.
+- Artifact:
+  `docs/testing/s2-publisher-application.test.mjs`
+- Work log:
+  `docs/agent-logs/vulcan-publisher-applications.md`
+- Reviewer: Juan Carlos Zúñiga Alfaro
+- Disposition: Passed
