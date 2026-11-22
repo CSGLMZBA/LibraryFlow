@@ -9,7 +9,7 @@ import { PublisherApplicationForm } from "./components/PublisherApplicationForm"
 
 function WorkspaceShell() {
   // Get authentication state.
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, authNotice } = useAuth();
 
   // Allow visitors to browse the catalog.
   const [showGuestCatalog, setShowGuestCatalog] = useState(false);
@@ -76,6 +76,7 @@ function WorkspaceShell() {
 
       {/* Main content */}
       <main className="mx-auto max-w-6xl px-4 py-8">
+        {authNotice && <p role="status" className="mb-4 text-sm">{authNotice}</p>}
 
         {/* Case 1: unauthenticated user */}
         {!isAuthenticated || !user ? (

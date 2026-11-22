@@ -7,6 +7,8 @@ import { classificationRouter } from "./routes/classification-routes.js";
 import { moderationRouter } from "./routes/moderation-routes.js";
 import { publisherApplicationRouter } from "./routes/publisher-application-routes.js";
 
+import { accountRouter } from "./routes/account-routes.js";
+
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 
@@ -44,6 +46,7 @@ app.use((request, response, next) => {
 app.use(express.json({ limit: "100kb" }));
 
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1", accountRouter);
 app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/classifications", classificationRouter);
 app.use("/api/v1/publisher-applications", publisherApplicationRouter);

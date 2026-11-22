@@ -11,7 +11,7 @@ This register is the QA verification source of truth for Sprint 2 (`S2-T10`). Ea
 | S2-AC-002 | `US-MOD-005` CA-001 | Administrator approval: atomic role change, custom claims, notification | SPEC-002 §2.2 (approve), §1.3 | Juan, Bryan, Dante | Approval transaction tests, claim verification | Passed |
 | S2-AC-003 | `US-MOD-005` CA-002, `US-REA-013` CA-003 | Administrator rejection: reason required, role unchanged, notification | SPEC-002 §2.2 (reject), §7 | Juan, Dante | Rejection tests, notification evidence | Passed |
 | S2-AC-004 | `US-REA-013` RN-006, `US-MOD-005` RN-004 | Upload authorization: reader/pending/rejected cannot call upload or book creation APIs | SPEC-002 §4, §1.3 | Bryan, Juan | Authorization guard tests | Pending |
-| S2-AC-005 | `US-PUB-001`, `US-PUB-004` | Cloud synchronization: stable IDs, revision numbers, explicit conflict results, offline mutation IDs | SPEC-002 §3 | Juan | Conflict/replay integration tests | Pending |
+| S2-AC-005 | `US-PUB-001`, `US-PUB-004` | Cloud synchronization: stable IDs, revision numbers, explicit conflict results, offline mutation IDs | SPEC-002 §3 | Juan | Conflict/replay integration tests | Passed |
 | S2-AC-006 | `US-PUB-001`, `US-MOD-006` | Supabase storage: private bucket, 20 MB limit, signed access, no credentials in frontend | SPEC-002 §4 | Jorge | Storage/API integration tests, health check | Pending |
 | S2-AC-007 | `US-MOD-006`, `US-MOD-008` | Scheduled cleanup: 24h rejection deletion job, claim/retry/idempotency, exponential backoff | SPEC-002 §5 | Jorge | Deletion worker tests | Pending |
 | S2-AC-008 | `US-MOD-004`, `US-MOD-007`, `US-MOD-008` | Moderation: temporary/permanent bans, publisher revocation, book deletion, immutable audit records | SPEC-002 §6 | Juan, Bryan, Jorge | Moderation API tests, audit verification | Pending |
@@ -69,10 +69,10 @@ No item may be marked passed without a dated command or manual scenario.
 
 | Test ID | AC / Story | Criterion | Preconditions | Steps | Expected Result | Type | Status |
 |---|---|---|---|---|---|---|---|
-| TC-S2-023 | `S2-AC-005` / SPEC-002 §3 | Revision-controlled mutations | Application or book record at `revision: 1` | 1) Update with `revision: 1` → succeeds, `revision: 2`; 2) Update again with `revision: 1` | First update succeeds; second returns 409 `REVISION_CONFLICT` with `serverRevision: 2` and `serverValue` | Automated | Not started |
-| TC-S2-024 | `S2-AC-005` / SPEC-002 §3 | Conflict response preserves server value | Two concurrent modifications to same record | Simulate two mutations with same `revision` | The winning mutation persists; the loser receives `REVISION_CONFLICT` including the full `serverValue`; no silent overwrite | Automated | Not started |
+| TC-S2-023 | `S2-AC-005` / SPEC-002 §3 | Revision-controlled mutations | Application or book record at `revision: 1` | 1) Update with `revision: 1` → succeeds, `revision: 2`; 2) Update again with `revision: 1` | First update succeeds; second returns 409 `REVISION_CONFLICT` with `serverRevision: 2` and `serverValue` | Automated | Passed |
+| TC-S2-024 | `S2-AC-005` / SPEC-002 §3 | Conflict response preserves server value | Two concurrent modifications to same record | Simulate two mutations with same `revision` | The winning mutation persists; the loser receives `REVISION_CONFLICT` including the full `serverValue`; no silent overwrite | Automated | Passed |
 | TC-S2-025 | `S2-AC-005` / SPEC-002 §3 | Stable IDs survive reload | Firestore records created with known IDs | Reload application; query same IDs | Records returned with identical `id` values and correct `revision` | Automated | Not started |
-| TC-S2-026 | `S2-AC-005` / SPEC-002 §3 | Offline mutation IDs and idempotent replay | Offline IndexedDB queue with mutation IDs | Queue offline mutation; reconnect and replay | Successful replay removes queue item; conflict remains visible to user; no indefinite retry | Automated | Not started |
+| TC-S2-026 | `S2-AC-005` / SPEC-002 §3 | Offline mutation IDs and idempotent replay | Offline IndexedDB queue with mutation IDs | Queue offline mutation; reconnect and replay | Successful replay removes queue item; conflict remains visible to user; no indefinite retry | Automated | Passed |
 
 ### 2.6 Supabase Storage (`S2-AC-006`: SPEC-002 §4)
 
@@ -204,10 +204,96 @@ must include the failure, owner, issue reference, and retest date.
 - Expected result:
   Client validation enforces SPEC-002 §2.1 rules; reader submission, duplicate detection, withdrawal, moderator approval, rejection with mandatory reason, optimistic revision conflict recovery, and publisher revocation follow the Sprint 2 API contract envelopes without TypeScript or build errors.
 - Actual result:
-  8 automated UI contract tests passed, 0 failed, 0 skipped; `npm run typecheck` and `npm run build` exited with status 0 across all workspaces; browser UI verified role-based access and controlled `AUTH_REQUIRED` error handling.
+  9 automated UI contract tests passed, 0 failed, 0 skipped; `npm run typecheck` and `npm run build` exited with status 0 across all workspaces; browser UI verified role-based access and controlled `AUTH_REQUIRED` error handling.
 - Artifact:
   `docs/testing/s2-t04-ui-contract.test.mjs`
 - Work logs:
   `docs/agent-logs/yuki-s2-t04-block1-applicant-ui.md`, `docs/agent-logs/yuki-s2-t04-block2-moderator-review-ui.md`, `docs/agent-logs/yuki-s2-t04-block3-verification.md`
 - Reviewer: Dante Uriel Juárez Tolentino
 - Disposition: Passed
+## Passed Evidence — S2-T03 Firestore Revisions & Concurrency
+
+- Acceptance ID: `S2-AC-005`
+- Linked stories: `US-PUB-001`, `US-PUB-004`
+- Contract: `SPEC-002-CONTRACTS.md` §3, §4
+- Date: 2026-11-22
+- Environment: Local Windows TypeScript/Node.js execution
+- Actor roles: Publisher and moderator
+- Route/UI path: Service and repository optimistic concurrency layer
+- Exact command: `npx tsx --test docs/testing/s2-revisions-conflicts.test.mjs`
+- Expected result: Initial revision 1, monotonic increments, 409 REVISION_CONFLICT on stale or future revision, and idempotent mutation caching.
+- Actual result: 7 tests passed, 0 failed, 0 skipped.
+- Artifact: `docs/testing/s2-revisions-conflicts.test.mjs`
+- Work log: `docs/agent-logs/vulcan-firestore-revisions.md`
+- Reviewer: Juan Carlos Zúñiga Alfaro
+- Disposition: Passed
+
+## S2-T01 incremental verification — 2026-11-21
+
+- Acceptance: S2-AC-009 (partial); US-REA-010, US-REA-019, US-REA-020;
+  SPEC-002-CONTRACTS.md sections 1.1–1.3 and 6.
+- Environment: Work Linux, Node.js 24.22.3; mocked Firebase client/admin and
+  HTTP transport. Actor: reader; wrong-role publisher access is rejected.
+- Paths: /api/v1/auth/session, /refresh, /logout (adapter/service calls).
+- Command: npm test, with focused cases in s2-auth-lifecycle.test.mjs,
+  s2-auth-registration.test.mjs and s1-cross-cutting.test.mjs.
+- Expected: restore/renew tokens, verify roles and revoked credentials,
+  clear SDK state on logout, deny late restoration, preserve errors on outages,
+  and prevent local public publisher registration.
+- Actual: focused automated scenarios pass. Live Firebase/browser scenarios,
+  inactivity expiry and account lifecycle remain pending.
+- Artifacts: docs/testing/s2-auth-lifecycle.test.mjs;
+  docs/testing/S2-AUTH-SESSION-HANDOFF.md;
+  docs/agent-logs/codex-s2-t01-session-2026-11-21.md.
+- Reviewer: team review pending. Disposition: Partial; S2-AC-009 stays Pending.
+- Baseline defect: nonexistent approve import in
+  s2-publisher-application.test.mjs prevented module loading. Removed the
+  unused import and reran the baseline successfully; no application service
+  implementation was changed. Owner of this correction: Bryan.
+
+## S2-T01 / S2-T06 contract amendment and behavioral evidence
+
+- Owner authorization: Bryan requested modification of the MD and continuation
+  of his Sprint 2 implementation; SPEC-002-CONTRACTS.md section 10 documents
+  the resulting clarification for integration review.
+- Acceptance/story mapping: S2-AC-009, TC-S2-044–052; US-REA-019/020/017 and
+  US-MOD-011; SPEC-002-CONTRACTS.md sections 1, 6 and 10.
+- Environment: Work Linux, Node.js 24.22.3; reader and moderator fixtures;
+  controlled clocks, transactional memory test storage and mocked Firebase/HTTP.
+- Paths: /api/v1/auth/session, /refresh, /logout;
+  /api/v1/account/deletion-request, /deletion-cancel;
+  /api/v1/moderation/accounts/:uid/restore.
+- Command: npm run typecheck; npm run build; npm test.
+- Observed result: typecheck/build passed; Sprint 1 20 passed, Sprint 2 88
+  passed, 0 failures. 42 unrelated inherited placeholder assertions remain.
+- Expected and actual: 30-minute boundary/replay denial, renewed-token
+  replacement, revocation, 30-day job and queued-email creation, restricted
+  accounts, cancellation/worker boundary, moderator permission/revision checks
+  and public-field redaction behave as covered by the focused suites.
+- Artifacts: s2-account-policy.test.mjs, s2-account-routes.test.mjs,
+  s2-auth-lifecycle.test.mjs, s2-auth-routes.test.mjs and
+  S2-AUTH-SESSION-HANDOFF.md.
+- Review disposition: automated service/router checks passed; independent
+  reviewer and live Firebase/Firestore/browser evidence pending. S2-AC-009
+  remains Pending. Queued email is not proof of delivery; permanent deletion,
+  settings UI, cloud rules deployment and delivery worker remain cross-owner
+  handoffs rather than fabricated passed scenarios.
+
+### Bryan S2-T01 / S2-T06 moderator-request clarification — 2026-11-22
+
+- Owner: Bryan Alessandro Peralta Gutierrez; agent: Codex.
+- Contract: SPEC-002-CONTRACTS.md sections 6 and 10 now distinguish a user
+  cancellation request from moderator approval, as clarified by the team.
+- Verified deletion-pending login exposes the request action. Submission
+  returns 202 pending without clearing restrictions or issuing a session.
+  An active moderator lists and explicitly approves a request with the
+  current account revision. No self restoration is permitted.
+- Automated checks: typecheck and production build passed; Sprint 1 20 and
+  Sprint 2 97 passed, 0 failures. Nine added behavioral checks cover request
+  idempotency, moderator-only approval/listing, missing requests, deadlines,
+  claimed jobs, frontend transport and selective recovery error exposure.
+- Evidence: s2-account-policy.test.mjs, s2-account-routes.test.mjs,
+  s2-auth-lifecycle.test.mjs and s2-auth-routes.test.mjs.
+- Limits: 42 inherited unrelated placeholders are not acceptance evidence.
+  No live Firebase, Firestore emulator, deployed browser, email delivery or
+  permanent erasure evidence is claimed. S2-AC-009 remains Pending.

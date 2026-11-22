@@ -1,6 +1,7 @@
 import type { Book, BookFilterQuery } from "@library-flow/shared";
 
 export class BookRepository {
+  private readonly restrictedOwners = new Set<string>();
   private readonly books = new Map<string, Book>();
 
   async save(book: Book): Promise<Book> {
@@ -11,14 +12,14 @@ export class BookRepository {
 
   async findById(id: string): Promise<Book | null> {
     const book = this.books.get(id);
-    return book ? this.clone(book) : null;
+    return book && !this.restrictedOwners.has(book.ownerId) ? this.clone(book) : null;
   }
 
   async findApproved(filters?: BookFilterQuery): Promise<Book[]> {
     const normalizedSearch = filters?.search?.trim().toLocaleLowerCase();
 
     return Array.from(this.books.values())
-      .filter((book) => book.status === "approved")
+      .filter((book) => book.status === "approved" && !this.restrictedOwners.has(book.ownerId))
       .filter((book) => {
         if (!normalizedSearch) {
           return true;
@@ -48,7 +49,7 @@ export class BookRepository {
 
   async findPending(): Promise<Book[]> {
     return Array.from(this.books.values())
-      .filter((book) => book.status === "pending")
+      .filter((book) => book.status === "pending" && !this.restrictedOwners.has(book.ownerId))
       .map((book) => this.clone(book));
   }
 
@@ -77,6 +78,13 @@ export class BookRepository {
     });
     this.books.set(id, updatedBook);
     return this.clone(updatedBook);
+  }
+
+  async redactOwner(uid: string): Promise<void> {
+    this.restrictedOwners.add(uid);
+    for (const [id, book] of this.books) {
+      if (book.ownerId === uid) this.books.set(id, {...book, author: 'Deleted user', status: 'pending'});
+    }
   }
 
   private clone(book: Book): Book {

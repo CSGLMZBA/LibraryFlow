@@ -20,7 +20,7 @@ import {
   publisherApplicationService,
 } from '../../apps/backend/src/services/publisher-application-service.ts';
 import {
-  notificationRepository,approve
+  notificationRepository
 } from '../../apps/backend/src/repositories/notification-repository.ts';
 
 // ===========================================================================

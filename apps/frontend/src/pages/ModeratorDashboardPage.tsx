@@ -1,3 +1,4 @@
+import { AccountRecoveryRequests } from "../components/AccountRecoveryRequests";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { COMMENT_MAX_LENGTH, type BookComment } from "@library-flow/shared";
 import { commentRepository } from "../repositories/comment-repository";
@@ -91,7 +92,11 @@ export default function ModeratorDashboardPage({ moderator }: ModeratorDashboard
         </p>
       </div>
 
-      <ModeratorPublisherApplicationsSection />
+<ModeratorPublisherApplicationsSection />
+
+      {(import.meta as ImportMeta & {env?: {VITE_AUTH_MODE?: string}}).env?.VITE_AUTH_MODE === 'cloud'
+        ? <AccountRecoveryRequests />
+        : <p className="text-sm text-slate-600">Account recovery requests are available in cloud mode.</p>}
 
       {message && <p role="status" className="rounded-lg bg-emerald-50 p-4 text-emerald-800">{message}</p>}
       {error && <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-700">{error}</p>}

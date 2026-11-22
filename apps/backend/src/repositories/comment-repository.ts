@@ -57,6 +57,12 @@ export class CommentRepository {
     return this.clone(deletedComment);
   }
 
+  async redactAuthor(uid: string): Promise<void> {
+    for (const [id, comment] of this.comments) {
+      if (comment.authorId === uid) this.comments.set(id, {...comment, authorDisplayName: 'Deleted user', content: '', isDeleted: true});
+    }
+  }
+
   private clone(comment: BookComment): BookComment {
     return { ...comment };
   }

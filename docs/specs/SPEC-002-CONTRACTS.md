@@ -250,7 +250,7 @@ Account deletion:
 - personal public fields are removed immediately;
 - login and token refresh return `403 ACCOUNT_RESTRICTED` during the grace
   period;
-- `POST /account/deletion-cancel` is allowed only during the grace period;
+- `POST /account/deletion-cancel` creates a pending moderator-review request during the grace period; it never restores the account;
 - the scheduled worker permanently removes account-owned personal data after
   `permanentDeletionAt`;
 - `POST /moderation/accounts/:uid/restore` is moderator-only and audited.
@@ -262,7 +262,8 @@ Session routes:
 | POST | `/auth/refresh` | returns a refreshed session through the auth adapter |
 | POST | `/auth/logout` | revokes refresh/session tokens and clears local session |
 | POST | `/account/deletion-request` | starts the deletion grace period |
-| POST | `/account/deletion-cancel` | restores active account before deadline |
+| POST | `/account/deletion-cancel` | submits cancellation for moderator approval (202) |
+| GET | `/moderation/account-recovery-requests` | moderator-only pending requests |
 
 Ban records require `actorUid`, `targetUid`, `reason`, `startsAt`, and either
 `endsAt` or `permanent: true`. Active bans block comments, uploads, moderation
@@ -339,3 +340,101 @@ npm test
 
 Each owner must also provide focused tests for their contract and update the
 matching row in `S2-ACCEPTANCE-REGISTER.md` only after execution.
+
+## 10. Bryan's auth/account clarification (S2-T01 and S2-T06)
+
+This amendment was requested by Bryan for review in his PR. It retains the
+existing Bearer-only transport consumed by the open S2-T04 applicant UI PR;
+no new session header or shared domain DTO is required. The earlier
+S2-AUTH-ACCOUNT-PROPOSAL.md is superseded for this increment by this section.
+
+### 10.1 Authoritative account and session state
+
+`accounts/{encodedUid}` stores uid, integer revision, updatedAt and optional
+deletionRequestedAt, permanentDeletionAt, deletionJobId, tokensValidAfter
+(Unix milliseconds), publicRedactionPending, and ban. Ban embeds the fields
+already specified in section 6; writing ban records remains the moderation
+owner's responsibility. Missing account documents are migrated only when a
+recent, verified Firebase sign-in bootstraps a session. A failed Firestore read
+never falls back to unrestricted local data. Role claims stay in Firebase.
+
+`authSessions/{sha256(uid + ":" + auth_time)}` stores uid, authTime and issuedAt
+(from verified Firebase auth_time/iat), tokenDigest (SHA-256), integer revision,
+lastActivityAt (Unix milliseconds) and optional revokedAt. No raw token or
+password is stored in these records. Devices signed in within the same
+Firebase auth_time second share this conservative revocation boundary; logout
+revokes the account's Firebase refresh tokens and all application sessions via
+tokensValidAfter. Immediate same-second re-login may require a retry after the
+next second to avoid accepting a pre-logout credential.
+
+Expired/unknown sessions cannot be revived by refresh. GET /auth/session may
+bootstrap only a verified sign-in younger than 30 minutes; an existing expired
+session is never replaced by that read. Protected user actions and explicit
+POST /auth/refresh touch lastActivityAt; passive /auth/session checks and
+background SDK refresh do not. At exactly 30 minutes inactivity the backend
+returns 401 AUTH_INVALID. Local IndexedDB mode uses the same idle boundary.
+
+A newer verified iat advances the accepted digest transactionally. An older
+token or a different digest with the same iat is rejected. When Firebase
+returns the identical token within the same second, refresh is a no-op for
+token replacement: TC-S2-045 checks old-token rejection after a genuinely newer
+iat rather than assuming two immediate SDK calls always produce distinct JWTs.
+The synchronous getAccessToken(): string | null API is preserved for Dante;
+Firebase's onIdTokenChanged updates its cache, and server checks remain
+mandatory on every protected request.
+
+### 10.2 Account deletion and recovery proof
+
+POST /account/deletion-request requires a verified bearer and `{confirm:true}`.
+The restriction, 30-day deadline, immutable audit entry, account-data deletion
+job and deduplicated confirmation-email outbox record are written atomically.
+The response is `{deletionRequestedAt, permanentDeletionAt, revision,
+emailStatus:"queued"}`. Queued is not sent: actual outbound delivery is an
+explicit platform handoff. Failed public redaction fails the request safely;
+publicRedactionPending prevents restoration until cleanup completes and the
+same verified request can retry interrupted cleanup before token revocation.
+
+Public profiles, comment names/content and published account-owned book views
+are redacted/hidden without restoring them automatically on cancellation.
+The in-memory Sprint 1 repositories and matching Firestore profiles/comments/
+books paths use idempotent redaction hooks. Future cloud repositories must
+preserve the same visibility restriction. The permanent worker belongs to
+S2-T08; this increment creates its existing account-data job, not a new worker.
+
+POST /account/deletion-cancel accepts `{email,password}` verified by Firebase
+solely to submit a recovery request. HTTP 202 returns a pending request; it
+never clears restrictions, cancels the deletion job or issues an ordinary
+session. Repeated submissions for the same deletion job are idempotent.
+The private `accountRecoveryRequests/{id}` record contains id, targetUid,
+deletionJobId, status (pending/approved), createdAt, permanentDeletionAt and
+revision. Submission writes an immutable audit entry atomically.
+
+Login returns `403 ACCOUNT_RESTRICTED` with `error.recoveryAvailable:true`
+only for a verified account pending deletion. The sign-in screen then offers
+"Request deletion cancellation"; wrong credentials and bans alone do not
+expose this action. A successful submission displays pending moderator review.
+
+GET /moderation/account-recovery-requests requires an active moderator and
+returns at most 100 pending requests with accountRevision and canRestore.
+The moderator dashboard loads this queue and confirms an approval explicitly.
+POST /moderation/accounts/:uid/restore requires an active moderator,
+`{revision}` and a pending request matching the active deletion job. Wrong roles
+receive 403 FORBIDDEN and stale revisions receive 409 REVISION_CONFLICT.
+Approval is allowed only when now < permanentDeletionAt, redaction has finished
+and the cleanup job is still pending. The transaction clears lifecycle flags,
+closes the job with cancellation metadata, approves the request with reviewer
+and time, increments revisions, and writes audit and account_restored
+notification. A concurrent claimed/completed worker prevents restoration.
+Old credentials stay invalid; a fresh login is required and bans remain
+enforced. An already removed Firebase identity cannot be reconstructed here.
+
+`accountAudit/{eventId}` is immutable and created transactionally, containing
+actorUid, targetUid, reason, action and timestamp. `accountEmailOutbox/{eventId}`
+contains the private recipient, uid, creation time, deletion deadline, kind and
+pending delivery status. It must be readable only by the trusted delivery
+worker. Account, session, audit, notification and outbox collections must deny
+all direct browser writes; Admin SDK backend access is authoritative.
+
+The account lifecycle services expose backend hooks. Sign-in recovery and
+moderator approval consume these URLs. Account-settings, email dispatcher and
+permanent-worker integration still require their owners' verification. S2-AC-009 remains Pending until the required live evidence exists.
