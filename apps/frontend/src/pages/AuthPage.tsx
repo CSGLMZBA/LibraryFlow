@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { validateLoginInput, validateRegisterInput } from "../schemas/auth-schema";
+import { accountLifecycleService } from "../services/account-lifecycle-service";
 import { seedLocalModeratorForTests } from "../services/auth-service";
 import type { AuthValidationErrors, RegisterRole } from "../types/auth";
 
@@ -16,6 +17,8 @@ export function AuthPage() {
 
   const [errors, setErrors] = useState<AuthValidationErrors>({});
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [recoveryAvailable, setRecoveryAvailable] = useState(false);
+  const [requestingRecovery, setRequestingRecovery] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSeedingModerator, setIsSeedingModerator] = useState(false);
 
@@ -44,6 +47,7 @@ export function AuthPage() {
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
+    setRecoveryAvailable(false);
     setErrors({});
     setStatusMessage(null);
     setPassword("");
@@ -64,6 +68,7 @@ export function AuthPage() {
       return;
     }
 
+    setRecoveryAvailable(false);
     setIsSubmitting(true);
     try {
       if (mode === "register") {
@@ -71,6 +76,7 @@ export function AuthPage() {
         if (!result.success) {
           const field = result.error.field ?? "general";
           setErrors({ [field]: result.error.message });
+          setRecoveryAvailable(result.error.recoveryAvailable === true);
           return;
         }
         setStatusMessage(
@@ -83,6 +89,7 @@ export function AuthPage() {
         if (!result.success) {
           const field = result.error.field ?? "general";
           setErrors({ [field]: result.error.message });
+          setRecoveryAvailable(result.error.recoveryAvailable === true);
           return;
         }
         setStatusMessage(`Welcome back, ${result.data.user.displayName}.`);
@@ -90,6 +97,20 @@ export function AuthPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const requestRecovery = async () => {
+    setRequestingRecovery(true);
+    setStatusMessage(null);
+    try {
+      await accountLifecycleService.requestCancellation(email, password);
+      setErrors({});
+      setRecoveryAvailable(false);
+      setPassword('');
+      setStatusMessage('Your request is pending moderator approval. You cannot sign in until it is approved.');
+    } catch (error) {
+      setErrors({general: error instanceof Error ? error.message : 'Could not submit your recovery request. Try again.'});
+    } finally { setRequestingRecovery(false); }
   };
 
   return (
@@ -167,7 +188,7 @@ export function AuthPage() {
             maxLength={50}
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value); setRecoveryAvailable(false); }}
             aria-invalid={Boolean(errors.email)}
             aria-describedby={errors.email ? "auth-email-error" : undefined}
             className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -191,7 +212,7 @@ export function AuthPage() {
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => { setPassword(e.target.value); setRecoveryAvailable(false); }}
             aria-invalid={Boolean(errors.password)}
             aria-describedby={
               errors.password
@@ -242,7 +263,7 @@ export function AuthPage() {
 
         <button
           type="submit"
-          disabled={isSubmitting}
+          disabled={isSubmitting || requestingRecovery}
           className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isSubmitting
@@ -252,6 +273,15 @@ export function AuthPage() {
               : "Create Account"}
         </button>
       </form>
+      {mode === 'login' && recoveryAvailable && (
+        <div className="mt-4 rounded-lg border border-amber-300 p-3">
+          <p className="mb-3 text-sm">Your account remains blocked. You can ask a moderator to cancel its deletion.</p>
+          <button type="button" onClick={() => void requestRecovery()} disabled={requestingRecovery || isSubmitting}
+            className="w-full rounded-md border border-indigo-600 px-3 py-2 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60">
+            {requestingRecovery ? 'Submitting request...' : 'Request deletion cancellation'}
+          </button>
+        </div>
+      )}
       {(import.meta as ImportMeta & { env?: { DEV?: boolean } }).env?.DEV === true && (
         <div className="mt-4 border-t border-slate-200 pt-4">
           <button
