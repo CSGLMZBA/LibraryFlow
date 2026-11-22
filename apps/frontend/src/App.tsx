@@ -6,6 +6,7 @@ import { AuthPage } from "./pages/AuthPage";
 import { PublisherDashboardPage } from "./pages/PublisherDashboardPage";
 import ModeratorDashboardPage from "./pages/ModeratorDashboardPage";
 import { PublisherApplicationForm } from "./components/PublisherApplicationForm";
+import { ReaderApplicationStatus } from "./components/ReaderApplicationStatus";
 
 function WorkspaceShell() {
   // Get authentication state.
@@ -20,6 +21,10 @@ function WorkspaceShell() {
 
   // Switch between the catalog and publisher application form (readers only).
   const [showPublisherApplication, setShowPublisherApplication] =
+    useState(false);
+
+  // Reader-only application status view.
+  const [showReaderApplicationStatus, setShowReaderApplicationStatus] =
     useState(false);
 
   return (
@@ -59,6 +64,7 @@ function WorkspaceShell() {
                 onClick={() => {
                   setShowPublisherDashboard(false);
                   setShowPublisherApplication(false);
+                  setShowReaderApplicationStatus(false);
                   void logout();
                 }}
                 className="rounded-lg border border-slate-300
@@ -118,22 +124,33 @@ function WorkspaceShell() {
 
           /* Case 2: authenticated user */
           <div>
-
-            {/* Reader-only publisher application trigger */}
+            {/* Reader-only publisher application navigation */}
             {user.role === "reader" && (
-              <div className="mb-6 flex justify-end">
+              <div className="mb-6 flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowPublisherApplication((previous) => !previous)
-                  }
-                  className="rounded-lg bg-indigo-600
-                             px-4 py-2 text-sm font-medium
-                             text-white hover:bg-indigo-700"
+                  onClick={() => {
+                    setShowPublisherApplication((previous) => !previous);
+                    setShowReaderApplicationStatus(false);
+                  }}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                 >
                   {showPublisherApplication
                     ? "Back to catalog"
                     : "Apply as Publisher"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReaderApplicationStatus((previous) => !previous);
+                    setShowPublisherApplication(false);
+                  }}
+                  className="rounded-lg border border-indigo-600 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                >
+                  {showReaderApplicationStatus
+                    ? "Back to catalog"
+                    : "My application status"}
                 </button>
               </div>
             )}
@@ -165,6 +182,9 @@ function WorkspaceShell() {
             ) : user.role === "publisher" &&
             showPublisherDashboard ? (
               <PublisherDashboardPage publisher={user} />
+            ) : user.role === "reader" &&
+            showReaderApplicationStatus ? (
+              <ReaderApplicationStatus key={user.id} />
             ) : user.role === "reader" &&
             showPublisherApplication ? (
               <PublisherApplicationForm />
