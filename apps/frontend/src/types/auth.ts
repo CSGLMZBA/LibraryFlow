@@ -10,6 +10,7 @@ export interface AuthPort {
   refreshSession(): Promise<AuthSession | null>;
   getAccessToken(): string | null;
   hasRole(role: UserRole): Promise<boolean>;
+  getAccessToken?(): string | null;
 }
 export class AuthError extends Error {
   constructor(public readonly code: string, message: string, public readonly field?: string, public readonly recoveryAvailable = false) { super(message); this.name = 'AuthError'; }
