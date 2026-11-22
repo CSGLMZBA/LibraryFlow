@@ -145,4 +145,5 @@ export const authService = {
   logout: () => configuredAuth.logout(),
   getCurrentSession: () => configuredAuth.getCurrentSession(),
   hasRole: (role: UserRole) => configuredAuth.hasRole(role),
+  getAccessToken: () => configuredAuth.getAccessToken?.() ?? null,
 };

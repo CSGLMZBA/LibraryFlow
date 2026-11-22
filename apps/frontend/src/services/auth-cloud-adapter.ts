@@ -54,6 +54,9 @@ export function createCloudAuthService(apiBaseUrl: string): AuthPort {
     async hasRole(role: UserRole): Promise<boolean> {
       const session = await this.getCurrentSession();
       return session?.user.role === role;
-    }
+    },
+    getAccessToken(): string | null {
+      return token;
+    },
   };
 }
