@@ -106,3 +106,14 @@ No Firebase/Firestore emulator or live deployed Firebase was run.
 S2-AC-009 stays Pending until the real project, UI, delivery and operational
 scenarios have dated evidence. A normal PR is a request for review, not a
 claim that Sprint 2 or deployment is complete.
+
+
+## 2026-11-22 — PR #18 merged during publication
+
+PR #18 was merged into develop (b21b9af) while this branch was being
+published. Integrated that base into Bryan's branch only. Preserved Dante's
+application form, service, validation, dependencies, App navigation and logs.
+Resolved the two auth-service conflicts using the persistent Firebase adapter,
+which already supplies the synchronous bearer getter expected by the consumer;
+removed an automatically merged duplicate optional getter declaration.
+Earlier references to #18 as open describe the initial review state.
