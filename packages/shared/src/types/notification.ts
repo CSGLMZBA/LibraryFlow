@@ -1,4 +1,10 @@
-export type InAppNotificationType = "book_rejected" | "comment_removed";
+export type InAppNotificationType =
+  | "book_rejected"
+  | "comment_removed"
+  | "publisher_application_approved"
+  | "publisher_application_rejected"
+  | "publisher_application_expired"
+  | "publisher_revoked";
 
 export type InAppNotification = {
   id: string;
