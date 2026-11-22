@@ -11,7 +11,7 @@ This register is the QA verification source of truth for Sprint 2 (`S2-T10`). Ea
 | S2-AC-002 | `US-MOD-005` CA-001 | Administrator approval: atomic role change, custom claims, notification | SPEC-002 §2.2 (approve), §1.3 | Juan, Bryan, Dante | Approval transaction tests, claim verification | Passed |
 | S2-AC-003 | `US-MOD-005` CA-002, `US-REA-013` CA-003 | Administrator rejection: reason required, role unchanged, notification | SPEC-002 §2.2 (reject), §7 | Juan, Dante | Rejection tests, notification evidence | Passed |
 | S2-AC-004 | `US-REA-013` RN-006, `US-MOD-005` RN-004 | Upload authorization: reader/pending/rejected cannot call upload or book creation APIs | SPEC-002 §4, §1.3 | Bryan, Juan | Authorization guard tests | Pending |
-| S2-AC-005 | `US-PUB-001`, `US-PUB-004` | Cloud synchronization: stable IDs, revision numbers, explicit conflict results, offline mutation IDs | SPEC-002 §3 | Juan | Conflict/replay integration tests | Pending |
+| S2-AC-005 | `US-PUB-001`, `US-PUB-004` | Cloud synchronization: stable IDs, revision numbers, explicit conflict results, offline mutation IDs | SPEC-002 §3 | Juan | Conflict/replay integration tests | Passed |
 | S2-AC-006 | `US-PUB-001`, `US-MOD-006` | Supabase storage: private bucket, 20 MB limit, signed access, no credentials in frontend | SPEC-002 §4 | Jorge | Storage/API integration tests, health check | Pending |
 | S2-AC-007 | `US-MOD-006`, `US-MOD-008` | Scheduled cleanup: 24h rejection deletion job, claim/retry/idempotency, exponential backoff | SPEC-002 §5 | Jorge | Deletion worker tests | Pending |
 | S2-AC-008 | `US-MOD-004`, `US-MOD-007`, `US-MOD-008` | Moderation: temporary/permanent bans, publisher revocation, book deletion, immutable audit records | SPEC-002 §6 | Juan, Bryan, Jorge | Moderation API tests, audit verification | Pending |
@@ -69,10 +69,10 @@ No item may be marked passed without a dated command or manual scenario.
 
 | Test ID | AC / Story | Criterion | Preconditions | Steps | Expected Result | Type | Status |
 |---|---|---|---|---|---|---|---|
-| TC-S2-023 | `S2-AC-005` / SPEC-002 §3 | Revision-controlled mutations | Application or book record at `revision: 1` | 1) Update with `revision: 1` → succeeds, `revision: 2`; 2) Update again with `revision: 1` | First update succeeds; second returns 409 `REVISION_CONFLICT` with `serverRevision: 2` and `serverValue` | Automated | Not started |
-| TC-S2-024 | `S2-AC-005` / SPEC-002 §3 | Conflict response preserves server value | Two concurrent modifications to same record | Simulate two mutations with same `revision` | The winning mutation persists; the loser receives `REVISION_CONFLICT` including the full `serverValue`; no silent overwrite | Automated | Not started |
+| TC-S2-023 | `S2-AC-005` / SPEC-002 §3 | Revision-controlled mutations | Application or book record at `revision: 1` | 1) Update with `revision: 1` → succeeds, `revision: 2`; 2) Update again with `revision: 1` | First update succeeds; second returns 409 `REVISION_CONFLICT` with `serverRevision: 2` and `serverValue` | Automated | Passed |
+| TC-S2-024 | `S2-AC-005` / SPEC-002 §3 | Conflict response preserves server value | Two concurrent modifications to same record | Simulate two mutations with same `revision` | The winning mutation persists; the loser receives `REVISION_CONFLICT` including the full `serverValue`; no silent overwrite | Automated | Passed |
 | TC-S2-025 | `S2-AC-005` / SPEC-002 §3 | Stable IDs survive reload | Firestore records created with known IDs | Reload application; query same IDs | Records returned with identical `id` values and correct `revision` | Automated | Not started |
-| TC-S2-026 | `S2-AC-005` / SPEC-002 §3 | Offline mutation IDs and idempotent replay | Offline IndexedDB queue with mutation IDs | Queue offline mutation; reconnect and replay | Successful replay removes queue item; conflict remains visible to user; no indefinite retry | Automated | Not started |
+| TC-S2-026 | `S2-AC-005` / SPEC-002 §3 | Offline mutation IDs and idempotent replay | Offline IndexedDB queue with mutation IDs | Queue offline mutation; reconnect and replay | Successful replay removes queue item; conflict remains visible to user; no indefinite retry | Automated | Passed |
 
 ### 2.6 Supabase Storage (`S2-AC-006`: SPEC-002 §4)
 
@@ -190,6 +190,23 @@ must include the failure, owner, issue reference, and retest date.
 - Reviewer: Juan Carlos Zúñiga Alfaro
 - Disposition: Passed
 
+## Passed Evidence — S2-T03 Firestore Revisions & Concurrency
+
+- Acceptance ID: `S2-AC-005`
+- Linked stories: `US-PUB-001`, `US-PUB-004`
+- Contract: `SPEC-002-CONTRACTS.md` §3, §4
+- Date: 2026-11-22
+- Environment: Local Windows TypeScript/Node.js execution
+- Actor roles: Publisher and moderator
+- Route/UI path: Service and repository optimistic concurrency layer
+- Exact command: `npx tsx --test docs/testing/s2-revisions-conflicts.test.mjs`
+- Expected result: Initial revision 1, monotonic increments, 409 REVISION_CONFLICT on stale or future revision, and idempotent mutation caching.
+- Actual result: 7 tests passed, 0 failed, 0 skipped.
+- Artifact: `docs/testing/s2-revisions-conflicts.test.mjs`
+- Work log: `docs/agent-logs/vulcan-firestore-revisions.md`
+- Reviewer: Juan Carlos Zúñiga Alfaro
+- Disposition: Passed
+
 ## S2-T01 incremental verification — 2026-11-21
 
 - Acceptance: S2-AC-009 (partial); US-REA-010, US-REA-019, US-REA-020;
@@ -220,7 +237,7 @@ must include the failure, owner, issue reference, and retest date.
   the resulting clarification for integration review.
 - Acceptance/story mapping: S2-AC-009, TC-S2-044–052; US-REA-019/020/017 and
   US-MOD-011; SPEC-002-CONTRACTS.md sections 1, 6 and 10.
-- Environment: Work Linux, Node 24.22.3; reader and moderator fixtures;
+- Environment: Work Linux, Node.js 24.22.3; reader and moderator fixtures;
   controlled clocks, transactional memory test storage and mocked Firebase/HTTP.
 - Paths: /api/v1/auth/session, /refresh, /logout;
   /api/v1/account/deletion-request, /deletion-cancel;
@@ -240,7 +257,6 @@ must include the failure, owner, issue reference, and retest date.
   remains Pending. Queued email is not proof of delivery; permanent deletion,
   settings UI, cloud rules deployment and delivery worker remain cross-owner
   handoffs rather than fabricated passed scenarios.
-
 
 ### Bryan S2-T01 / S2-T06 moderator-request clarification — 2026-11-22
 

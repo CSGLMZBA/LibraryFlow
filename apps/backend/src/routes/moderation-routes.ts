@@ -12,12 +12,14 @@ import {
   rejectApplication,
   revokePublisher,
 } from "../controllers/publisher-application-controller.js";
+import { deleteBook } from "../controllers/book-controller.js";
 
 export const moderationRouter = Router();
 
 moderationRouter.get("/books/pending", moderatorGuard, listPendingBooks);
 moderationRouter.post("/books/:bookId/approve", moderatorGuard, approveBook);
 moderationRouter.post("/books/:bookId/reject", moderatorGuard, rejectBook);
+moderationRouter.delete("/books/:bookId", moderatorGuard, deleteBook);
 moderationRouter.delete("/comments/:commentId", moderatorGuard, removeComment);
 moderationRouter.get(
   "/publisher-applications",
