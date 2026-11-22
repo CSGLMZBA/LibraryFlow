@@ -145,3 +145,14 @@ and cross-owner worker/delivery acceptance remain pending; unrelated inherited
 placeholder tests do not establish acceptance. Open #18 synchronous bearer
 consumer remains compatible. Merged #15/#17 changes are retained. No main,
 develop or colleague branch was written and no PR was merged.
+
+
+## 2026-11-22 — PR #18 merged during publication
+
+PR #18 was merged into develop (b21b9af) while this branch was being
+published. Integrated that base into Bryan's branch only. Preserved Dante's
+application form, service, validation, dependencies, App navigation and logs.
+Resolved the two auth-service conflicts using the persistent Firebase adapter,
+which already supplies the synchronous bearer getter expected by the consumer;
+removed an automatically merged duplicate optional getter declaration.
+Earlier references to #18 as open describe the initial review state.
