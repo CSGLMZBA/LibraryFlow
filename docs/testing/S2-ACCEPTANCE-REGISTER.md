@@ -189,3 +189,25 @@ must include the failure, owner, issue reference, and retest date.
   `docs/agent-logs/vulcan-publisher-applications.md`
 - Reviewer: Juan Carlos Zúñiga Alfaro
 - Disposition: Passed
+
+## Passed Evidence — S2-T04 Frontend Publisher Application & Moderator Review UI
+
+- Acceptance IDs: `S2-AC-001`, `S2-AC-002`, `S2-AC-003` (and frontend contract coverage for `US-MOD-007`)
+- Linked stories: `US-REA-013`, `US-MOD-005`, `US-MOD-007`
+- Contract: `SPEC-002-CONTRACTS.md` §1, §2, §3
+- Date: 2026-11-22
+- Environment: Local Windows Node.js/TypeScript execution and Vite dev browser verification
+- Actor roles: Reader and moderator
+- Route/UI path: Reader `Apply as Publisher` workspace (`PublisherApplicationForm.tsx`) and `ModeratorDashboardPage.tsx` (`ModeratorPublisherApplicationsSection.tsx`) consuming `/api/v1/publisher-applications` and `/api/v1/moderation/...`
+- Exact command:
+  `npx tsx --test docs/testing/s2-t04-ui-contract.test.mjs && npm run typecheck && npm run build`
+- Expected result:
+  Client validation enforces SPEC-002 §2.1 rules; reader submission, duplicate detection, withdrawal, moderator approval, rejection with mandatory reason, optimistic revision conflict recovery, and publisher revocation follow the Sprint 2 API contract envelopes without TypeScript or build errors.
+- Actual result:
+  8 automated UI contract tests passed, 0 failed, 0 skipped; `npm run typecheck` and `npm run build` exited with status 0 across all workspaces; browser UI verified role-based access and controlled `AUTH_REQUIRED` error handling.
+- Artifact:
+  `docs/testing/s2-t04-ui-contract.test.mjs`
+- Work logs:
+  `docs/agent-logs/yuki-s2-t04-block1-applicant-ui.md`, `docs/agent-logs/yuki-s2-t04-block2-moderator-review-ui.md`, `docs/agent-logs/yuki-s2-t04-block3-verification.md`
+- Reviewer: Dante Uriel Juárez Tolentino
+- Disposition: Passed
