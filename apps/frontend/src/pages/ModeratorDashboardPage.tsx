@@ -5,6 +5,7 @@ import { bookService } from "../services/book-service";
 import { commentService } from "../services/comment-service";
 import type { AuthUser } from "../types/auth";
 import type { BookRecord } from "../types/book";
+import { ModeratorPublisherApplicationsSection } from "../components/ModeratorPublisherApplicationsSection";
 
 interface ModeratorDashboardPageProps {
   moderator: AuthUser;
@@ -85,8 +86,12 @@ export default function ModeratorDashboardPage({ moderator }: ModeratorDashboard
     <div className="space-y-8">
       <div>
         <h2 className="text-2xl font-bold text-slate-900">Moderation workspace</h2>
-        <p className="mt-1 text-slate-600">Approve or reject submissions and remove violating comments.</p>
+        <p className="mt-1 text-slate-600">
+          Review publisher applications, approve or reject book submissions, and remove violating comments.
+        </p>
       </div>
+
+      <ModeratorPublisherApplicationsSection />
 
       {message && <p role="status" className="rounded-lg bg-emerald-50 p-4 text-emerald-800">{message}</p>}
       {error && <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-700">{error}</p>}

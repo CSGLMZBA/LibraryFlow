@@ -145,14 +145,18 @@ export const publisherApplicationService = {
     );
   },
 
-  async revokePublisher(
+  
+async revokePublisher(
     publisherUid: string,
     decisionReason: string,
   ): Promise<ApiResponse<{ uid: string; role: "reader" }>> {
+    const payload: ReviewPublisherApplicationDto = {
+      decisionReason: decisionReason.trim(),
+    };
     return apiRequest<{ uid: string; role: "reader" }>(
       `/moderation/publishers/${encodeURIComponent(publisherUid)}/revoke`,
       "POST",
-      { reason: decisionReason.trim() },
+      payload,
     );
   },
 };
