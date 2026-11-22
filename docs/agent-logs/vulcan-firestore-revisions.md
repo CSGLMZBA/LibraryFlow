@@ -31,7 +31,7 @@ Observed commands and results:
 - `npm run build -w @library-flow/backend`: passed.
 - `npm run build`: passed across shared, backend, and frontend workspaces.
 - `npx tsx --test docs/testing/s2-revisions-conflicts.test.mjs`: passed,
-  with 5 tests passed and 0 failed.
+  with 7 tests passed and 0 failed.
 
 ## Test Evidence
 
@@ -44,6 +44,8 @@ Observed commands and results:
   book result without re-executing the update.
 - TC-S2-REV-05: Verified moderator deletion sets status `deleted` and
   increments the revision.
+- TC-S2-REV-06: Verified sequential updates increment revision monotonically from 1 to 3.
+- TC-S2-REV-07: Verified updates with future revisions reject with RevisionConflictError.
 
 ## Changed Deliverables
 

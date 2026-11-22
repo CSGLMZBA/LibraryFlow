@@ -124,3 +124,55 @@ test("S2-AC-005 / S2-AC-008 (TC-S2-REV-05): moderator deleteBook sets status to 
   assert.equal(deleted.status, "deleted");
   assert.equal(deleted.revision, originalRevision + 1);
 });
+
+test("S2-AC-005 (TC-S2-REV-06): multiple sequential updates increment revision monotonically", async () => {
+  const book = await bookService.createBook(
+    validBookPayload("Sequential Updates"),
+    "publisher-revision-06",
+  );
+
+  const firstUpdate = await bookService.updateBookMetadata(
+    book.id,
+    {
+      title: "Sequential Updates First",
+      clientRevision: 1,
+    },
+    "publisher-revision-06",
+  );
+  assert.equal(firstUpdate.revision, 2);
+
+  const secondUpdate = await bookService.updateBookMetadata(
+    book.id,
+    {
+      title: "Sequential Updates Second",
+      clientRevision: 2,
+    },
+    "publisher-revision-06",
+  );
+  assert.equal(secondUpdate.revision, 3);
+});
+
+test("S2-AC-005 (TC-S2-REV-07): update with future clientRevision throws RevisionConflictError", async () => {
+  const book = await bookService.createBook(
+    validBookPayload("Future Revision"),
+    "publisher-revision-07",
+  );
+
+  await assert.rejects(
+    () =>
+      bookService.updateBookMetadata(
+        book.id,
+        {
+          title: "Future Revision Update",
+          clientRevision: 10,
+        },
+        "publisher-revision-07",
+      ),
+    (error) => {
+      assert.ok(error instanceof RevisionConflictError);
+      assert.equal(error.serverRevision, 1);
+      assert.equal(error.resourceId, book.id);
+      return true;
+    },
+  );
+});
