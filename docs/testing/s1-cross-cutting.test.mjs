@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { beforeEach, test } from 'node:test';
+import { localAuthService } from '../../apps/frontend/src/services/auth-service.ts';
 import {
   BOOK_AUTHOR_MAX_LENGTH,
   BOOK_MAX_FILE_SIZE_BYTES,
@@ -183,6 +184,17 @@ beforeEach(() => {
   globalThis.IDBKeyRange = { only: (value) => ({ _only: value }) };
 });
 
+test('S2-T01: local public registration stays reader, persists and clears on logout', async () => {
+  const created = await localAuthService.register('applicant@example.com', 'Test1234!', 'publisher');
+  assert.equal(created.user.role, 'reader');
+  assert.deepEqual(await localAuthService.getCurrentSession(), created);
+  assert.equal(await localAuthService.hasRole('publisher'), false);
+  assert.equal(await localAuthService.getAccessToken(), null);
+  await localAuthService.logout();
+  assert.equal(await localAuthService.refreshSession(), null);
+  assert.equal((await localAuthService.login('applicant@example.com', 'Test1234!')).user.role, 'reader');
+});
+
 test('S1-AC-009 (TC-038): shared limits match SPEC-001 §15 and FIELD_RULES.md', () => {
   assert.equal(DEFAULT_TEXT_MAX_LENGTH, 25);
   assert.equal(EMAIL_MAX_LENGTH, 50);
@@ -321,4 +333,15 @@ test('S1-AC-009 (TC-037): offline boundary works without network and enforces qu
   assert.deepEqual(ids, ['book-offline-1']);
   assert.equal(offlineCopy?.title, 'Distributed Systems');
   assert.equal(offlineCopy?.author, 'Maarten van Steen');
+});
+
+test('S2-T01: local sessions expire at the same 30-minute inactivity boundary', async () => {
+  const created = await localAuthService.register('idle@example.com', 'Test1234!', 'reader');
+  const at = Date.parse(created.authenticatedAt);
+  const clock = Date.now;
+  try {
+    Date.now = () => at + 30 * 60 * 1000;
+    assert.equal(await localAuthService.getCurrentSession(), null);
+    assert.equal(await readSession(), null);
+  } finally { Date.now = clock; }
 });
