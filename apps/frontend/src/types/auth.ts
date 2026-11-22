@@ -8,6 +8,7 @@ export interface AuthPort {
   logout(): Promise<void>;
   getCurrentSession(): Promise<AuthSession | null>;
   hasRole(role: UserRole): Promise<boolean>;
+  getAccessToken?(): string | null;
 }
 export class AuthError extends Error {
   constructor(public readonly code: string, message: string, public readonly field?: string) { super(message); this.name = 'AuthError'; }
