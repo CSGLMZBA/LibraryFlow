@@ -1,8 +1,27 @@
 import type { Request, Response } from "express";
 import type { BookFilterQuery } from "@library-flow/shared";
-import { bookService } from "../services/book-service.js";
+import {
+  bookService,
+  RevisionConflictError,
+} from "../services/book-service.js";
 
 function sendError(response: Response, error: unknown): void {
+  if (error instanceof RevisionConflictError) {
+    response.status(409).json({
+      success: false,
+      error: {
+        code: "REVISION_CONFLICT",
+        message: "The record changed. Reload it before retrying.",
+      },
+      data: {
+        resourceId: error.resourceId,
+        serverRevision: error.serverRevision,
+        serverValue: error.serverValue,
+      },
+    });
+    return;
+  }
+
   const message = error instanceof Error ? error.message : "Invalid request.";
   response.status(400).json({
     success: false,
@@ -66,6 +85,21 @@ export async function updateBook(
       request.body,
       response.locals.auth.uid as string,
       response.locals.auth.role === "moderator",
+    );
+    response.json({ success: true, data: book });
+  } catch (error) {
+    sendError(response, error);
+  }
+}
+
+export async function deleteBook(
+  request: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    const book = await bookService.deleteBook(
+      request.params.bookId as string,
+      response.locals.auth.uid as string,
     );
     response.json({ success: true, data: book });
   } catch (error) {
