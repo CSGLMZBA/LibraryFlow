@@ -21,17 +21,20 @@ async function apiRequest<T>(
   body?: unknown,
 ): Promise<ApiResponse<T>> {
   const token = authService.getAccessToken();
+
   if (!token) {
     return {
       success: false,
       error: {
         code: "AUTH_REQUIRED",
-        message: "An active cloud session token is required to submit or review applications.",
+        message:
+          "An active cloud session token is required to submit or review applications.",
       },
     };
   }
 
   let response: Response;
+
   try {
     response = await fetch(`${API_BASE_URL}/api/v1${path}`, {
       method,
@@ -46,12 +49,14 @@ async function apiRequest<T>(
       success: false,
       error: {
         code: "SERVICE_UNAVAILABLE",
-        message: "Unable to reach the LibraryFlow API server. Please try again.",
+        message:
+          "Unable to reach the LibraryFlow API server. Please try again.",
       },
     };
   }
 
   const parsed: unknown = await response.json().catch(() => null);
+
   if (!parsed || typeof parsed !== "object") {
     return {
       success: false,
@@ -63,17 +68,23 @@ async function apiRequest<T>(
   }
 
   const envelope = parsed as ApiResponse<T>;
+
   if (!response.ok || !envelope.success) {
     if ("error" in envelope && envelope.error) {
       return {
         success: false,
         error: {
           code: envelope.error.code || "REQUEST_FAILED",
-          message: envelope.error.message || "The request could not be completed.",
-          ...(envelope.error.field ? { field: envelope.error.field } : {}),
+          message:
+            envelope.error.message ||
+            "The request could not be completed.",
+          ...(envelope.error.field
+            ? { field: envelope.error.field }
+            : {}),
         },
       };
     }
+
     return {
       success: false,
       error: {
@@ -91,27 +102,42 @@ export const publisherApplicationService = {
     rawInput: CreatePublisherApplicationDto,
   ): Promise<ApiResponse<PublisherApplication>> {
     const errors = validateCreatePublisherApplication(rawInput);
-    const firstField = Object.keys(errors)[0] as keyof typeof errors | undefined;
+    const firstField = Object.keys(errors)[0] as
+      | keyof typeof errors
+      | undefined;
+
     if (firstField) {
       return {
         success: false,
         error: {
           code: "VALIDATION_ERROR",
-          message: errors[firstField] ?? "Invalid publisher application input.",
+          message:
+            errors[firstField] ??
+            "Invalid publisher application input.",
           field: firstField,
         },
       };
     }
 
     const payload = normalizePublisherApplicationInput(rawInput);
-    return apiRequest<PublisherApplication>("/publisher-applications", "POST", payload);
+
+    return apiRequest<PublisherApplication>(
+      "/publisher-applications",
+      "POST",
+      payload,
+    );
   },
 
-  async listMyApplications(): Promise<ApiResponse<PublisherApplication[]>> {
-    return apiRequest<PublisherApplication[]>("/publisher-applications/me", "GET");
+  async listMyApplications(): Promise<
+    ApiResponse<PublisherApplication[]>
+  > {
+    return apiRequest<PublisherApplication[]>(
+      "/publisher-applications/me",
+      "GET",
+    );
   },
 
-
+  // Reader: withdraw a pending publisher application.
   async withdrawApplication(
     applicationId: string,
     revision: number,
@@ -123,13 +149,17 @@ export const publisherApplicationService = {
     );
   },
 
-  async listPendingApplications(): Promise<ApiResponse<PublisherApplication[]>> {
+  // Moderator: retrieve pending applications.
+  async listPendingApplications(): Promise<
+    ApiResponse<PublisherApplication[]>
+  > {
     return apiRequest<PublisherApplication[]>(
       "/moderation/publisher-applications?status=pending",
       "GET",
     );
   },
 
+  // Moderator: approve a pending application.
   async approveApplication(
     applicationId: string,
     revision: number,
@@ -141,15 +171,19 @@ export const publisherApplicationService = {
     );
   },
 
+  // Moderator: reject a pending application.
   async rejectApplication(
     applicationId: string,
     revision: number,
     decisionReason: string,
   ): Promise<ApiResponse<PublisherApplication>> {
-    const payload: ReviewPublisherApplicationDto & { revision: number } = {
+    const payload: ReviewPublisherApplicationDto & {
+      revision: number;
+    } = {
       revision,
       decisionReason: decisionReason.trim(),
     };
+
     return apiRequest<PublisherApplication>(
       `/moderation/publisher-applications/${encodeURIComponent(applicationId)}/reject`,
       "POST",
@@ -157,14 +191,19 @@ export const publisherApplicationService = {
     );
   },
 
+  // Moderator: revoke publisher privileges.
   async revokePublisher(
     publisherUid: string,
     decisionReason: string,
   ): Promise<ApiResponse<{ uid: string; role: "reader" }>> {
+    const payload: ReviewPublisherApplicationDto = {
+      decisionReason: decisionReason.trim(),
+    };
+
     return apiRequest<{ uid: string; role: "reader" }>(
       `/moderation/publishers/${encodeURIComponent(publisherUid)}/revoke`,
       "POST",
-      { reason: decisionReason.trim() },
+      payload,
     );
   },
 };
