@@ -11,7 +11,7 @@
     "dev:frontend": "npm run dev --workspace @library-flow/frontend",
     "dev:backend": "npm run dev --workspace @library-flow/backend",
     "test:sprint1": "node --import tsx --test docs/testing/auth-validation.test.mjs docs/testing/s1-cross-cutting.test.mjs docs/testing/s1-domain-acceptance.test.mjs",
-    "test:sprint2": "node --import tsx --test docs/testing/s2-publisher-application.test.mjs docs/testing/s2-security-session.test.mjs docs/testing/s2-storage-deployment.test.mjs docs/testing/s2-auth-registration.test.mjs docs/testing/s2-auth-lifecycle.test.mjs docs/testing/s2-auth-routes.test.mjs docs/testing/s2-account-policy.test.mjs docs/testing/s2-account-routes.test.mjs",
+    "test:sprint2": "node --import tsx --test docs/testing/s2-publisher-application.test.mjs docs/testing/s2-t04-ui-contract.test.mjs docs/testing/s2-security-session.test.mjs docs/testing/s2-storage-deployment.test.mjs docs/testing/s2-auth-registration.test.mjs docs/testing/s2-auth-lifecycle.test.mjs docs/testing/s2-auth-routes.test.mjs docs/testing/s2-account-policy.test.mjs docs/testing/s2-account-routes.test.mjs",
     "test": "npm run test:sprint1 && npm run test:sprint2",
     "start": "npm run dev:backend",
     "admin:moderator": "node --env-file=.env scripts/set-moderator.mjs",

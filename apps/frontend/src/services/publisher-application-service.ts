@@ -111,6 +111,17 @@ export const publisherApplicationService = {
     return apiRequest<PublisherApplication[]>("/publisher-applications/me", "GET");
   },
 
+  async withdrawApplication(
+    applicationId: string,
+    revision: number,
+  ): Promise<ApiResponse<PublisherApplication>> {
+    return apiRequest<PublisherApplication>(
+      `/publisher-applications/${encodeURIComponent(applicationId)}/withdraw`,
+      "POST",
+      { revision },
+    );
+  },
+  
   async listPendingApplications(): Promise<ApiResponse<PublisherApplication[]>> {
     return apiRequest<PublisherApplication[]>(
       "/moderation/publisher-applications?status=pending",
@@ -145,14 +156,18 @@ export const publisherApplicationService = {
     );
   },
 
-  async revokePublisher(
+
+async revokePublisher(
     publisherUid: string,
     decisionReason: string,
   ): Promise<ApiResponse<{ uid: string; role: "reader" }>> {
+    const payload: ReviewPublisherApplicationDto = {
+      decisionReason: decisionReason.trim(),
+    };
     return apiRequest<{ uid: string; role: "reader" }>(
       `/moderation/publishers/${encodeURIComponent(publisherUid)}/revoke`,
       "POST",
-      { reason: decisionReason.trim() },
+      payload,
     );
   },
 };
