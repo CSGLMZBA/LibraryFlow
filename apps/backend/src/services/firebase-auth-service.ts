@@ -26,9 +26,13 @@ export function authAdmin() {
 export async function identityToolkit(endpoint: 'signUp' | 'signInWithPassword', email: string, password: string): Promise<{idToken: string}> {
   const apiKey = process.env.FIREBASE_WEB_API_KEY;
   if (!apiKey) throw new AuthCloudError('CONFIGURATION_ERROR', 'FIREBASE_WEB_API_KEY is missing.', undefined, 503);
+  const emulator = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  const base = emulator
+    ? `http://${emulator}/identitytoolkit.googleapis.com`
+    : 'https://identitytoolkit.googleapis.com';
   let response: Response;
   try {
-    response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:${endpoint}?key=${encodeURIComponent(apiKey)}`, {
+    response = await fetch(`${base}/v1/accounts:${endpoint}?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({email, password, returnSecureToken: true})
     });

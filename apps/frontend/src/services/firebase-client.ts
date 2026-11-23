@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from 'firebase/app';
-import { getAuth, indexedDBLocalPersistence, setPersistence, signInWithEmailAndPassword, signOut, onIdTokenChanged } from 'firebase/auth';
+import { connectAuthEmulator, getAuth, indexedDBLocalPersistence, setPersistence, signInWithEmailAndPassword, signOut, onIdTokenChanged } from 'firebase/auth';
 import { AuthError } from '../types/auth';
 
 /** SDK owns credential persistence and refresh tokens. Never copy them into app storage. */
@@ -30,6 +30,9 @@ async function initializeClient(): Promise<CloudIdentityClient> {
   const app = getApps().some(candidate => candidate.name === appName)
     ? getApp(appName) : initializeApp({apiKey, authDomain, projectId}, appName);
   const auth = getAuth(app);
+  if ((import.meta as ImportMeta & {env?: {DEV?: boolean}}).env?.DEV && env.VITE_FIREBASE_AUTH_EMULATOR_HOST) {
+    connectAuthEmulator(auth, `http://${env.VITE_FIREBASE_AUTH_EMULATOR_HOST}`);
+  }
   await setPersistence(auth, indexedDBLocalPersistence);
   await auth.authStateReady();
   return {

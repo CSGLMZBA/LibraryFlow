@@ -116,7 +116,7 @@ No item may be marked passed without a dated command or manual scenario.
 | TC-S2-047 | `S2-AC-009` / `US-REA-020` CA-004 | Access after logout is denied | Session invalidated by logout | GET any protected endpoint with old Bearer token | 401 `AUTH_INVALID`; redirect to login; notification of session expiration | Automated | Not started |
 | TC-S2-048 | `S2-AC-009` / `US-REA-017` CA-001 | Account deletion request starts grace period | Authenticated user | POST `/api/v1/account/deletion-request` | `deletionRequestedAt` set; `permanentDeletionAt = now + 30 days`; personal public fields removed immediately | Automated | Not started |
 | TC-S2-049 | `S2-AC-009` / `US-REA-017` CA-003 | Login blocked during grace period | Account with active deletion request | POST `/api/v1/auth/login` | 403 `ACCOUNT_RESTRICTED`; message indicates pending deletion and grace period | Automated | Not started |
-| TC-S2-050 | `S2-AC-009` / `US-REA-017` CA-001 | Cancel deletion during grace period | Account with active deletion request within 30 days | POST `/api/v1/account/deletion-cancel` | Account restored to active; `deletionRequestedAt` cleared; login re-enabled | Automated | Not started |
+| TC-S2-050 | `S2-AC-009` / `US-REA-017` CA-001 | Cancel deletion during grace period | Account with active deletion request within 30 days | POST `/api/v1/account/deletion-cancel` | 202 pending; deletion deadline and restrictions remain in effect; login becomes available only after moderator approval and a fresh sign-in | Automated | Not started |
 | TC-S2-051 | `S2-AC-009` / `US-MOD-011` CA-001 | Moderator restores a deleted account | Account pending deletion or deleted | POST `/api/v1/moderation/accounts/:uid/restore` | Account marked active; user receives `account_restored` notification; audit record with moderator ID, user ID, timestamp | Automated | Not started |
 | TC-S2-052 | `S2-AC-009` / SPEC-002 §1.2–§1.3 | Every protected handler checks auth chain | Various protected endpoints | 1) No token → 401; 2) Invalid token → 401; 3) Banned account → 403; 4) Deletion-pending → 403; 5) Wrong role → 403 | Each check enforced in order per SPEC-002 §1.3 | Automated | Not started |
 
@@ -141,6 +141,24 @@ No acceptance item is marked `Passed` until implementation exists and the verifi
 |---|---|---|---|---|
 
 ---
+
+### S2-AC-009 browser verification — 2026-11-23
+
+Base: develop at 4d04fb9. Local Chromium, Firebase Authentication and
+Firestore emulators, real Express routes and React UI, disposable reader and
+moderator accounts. Runner and setup: S2-AUTH-SESSION-HANDOFF.md.
+
+| Scenario | Observed |
+|---|---|
+| Sign in and reload | The reader workspace returned after browser reload and the session endpoint returned 200. |
+| Simulate 30 minutes of inactivity | Backdated the test reader's last activity in Firestore. Reload returned 401 and the sign-in screen. |
+| Log out and reload | Logout returned 200; the browser remained signed out on reload. |
+| Request deletion and then cancellation | The account API set a deadline 30 days later. The login page offered cancellation and its request returned 202. A second login attempt remained restricted. |
+| Approve recovery | A separate moderator browser context confirmed the matching request. The reader could sign in again. |
+
+Typecheck and production build passed. The existing test command reported
+20 Sprint 1 and 97 Sprint 2 passes. Acceptance remains Pending until
+independent review and verification in the team's deployed environment.
 
 ## 4. Defect Log (`S2-T10`)
 

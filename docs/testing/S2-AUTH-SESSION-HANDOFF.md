@@ -117,3 +117,24 @@ Resolved the two auth-service conflicts using the persistent Firebase adapter,
 which already supplies the synchronous bearer getter expected by the consumer;
 removed an automatically merged duplicate optional getter declaration.
 Earlier references to #18 as open describe the initial review state.
+
+## Run the isolated browser acceptance check
+
+From the repository root, with Node.js, Java 21, Python 3.11+, Bash and curl
+available (Git Bash also works on Windows), use the same Python for both
+Playwright commands. The app, auth provider and database run on loopback.
+Each run uses a fresh demo project and disposable reader and moderator accounts.
+
+```sh
+npm ci
+npm run build
+python -m pip install playwright
+python -m playwright install chromium
+npx --yes firebase-tools@14 emulators:exec --project demo-libraryflow --config docs/testing/auth-emulators/firebase.json --only auth,firestore "bash docs/testing/auth-emulators/run.sh"
+```
+
+An existing Chromium installation can be selected with CHROMIUM_PATH.
+The test exercises the sign-in and moderator pages, starts deletion via the
+account API and simulates inactivity by backdating the reader's emulator
+session. The emulator rules deny direct client reads and writes. This suite
+does not verify the team's deployed rules, actual email delivery or erasure.
