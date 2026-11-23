@@ -74,6 +74,20 @@ export function ReaderApplicationStatus() {
 // Count manual refresh attempts to provide visible feedback.
   const [refreshAttempts, setRefreshAttempts] = useState(0);
 
+
+// Application withdrawal confirmation and request state.
+  const [confirmationId, setConfirmationId] = useState<string | null>(null);
+  const [withdrawingId, setWithdrawingId] = useState<string | null>(null);
+
+  const [withdrawalError, setWithdrawalError] = useState<{
+    applicationId: string;
+    message: string;
+  } | null>(null);
+
+  const [withdrawalNotice, setWithdrawalNotice] = useState<string | null>(
+    null,
+  );
+
   // Read applications from the existing authenticated API service.
   useEffect(() => {
     let active = true;
@@ -128,9 +142,92 @@ export function ReaderApplicationStatus() {
   }, [reloadKey]);
 
     function refreshApplications() {
-    setRefreshAttempts((previous) => previous + 1);
-    setReloadKey((previous) => previous + 1);
-  }
+      if (withdrawingId !== null) {
+        return;
+      }
+
+      setConfirmationId(null);
+      setWithdrawalError(null);
+      setWithdrawalNotice(null);
+
+      setRefreshAttempts((previous) => previous + 1);
+      setReloadKey((previous) => previous + 1);
+    }
+
+    // Withdraw an application only after explicit confirmation.
+    async function confirmWithdrawal(application: PublisherApplication) {
+      if (
+        application.status !== "pending" ||
+        withdrawingId !== null ||
+        confirmationId !== application.id
+      ) {
+        return;
+      }
+
+      setWithdrawingId(application.id);
+      setConfirmationId(null);
+      setWithdrawalError(null);
+      setWithdrawalNotice(null);
+
+      try {
+        const result = await publisherApplicationService.withdrawApplication(
+          application.id,
+          application.revision,
+        );
+
+        if (!result.success) {
+          const isConflict =
+            result.error.code === "REVISION_CONFLICT" ||
+            result.error.code === "INVALID_STATE";
+
+          setWithdrawalError({
+            applicationId: application.id,
+            message: isConflict
+              ? "This application has changed. Refresh its status before trying again."
+              : result.error.message,
+          });
+
+          return;
+        }
+
+        const updatedApplication = result.data;
+
+        // Never display success without a valid withdrawn response.
+        if (
+          updatedApplication.id !== application.id ||
+          updatedApplication.status !== "withdrawn"
+        ) {
+          setWithdrawalError({
+            applicationId: application.id,
+            message:
+              "The server returned an unexpected result. Refresh the application status.",
+          });
+
+          return;
+        }
+
+        // Update the view using the confirmed server response.
+        setApplications((current) =>
+          current.map((item) =>
+            item.id === updatedApplication.id
+              ? updatedApplication
+              : item,
+          ),
+        );
+
+        setWithdrawalNotice(
+          `Application "${updatedApplication.publisherName}" was withdrawn successfully.`,
+        );
+      } catch {
+        setWithdrawalError({
+          applicationId: application.id,
+          message:
+            "An unexpected error occurred. Refresh the application status before trying again.",
+        });
+      } finally {
+        setWithdrawingId(null);
+      }
+    }
 
   return (
     <section
@@ -155,12 +252,23 @@ export function ReaderApplicationStatus() {
         <button
           type="button"
           onClick={refreshApplications}
-          disabled={loadState === "loading"}
+          disabled={loadState === "loading" || withdrawingId !== null}
           className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Refresh status
         </button>
       </div>
+
+      {/* Successful withdrawal feedback */}
+      {withdrawalNotice && (
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800"
+        >
+          {withdrawalNotice}
+        </p>
+      )}
 
       {/* Loading state */}
       {loadState === "loading" && (
@@ -323,6 +431,75 @@ export function ReaderApplicationStatus() {
                           {application.decisionReason}
                         </p>
                       </div>
+                    )}
+
+                    {/* Withdrawal is available only for pending applications. */}
+                    {application.status === "pending" && (
+                      <div className="mt-5 border-t border-slate-200 pt-4">
+                        {confirmationId === application.id ? (
+                          <div
+                            role="group"
+                            aria-label="Confirm application withdrawal"
+                            className="rounded-lg border border-amber-200 bg-amber-50 p-4"
+                          >
+                            <p className="text-sm font-semibold text-amber-900">
+                              Withdraw this application?
+                            </p>
+
+                            <p className="mt-2 text-sm text-amber-800">
+                              This action will end your pending application.
+                              You can submit a new application afterward.
+                            </p>
+
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void confirmWithdrawal(application);
+                                }}
+                                disabled={withdrawingId !== null}
+                                className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-medium text-white hover:bg-rose-800 disabled:opacity-50"
+                              >
+                                Confirm withdrawal
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setConfirmationId(null)}
+                                disabled={withdrawingId !== null}
+                                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={withdrawingId !== null}
+                            onClick={() => {
+                              setWithdrawalError(null);
+                              setWithdrawalNotice(null);
+                              setConfirmationId(application.id);
+                            }}
+                            className="rounded-lg border border-rose-600 px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {withdrawingId === application.id
+                              ? "Withdrawing..."
+                              : "Withdraw application"}
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Withdrawal errors are displayed next to their application. */}
+                    {withdrawalError?.applicationId === application.id && (
+                      <p
+                        role="alert"
+                        className="mt-4 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"
+                      >
+                        {withdrawalError.message}
+                      </p>
                     )}
                 </li>
               );
