@@ -1,4 +1,5 @@
 import express from "express";
+import { corsHeadersFor, parseFrontendOrigins } from "./config/cors-policy.js";
 import { moderatorGuard } from "./middleware/moderator-guard.js";
 import { removeComment } from "./controllers/moderation-controller.js";
 import { authRouter } from "./routes/auth-routes.js";
@@ -12,29 +13,15 @@ import { accountRouter } from "./routes/account-routes.js";
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
 
-const allowedOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:5173,*.netlify.app")
-  .split(",")
-  .map((origin) => origin.trim().replace(/\/$/, ""))
-  .filter(Boolean);
-
-function isOriginAllowed(origin: string): boolean {
-  return allowedOrigins.some((allowedOrigin) => {
-    if (allowedOrigin === "*") return true;
-    if (allowedOrigin.startsWith("*.") || allowedOrigin.startsWith("*.")) {
-      const suffix = allowedOrigin.slice(1);
-      return origin.endsWith(suffix);
-    }
-    return origin === allowedOrigin;
-  });
-}
+const allowedOrigins = parseFrontendOrigins(
+  process.env.FRONTEND_ORIGIN,
+  process.env.NODE_ENV,
+);
 
 app.use((request, response, next) => {
-  const origin = request.headers.origin;
-  if (origin && isOriginAllowed(origin)) {
-    response.setHeader("Access-Control-Allow-Origin", origin);
-    response.setHeader("Vary", "Origin");
-    response.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  const headers = corsHeadersFor(request.headers.origin, allowedOrigins);
+  for (const [name, value] of Object.entries(headers)) {
+    response.setHeader(name, value);
   }
   if (request.method === "OPTIONS") {
     response.sendStatus(204);
