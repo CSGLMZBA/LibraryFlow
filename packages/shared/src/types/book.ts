@@ -16,7 +16,10 @@ export type Book = {
   status: BookStatus;
   accessKey: string;
   shareableUrl: string;
+  /** Always an empty string. Book files are reached only through signed URLs (SPEC-002 §4). */
   fileUrl: string;
+  /** Object key inside the private book bucket. Not a URL; grants no access (SPEC-002 §4.1). */
+  fileObjectPath?: string;
   fileType: BookFileType;
   fileSizeBytes: number;
   categoryIds: string[];
@@ -45,6 +48,32 @@ export type UpdateBookMetadataDto = {
   genreIds?: string[];
   clientRevision?: number;
   mutationId?: string;
+};
+
+/** POST /books/:id/file/upload-url request (SPEC-002 §4.1). */
+export type BookFileUploadUrlRequest = {
+  fileName: string;
+  fileType: BookFileType;
+  fileSizeBytes: number;
+  revision: number;
+};
+
+/** POST /books/:id/file/upload-url response data. */
+export type BookFileUploadUrlResponse = {
+  objectPath: string;
+  uploadUrl: string;
+};
+
+/** POST /books/:id/file/complete request. Response data is the updated Book. */
+export type BookFileCompleteRequest = {
+  objectPath: string;
+  revision: number;
+};
+
+/** GET /books/:id/file/download-url response data. */
+export type BookFileDownloadUrlResponse = {
+  downloadUrl: string;
+  expiresAt: string;
 };
 
 export type BookFilterQuery = {

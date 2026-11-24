@@ -78,14 +78,14 @@ No item may be marked passed without a dated command or manual scenario.
 
 | Test ID | AC / Story | Criterion | Preconditions | Steps | Expected Result | Type | Status |
 |---|---|---|---|---|---|---|---|
-| TC-S2-027 | `S2-AC-006` / SPEC-002 §4 | Private bucket enforces access | `book-files` bucket is private | Attempt direct URL access without signed token | Access denied; no public URL available | Automated | Not started |
-| TC-S2-028 | `S2-AC-006` / SPEC-002 §4 | Upload constraint: 20 MB maximum | Authenticated `publisher` | 1) Upload valid PDF ≤ 20 MB → succeeds; 2) Upload PDF > 20 MB → rejected | Valid file stored at `books/{bookId}/{revision}/{sanitizedName}`; oversized file rejected with error | Automated | Not started |
-| TC-S2-029 | `S2-AC-006` / SPEC-002 §4 | Signed download URL for authorized readers | Authenticated `reader`; approved book exists | Request download URL from server | Server returns a temporary signed URL that expires within 10 minutes; no service-role key exposed | Automated / Manual | Not started |
-| TC-S2-030 | `S2-AC-006` / SPEC-002 §4 | No credentials in frontend bundle | Built frontend application | Inspect Netlify bundle for `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_PRIVATE_KEY`, `DELETION_WORKER_SECRET` | Zero matches; no service credentials in client-side code | Automated | Not started |
-| TC-S2-059 | `S2-AC-006` / SPEC-002 §4.1 (proposed) | Only the owner publisher receives an upload URL | `pending` book owned by publisher A | POST `/api/v1/books/:id/file/upload-url` as reader, as publisher B, and as publisher A | Reader → 403 `FORBIDDEN`; publisher B → 403 `FORBIDDEN`; publisher A → 200 with `objectPath = books/{id}/{revision}/{sanitizedName}` and an `uploadUrl` without a service-role key | Automated | Not started |
-| TC-S2-060 | `S2-AC-006` / SPEC-002 §4.1 (proposed) | Upload request validation | Owner publisher; `pending` book | Request with size > 20 MB; extension not matching `fileType`; stale `revision`; non-`pending` book | 400 `VALIDATION_ERROR` with `field`; 400 `VALIDATION_ERROR`; 409 `REVISION_CONFLICT`; 409 `INVALID_STATE` | Automated | Not started |
-| TC-S2-061 | `S2-AC-006` / SPEC-002 §4.1 (proposed) | Upload completion verifies the stored object | Owner publisher holds an `objectPath` | 1) Complete before uploading; 2) upload then complete; 3) complete with a path outside `books/{id}/{revision}/` | 1) 409 `INVALID_STATE`; 2) 200 `Book` with `fileObjectPath`, verified size, revision + 1; 3) 400 `VALIDATION_ERROR` (`field: "objectPath"`) | Automated | Not started |
-| TC-S2-062 | `S2-AC-006` / SPEC-002 §4.1 (proposed) | Download URL visibility rules | Approved book, pending book, deleted book | Request `/api/v1/books/:id/file/download-url` as anonymous, reader, owner, moderator | Anonymous → 401 `AUTH_REQUIRED`; reader gets approved only (pending/deleted → 404 `NOT_FOUND`); owner/moderator get pending; `expiresAt` ≤ issue time + 10 minutes | Automated | Not started |
+| TC-S2-027 | `S2-AC-006` / SPEC-002 §4 | Private bucket enforces access | `book-files` bucket is private | Attempt direct URL access without signed token | Access denied; no public URL available | Automated | Pending |
+| TC-S2-028 | `S2-AC-006` / SPEC-002 §4 | Upload constraint: 20 MB maximum | Authenticated `publisher` | 1) Upload valid PDF ≤ 20 MB → succeeds; 2) Upload PDF > 20 MB → rejected | Valid file stored at `books/{bookId}/{revision}/{sanitizedName}`; oversized file rejected with error | Automated | Pending |
+| TC-S2-029 | `S2-AC-006` / SPEC-002 §4 | Signed download URL for authorized readers | Authenticated `reader`; approved book exists | Request download URL from server | Server returns a temporary signed URL that expires within 10 minutes; no service-role key exposed | Automated / Manual | Pending |
+| TC-S2-030 | `S2-AC-006` / SPEC-002 §4 | No credentials in frontend bundle | Built frontend application | Inspect Netlify bundle for `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_PRIVATE_KEY`, `DELETION_WORKER_SECRET` | Zero matches; no service credentials in client-side code | Automated | Pending |
+| TC-S2-059 | `S2-AC-006` / SPEC-002 §4.1 | Only the owner publisher receives an upload URL | `pending` book owned by publisher A | POST `/api/v1/books/:id/file/upload-url` as reader, as publisher B, and as publisher A | Reader → 403 `FORBIDDEN`; publisher B → 403 `FORBIDDEN`; publisher A → 200 with `objectPath = books/{id}/{revision}/{sanitizedName}` and an `uploadUrl` without a service-role key | Automated | Pending |
+| TC-S2-060 | `S2-AC-006` / SPEC-002 §4.1 | Upload request validation | Owner publisher; `pending` book | Request with size > 20 MB; extension not matching `fileType`; stale `revision`; non-`pending` book | 400 `VALIDATION_ERROR` with `field`; 400 `VALIDATION_ERROR`; 409 `REVISION_CONFLICT`; 409 `INVALID_STATE` | Automated | Pending |
+| TC-S2-061 | `S2-AC-006` / SPEC-002 §4.1 | Upload completion verifies the stored object | Owner publisher holds an `objectPath` | 1) Complete before uploading; 2) upload then complete; 3) complete with a path outside `books/{id}/{revision}/` | 1) 409 `INVALID_STATE`; 2) 200 `Book` with `fileObjectPath`, verified size, revision + 1; 3) 400 `VALIDATION_ERROR` (`field: "objectPath"`) | Automated | Pending |
+| TC-S2-062 | `S2-AC-006` / SPEC-002 §4.1 | Download URL visibility rules | Approved book, pending book, deleted book | Request `/api/v1/books/:id/file/download-url` as anonymous, reader, owner, moderator | Anonymous → 401 `AUTH_REQUIRED`; reader gets approved only (pending/deleted → 404 `NOT_FOUND`); owner/moderator get pending; `expiresAt` ≤ issue time + 10 minutes | Automated | Pending |
 
 ### 2.7 Scheduled Cleanup (`S2-AC-007`: SPEC-002 §5)
 
@@ -130,7 +130,7 @@ No item may be marked passed without a dated command or manual scenario.
 |---|---|---|---|---|---|---|---|
 | TC-S2-053 | `S2-AC-010` / SPEC-002 §8 | Health endpoint is accessible and unauthenticated | Deployed Render backend | GET `/health` without authentication | 200 `HealthResponse`; no authentication required | Manual | Not started |
 | TC-S2-054 | `S2-AC-010` / SPEC-002 §8 | CORS allows only configured origins | Deployed backend | 1) Request from `FRONTEND_ORIGIN` → allowed; 2) Request from `https://evil.example.com` → blocked | Only configured `FRONTEND_ORIGIN` values receive CORS headers; `*` is never used in production | Manual | Not started |
-| TC-S2-055 | `S2-AC-010` / SPEC-002 §8 | No secrets in source or VITE_* variables | Repository and Netlify build output | Search repository for `FIREBASE_PRIVATE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DELETION_WORKER_SECRET` in source; verify no `VITE_` name contains a service key | Zero matches; all secrets in platform environment only | Automated | Not started |
+| TC-S2-055 | `S2-AC-010` / SPEC-002 §8 | No secrets in source or VITE_* variables | Repository and Netlify build output | Search repository for `FIREBASE_PRIVATE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DELETION_WORKER_SECRET` in source; verify no `VITE_` name contains a service key | Zero matches; all secrets in platform environment only | Automated | Pending |
 | TC-S2-056 | `S2-AC-010` / SPEC-002 §8 | Frontend environment uses only public config | Netlify build environment | Verify `VITE_API_BASE_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` are public-only | No service-role keys, private keys, or worker secrets exposed | Manual | Not started |
 | TC-S2-057 | `S2-AC-010` / Sprint 2 DoD | Backup and rollback evidence | Deployed platform | 1) Take backup snapshot; 2) Deploy breaking change; 3) Roll back; 4) Verify restored health | Backup captured; rollback completes; health returns 200; no data loss | Manual | Not started |
 | TC-S2-058 | `S2-AC-010` / Sprint 2 DoD | Netlify frontend communicates with Render backend | Deployed frontend and backend | Open Netlify URL; login; perform application submission | Frontend API calls reach Render backend through CORS; full round-trip succeeds | Manual | Not started |
@@ -163,6 +163,26 @@ moderator accounts. Runner and setup: S2-AUTH-SESSION-HANDOFF.md.
 Typecheck and production build passed. The existing test command reported
 20 Sprint 1 and 97 Sprint 2 passes. Acceptance remains Pending until
 independent review and verification in the team's deployed environment.
+
+### S2-T07 storage and CORS automated verification — 2026-11-23
+
+Owner: Jorge Enriquez Rico (agent: Harbor). Contract: SPEC-002 §4, §4.1, §8.
+Automated tests in `docs/testing/s2-storage-deployment.test.mjs` use an
+in-memory fake of Supabase Storage and a fake `fetch`; no live bucket was used.
+
+| Test IDs | Command | Observed |
+|---|---|---|
+| TC-S2-030, TC-S2-054 (policy), TC-S2-055 | `npm test` on local Windows after PR #27 (branch `feature/S2-T07-storage-signed-access`) | 108 passed, 0 failed, 0 skipped. TC-S2-030 scanned the built frontend bundle. |
+| TC-S2-027 to TC-S2-029, TC-S2-059 to TC-S2-062 | `node --import tsx --test docs/testing/s2-storage-deployment.test.mjs` (Linux, Node 22.23.5) on `feature/S2-T07-storage-routes` | 26 tests: 25 passed, 0 failed, 1 skipped (TC-S2-030, no build output). Mutation check: removing the oversized-object deletion, raising the URL lifetime to 3600 s, or letting readers download pending books each made the suite fail. |
+
+Still required before `Passed`:
+
+- TC-S2-027 live check: run `npm run storage:setup` against the team bucket,
+  then confirm an anonymous request to the public object URL is denied.
+- TC-S2-028 live check: a direct signed upload larger than 20 MB is rejected
+  by the bucket.
+- Independent review by Cesar (S2-T10) and the owner's local `npm test` run
+  on this branch.
 
 ## 4. Defect Log (`S2-T10`)
 
