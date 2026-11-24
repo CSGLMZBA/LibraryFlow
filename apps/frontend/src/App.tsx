@@ -7,6 +7,7 @@ import { PublisherDashboardPage } from "./pages/PublisherDashboardPage";
 import ModeratorDashboardPage from "./pages/ModeratorDashboardPage";
 import { PublisherApplicationForm } from "./components/PublisherApplicationForm";
 import { ReaderApplicationStatus } from "./components/ReaderApplicationStatus";
+import { clearReaderApplicationCache } from "./services/reader-application-cache";
 
 function WorkspaceShell() {
   // Get authentication state.
@@ -65,7 +66,9 @@ function WorkspaceShell() {
                   setShowPublisherDashboard(false);
                   setShowPublisherApplication(false);
                   setShowReaderApplicationStatus(false);
-                  void logout();
+                  void logout().finally(() => {
+                  void clearReaderApplicationCache(user.id);
+                });
                 }}
                 className="rounded-lg border border-slate-300
                            bg-white px-3 py-1.5 text-sm
@@ -185,7 +188,7 @@ function WorkspaceShell() {
               <PublisherDashboardPage publisher={user} />
             ) : user.role === "reader" &&
             showReaderApplicationStatus ? (
-              <ReaderApplicationStatus key={user.id} />
+              <ReaderApplicationStatus key={user.id} userId={user.id}/>
             ) : user.role === "reader" &&
             showPublisherApplication ? (
               <PublisherApplicationForm />
