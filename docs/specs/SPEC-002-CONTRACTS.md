@@ -216,6 +216,99 @@ Rejection leaves the object private and creates one deletion job due 24 hours
 after rejection. Permanent deletion marks the record `deleted`, removes all
 metadata exposed to ordinary users, and creates an immediate cleanup job.
 
+### 4.1 Book file upload and signed download (S2-T07)
+
+> **Status: Proposed by Jorge Enriquez Rico (S2-T07). Pending approval by Juan
+> Carlos Zuniga Alfaro (route and DTO owner) and Carlos Gabriel Martinez
+> Bazaldua (integration owner). No consumer may implement these routes until
+> this note is replaced by the approval record.**
+
+Book files never pass through the API. The browser uploads directly to the
+private bucket through a server-issued signed upload URL, then asks the API to
+verify the stored object. Every route below performs the §1.3 checks in order.
+
+| Method | Route | Auth |
+|---|---|---|
+| POST | `/books/:id/file/upload-url` | owner publisher |
+| POST | `/books/:id/file/complete` | owner publisher |
+| GET | `/books/:id/file/download-url` | authenticated account allowed to read the book |
+
+`POST /books/:id/file/upload-url`
+
+```ts
+type BookFileUploadUrlRequest = {
+  fileName: string;            // original name, 1-255 characters
+  fileType: "epub" | "pdf";    // must match the file name extension
+  fileSizeBytes: number;       // integer, 1 to 20 MB (BOOK_MAX_FILE_SIZE_BYTES)
+  revision: number;            // client-observed book revision
+};
+
+type BookFileUploadUrlResponse = {
+  objectPath: string;          // books/{bookId}/{revision}/{sanitizedOriginalName}
+  uploadUrl: string;           // single-object signed upload URL
+};
+```
+
+- The book must be `pending`; otherwise `409 INVALID_STATE`.
+- A stale `revision` returns `409 REVISION_CONFLICT` (§3).
+- Invalid name, type, extension, or size returns `400 VALIDATION_ERROR` with
+  `field`.
+- `sanitizedOriginalName` keeps only `[A-Za-z0-9._-]`, replaces other
+  characters with `-`, and keeps the `.pdf` or `.epub` extension.
+- The upload URL is valid only for `objectPath`, cannot overwrite an existing
+  object, and its lifetime is set by Supabase. It contains no service-role key.
+- The browser uploads with `PUT uploadUrl`, the raw file as the body, and
+  `Content-Type: application/pdf` or `application/epub+zip`.
+
+`POST /books/:id/file/complete`
+
+```ts
+type BookFileCompleteRequest = {
+  objectPath: string;          // value returned by upload-url
+  revision: number;            // same revision sent to upload-url
+};
+// 200: { success: true, data: Book } with revision incremented by one
+```
+
+- The server reads the object metadata from Supabase. A missing object returns
+  `409 INVALID_STATE`. An object larger than 20 MB or with a MIME type that
+  does not match `fileType` is deleted and returns `400 VALIDATION_ERROR`.
+- `objectPath` must start with `books/{bookId}/{revision}/`; otherwise
+  `400 VALIDATION_ERROR` with `field: "objectPath"`.
+- On success the book stores `fileObjectPath`, the verified `fileSizeBytes`,
+  and `fileType`, and increments `revision`. A replaced previous object is
+  queued for deletion under §5 (`kind: "deleted-book-file"`).
+
+`GET /books/:id/file/download-url`
+
+```ts
+type BookFileDownloadUrlResponse = {
+  downloadUrl: string;         // signed URL for one object
+  expiresAt: string;           // ISO timestamp, at most 10 minutes from issue
+};
+```
+
+- Any authenticated, non-restricted account may request an `approved` book.
+- The owner publisher and moderators may also request a `pending` or
+  `rejected` book.
+- A `deleted` book, a book without `fileObjectPath`, or a book the requester
+  cannot read returns `404 NOT_FOUND`.
+
+Shared type change (owner: Juan): `Book` gains optional
+`fileObjectPath?: string`, the object key inside the private bucket. It is not
+a URL and grants no access without a signed URL. `Book.fileUrl` stays an empty
+string and must never contain a storage URL.
+
+Bucket configuration (applied with the service-role key by the operations
+owner, never from the browser): `public: false`,
+`file_size_limit: 20971520`, and
+`allowed_mime_types: ["application/pdf", "application/epub+zip"]`. The bucket
+limits are the enforcement point for direct uploads; the `complete` check is
+the second line of defense.
+
+Storage provider failures return `500 INTERNAL_ERROR` with a safe message.
+Signed URLs, tokens, and the service-role key are never logged.
+
 ## 5. Deletion Jobs
 
 Collection: `deletionJobs/{jobId}`.
@@ -317,6 +410,17 @@ credential may use a `VITE_` name or appear in source control.
 `GET /health` returns the existing `HealthResponse`. It must be unauthenticated
 and return HTTP 200 only when the process is ready to serve. CORS allows only
 the configured `FRONTEND_ORIGIN` values, never `*` in production.
+
+`FRONTEND_ORIGIN` is a comma-separated list of exact origins
+(`scheme://host[:port]`, no path, no wildcard). When `NODE_ENV=production`,
+the backend refuses to start if `FRONTEND_ORIGIN` is empty or contains `*` or
+a wildcard host. Outside production, an empty value defaults to
+`http://localhost:5173`. Requests from other origins receive no CORS headers,
+and their preflight requests are answered without them.
+
+The Sprint 1 names `CORS_ORIGIN` and `SUPABASE_BUCKET` are replaced by
+`FRONTEND_ORIGIN` and `SUPABASE_BOOK_BUCKET` (S2-T07). The old names are not
+read.
 
 ## 9. Sprint 2 Work Handoffs and Verification
 

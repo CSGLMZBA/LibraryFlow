@@ -2,15 +2,17 @@ services:
   - type: web
     name: libraryflow-api
     runtime: node
-    buildCommand: npm install && npm run build --workspace @library-flow/shared && npm run build --workspace @library-flow/backend
+    buildCommand: npm install --include=dev && npm run build --workspace @library-flow/shared && npm run build --workspace @library-flow/backend
     startCommand: npm run start --workspace @library-flow/backend
     healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: NODE_ENV
+        value: production
       - key: APP_MODE
         value: cloud
-      - key: CORS_ORIGIN
+      - key: FRONTEND_ORIGIN
         sync: false
       - key: FIREBASE_PROJECT_ID
         sync: false
@@ -24,5 +26,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: SUPABASE_BUCKET
-        sync: false
+      - key: SUPABASE_BOOK_BUCKET
+        value: book-files
+      - key: DELETION_WORKER_SECRET
+        generateValue: true
