@@ -218,10 +218,10 @@ metadata exposed to ordinary users, and creates an immediate cleanup job.
 
 ### 4.1 Book file upload and signed download (S2-T07)
 
-> **Status: Proposed by Jorge Enriquez Rico (S2-T07). Pending approval by Juan
-> Carlos Zuniga Alfaro (route and DTO owner) and Carlos Gabriel Martinez
-> Bazaldua (integration owner). No consumer may implement these routes until
-> this note is replaced by the approval record.**
+> **Status: Approved on 2026-11-23.** Proposed by Jorge Enriquez Rico
+> (S2-T07) in PR #27. Approved by Juan Carlos Zuniga Alfaro (route and DTO
+> owner) and Carlos Gabriel Martinez Bazaldua (integration owner); PR #27
+> merged into `develop`.
 
 Book files never pass through the API. The browser uploads directly to the
 private bucket through a server-issued signed upload URL, then asks the API to
