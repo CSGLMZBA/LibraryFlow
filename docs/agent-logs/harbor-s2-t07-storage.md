@@ -7,7 +7,9 @@ Date: 2026-11-23
 - Task: `S2-T07` (Sprint 2)
 - Owner: Jorge Enriquez Rico
 - Agent: Harbor, AI assistant
-- Branch: `feature/S2-T07-storage-signed-access` (from `develop` at `4d04fb9`)
+- Branch (session 1): `feature/S2-T07-storage-signed-access`, rebased on
+  `develop` at `28b5a94`; merged as PR #27 (`9f06cf9`)
+- Branch (session 2): `feature/S2-T07-storage-routes` (from `develop` at `9f06cf9`)
 - Contract: `SPEC-002-CONTRACTS.md` §1, §4, §8
 - Stories: `US-PUB-001`, `US-MOD-006`
 - Dependencies: `S2-T03` (merged in PR #20)
@@ -38,7 +40,7 @@ Changed routes: none. CORS behavior changed for every route:
 - With `NODE_ENV=production`, the server fails at startup if
   `FRONTEND_ORIGIN` is empty or invalid.
 
-## Blocking item — approval required
+## Blocking item — approval required (resolved in session 2)
 
 SPEC-002 §4.1 is **proposed**. Juan (route/DTO owner) and Carlos (integration
 owner) must approve it before the storage service and the three routes are
@@ -89,3 +91,70 @@ before S2-T08 implementation.
 3. Implement `storage-service.ts` (Supabase Storage REST through `fetch`, no
    new dependency), the three routes, a bucket setup script, and
    TC-S2-027 to TC-S2-029 and TC-S2-059 to TC-S2-062.
+
+---
+
+# Session 2 — Storage service and file routes (2026-11-23)
+
+## Approval record
+
+- PR #27 approved by three reviewers, including Carlos, and merged into
+  `develop` (`9f06cf9`).
+- Juan approved SPEC-002 §4.1, noting it fits his concurrency and revision
+  rules. The "Proposed" note in §4.1 is replaced by the approval record.
+
+## Work completed
+
+| Area | Files |
+|---|---|
+| Contract and register | `SPEC-002-CONTRACTS.md` §4.1 approval note; register rows unmarked as proposed; evidence section added; TC-S2-027 to 030, 055, 059 to 062 set to `Pending` |
+| Shared types | `Book.fileObjectPath?`, `BookFileUploadUrlRequest`, `BookFileUploadUrlResponse`, `BookFileCompleteRequest`, `BookFileDownloadUrlResponse` |
+| Storage client | `apps/backend/src/services/storage-service.ts`: Supabase Storage REST via `fetch` (no new dependency) |
+| Rules | `apps/backend/src/services/book-file-service.ts`: ownership, state, revision, input validation, object verification, visibility |
+| Routes | `apps/backend/src/controllers/book-file-controller.ts`; `book-routes.ts` adds the three §4.1 routes |
+| Bucket setup | `scripts/setup-storage-bucket.mjs`; `npm run storage:setup` |
+| Tests | `docs/testing/s2-storage-deployment.test.mjs`: TC-S2-027 to 029 and TC-S2-059 to 062 |
+
+Changed routes (all under `/api/v1`):
+
+- `POST /books/:bookId/file/upload-url` (publisher guard)
+- `POST /books/:bookId/file/complete` (publisher guard)
+- `GET /books/:bookId/file/download-url` (authenticated)
+
+## Behavior notes
+
+- Storage is enabled only when `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` are set. Without them (local mode) the file
+  routes answer `500 INTERNAL_ERROR`. A partial configuration stops the
+  backend at startup with the missing variable names.
+- Storage errors are logged as operation and HTTP status only; signed URLs,
+  tokens, and the service-role key are never logged or returned in errors.
+- `complete` deletes a stored object that exceeds 20 MB or has the wrong MIME
+  type before answering `400 VALIDATION_ERROR` (`field: "file"`).
+- A previous object replaced by a new upload is not deleted yet. Cleanup
+  belongs to the deletion worker (S2-T08).
+- Supabase sets the signed upload URL lifetime; the API does not shorten it.
+
+## Verification observed in this session
+
+- `node --import tsx --test docs/testing/s2-storage-deployment.test.mjs`
+  (Linux, Node 22.23.5, global tsx with a path mapping for
+  `@library-flow/shared`): 26 tests, 25 passed, 0 failed, 1 skipped
+  (TC-S2-030 needs a frontend build).
+- Mutation check: three deliberate defects each made the suite fail; the
+  restored code passes.
+- TypeScript 7.0.2 `--noEmit` over the new backend files with minimal Express
+  type stubs, and over `packages/shared`: no errors.
+
+Not run in this session: the project's own `npm run typecheck`,
+`npm run build`, and `npm test`; any request to a real Supabase project.
+
+## Remaining for S2-T07 to be Done
+
+1. Owner runs `npm run typecheck`, `npm run build`, and `npm test` on this
+   branch.
+2. With Carlos's credentials: `npm run storage:setup`, then the TC-S2-027 and
+   TC-S2-028 live checks listed in the register.
+3. Cesar reviews the evidence (S2-T10) and marks the rows.
+4. Frontend consumers (publisher upload and reader download UI) use the three
+   routes; that UI work is outside S2-T07.
