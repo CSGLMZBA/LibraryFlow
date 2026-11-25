@@ -482,8 +482,11 @@ the configured `FRONTEND_ORIGIN` values, never `*` in production.
 
 `FRONTEND_ORIGIN` is a comma-separated list of exact origins
 (`scheme://host[:port]`, no path, no wildcard). When `NODE_ENV=production`,
-the backend refuses to start if `FRONTEND_ORIGIN` is empty or contains `*` or
-a wildcard host. Outside production, an empty value defaults to
+an empty `FRONTEND_ORIGIN` defaults to the exact deployment origin
+`https://library-flow-cgmb.netlify.app`; an explicit value containing `*`,
+a wildcard host, or an invalid origin fails startup. This deployment-specific
+default reflects the production recovery decision; set the variable explicitly
+when deploying another frontend. Outside production, an empty value defaults to
 `http://localhost:5173`. Requests from other origins receive no CORS headers,
 and their preflight requests are answered without them.
 

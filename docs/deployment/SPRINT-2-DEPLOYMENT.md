@@ -23,7 +23,7 @@ Blueprint must have this command set in their Render dashboard.
 
 | Variable | Value | Secret | Notes |
 |---|---|---|---|
-| `NODE_ENV` | `production` | No | Set by `render.yaml`. Enables strict CORS startup checks. |
+| `NODE_ENV` | `production` | No | Set by `render.yaml`. Invalid explicit CORS origins fail startup. |
 | `APP_MODE` | `cloud` | No | Set by `render.yaml`. |
 | `NODE_VERSION` | `20` | No | Set by `render.yaml`. |
 | `PORT` | set by Render | No | Do not set manually. |
@@ -180,7 +180,7 @@ Once per sprint, on the team's agreement:
 | What | Where | Action |
 |---|---|---|
 | Health | Render automatic health checks on `/health`; `npm run deploy:check` after each deploy | Failed check: inspect logs, roll back (§5) |
-| Backend errors | Render → Logs. Search `[book-files]`, `INTERNAL_ERROR`, `CorsConfigurationError` | `CorsConfigurationError` at startup means `FRONTEND_ORIGIN` is missing or invalid |
+| Backend errors | Render → Logs. Search `[book-files]`, `INTERNAL_ERROR`, `CorsConfigurationError` | `CorsConfigurationError` at startup means an explicitly configured origin is invalid |
 | Cold starts | Render free instances sleep after inactivity; the first request can take about a minute | Expected on the free plan; `deploy:check` waits 90 s |
 | Frontend build | Netlify → Deploys → build log | Secret scanning failures: see §1 |
 | Storage | Supabase → Storage and project usage | Unexpected public objects or growth: run `npm run storage:verify` |
@@ -193,7 +193,7 @@ appears, treat it as an incident: rotate the key and report it to the team.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Render deploy fails at startup with `FRONTEND_ORIGIN is required` | Missing variable after the S2-T07 rename | Add `FRONTEND_ORIGIN` (§1) and redeploy |
+| Render deploy fails with `CorsConfigurationError` | An explicitly configured frontend origin is invalid or contains a wildcard | Set valid exact `FRONTEND_ORIGIN` values (§1) and redeploy |
 | Browser shows a CORS error | `FRONTEND_ORIGIN` does not match the Netlify origin exactly | Copy the origin from the address bar, without path or trailing `/` |
 | Book upload or download answers 500 | Storage variables missing, or `SUPABASE_BOOK_BUCKET` names a bucket that does not exist | Check §1 and §2; run `npm run storage:verify` |
 | Backend reports `partially configured` | Only one of `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` is set | Set both, or neither for local mode |
