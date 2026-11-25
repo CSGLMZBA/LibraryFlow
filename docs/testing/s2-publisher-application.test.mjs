@@ -94,10 +94,6 @@ function createIsolatedService(options = {}) {
   };
 }
 
-// ===========================================================================
-// S2-AC-001: Publisher Application Submission (US-REA-013)
-// ===========================================================================
-
 describe('S2-AC-001: Publisher Application Submission', () => {
   const validApplication = {
     publisherName: 'Northstar Publishing',
@@ -336,10 +332,6 @@ describe('S2-AC-001: Publisher Application Submission', () => {
   });
 });
 
-// ===========================================================================
-// S2-AC-002: Administrator Approval (US-MOD-005)
-// ===========================================================================
-
 describe('S2-AC-002: Administrator Approval', () => {
   const validApplication = {
     publisherName: 'Northstar Publishing',
@@ -414,10 +406,6 @@ describe('S2-AC-002: Administrator Approval', () => {
     );
   });
 });
-
-// ===========================================================================
-// S2-AC-003: Administrator Rejection (US-MOD-005, US-REA-013)
-// ===========================================================================
 
 describe('S2-AC-003: Administrator Rejection', () => {
   const validApplication = {
@@ -507,10 +495,6 @@ describe('S2-AC-003: Administrator Rejection', () => {
     assert.equal(nextCalled, false);
   });
 });
-
-// ===========================================================================
-// S2-AC-004: Upload Authorization (US-REA-013 RN-006, US-MOD-005 RN-004)
-// ===========================================================================
 
 describe('S2-AC-004: Upload Authorization', () => {
   test('TC-S2-019: reader cannot create books or upload', async () => {
