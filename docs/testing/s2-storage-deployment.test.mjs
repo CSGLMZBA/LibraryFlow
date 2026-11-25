@@ -410,19 +410,23 @@ describe('S2-AC-006: Supabase Storage', () => {
     });
   });
 
-  test('TC-S2-027: storage configuration is all-or-nothing', () => {
+  test('TC-S2-027: storage configuration defaults to the canonical bucket and requires URL/key together', () => {
     assert.equal(createBookFileStorageFromEnv({}), null);
     assert.equal(createBookFileStorageFromEnv({ SUPABASE_BOOK_BUCKET: 'book-files' }), null);
-    assert.ok(createBookFileStorageFromEnv({
+    const storageWithOverride = createBookFileStorageFromEnv({
       SUPABASE_URL: 'https://project.supabase.co',
       SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
-      SUPABASE_BOOK_BUCKET: 'book-files',
-    }) instanceof SupabaseBookFileStorage);
+      SUPABASE_BOOK_BUCKET: 'custom-bucket',
+    });
+    assert.ok(storageWithOverride instanceof SupabaseBookFileStorage);
+    assert.equal(storageWithOverride.bucket, 'custom-bucket');
     assert.throws(() => createBookFileStorageFromEnv({ SUPABASE_URL: 'https://project.supabase.co' }), /SUPABASE_SERVICE_ROLE_KEY/);
-    assert.throws(() => createBookFileStorageFromEnv({
+    const storageWithDefaultBucket = createBookFileStorageFromEnv({
       SUPABASE_URL: 'https://project.supabase.co',
       SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
-    }), /SUPABASE_BOOK_BUCKET/);
+    });
+    assert.ok(storageWithDefaultBucket instanceof SupabaseBookFileStorage);
+    assert.equal(storageWithDefaultBucket.bucket, 'book-files');
   });
 
   test('TC-S2-028: upload constraint — 20 MB maximum, EPUB or PDF only', async () => {

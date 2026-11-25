@@ -133,3 +133,22 @@ were not changed. Do not delete or migrate objects based on this log alone.
 - The deployment PR and one worker run after release prerequisites are
   authorized by Carlos. No PR was merged and no production deployment or
   destructive worker operation was performed in this session.
+
+## 2026-11-25 — Render missing-bucket startup fix
+
+- Branch: `fix/s2-release-readiness`, based on merged `main`.
+- Render's deploy log showed the backend crashing at startup because
+  `SUPABASE_BOOK_BUCKET` was absent, although the canonical private
+  `book-files` bucket exists. The storage factory defaulted the absent bucket
+  to `book-files`; explicit bucket overrides remain supported, and incomplete
+  Supabase URL/key configuration still fails fast.
+- Added a regression assertion for the missing-bucket case and retained
+  coverage that explicit bucket overrides and URL/key validation work.
+- Updated the deployment guide to document the canonical default.
+- Focused storage/deployment tests: 38 passed, 0 failed.
+- `npm run typecheck`: passed. `npm run build`: passed with the existing
+  Vite large-chunk warning. `npm test`: 155 passed, 0 failed.
+- No production configuration was changed and no deployment was triggered.
+  After this fix is reviewed and deployed, configure the Render service's
+  `SUPABASE_BOOK_BUCKET=book-files` as well; the repository default protects
+  startup if the dashboard setting is omitted.
