@@ -138,6 +138,82 @@ test('TC-S2-052: active temporary and permanent bans block otherwise-valid sessi
   }
 });
 
+test('moderator ban transaction restricts sessions, creates audit and notification, then expires', async () => {
+  const f=setup();
+  await f.policy.authorize(f.proof,{bootstrap:true});
+  const actor={uid:'mod',role:'moderator'};
+  const endsAt=new Date(f.now()+1000).toISOString();
+  const result=await f.policy.ban('reader',actor,{reason:'  Repeated spam  ',endsAt});
+  assert.equal(result.revision,2);
+  assert.deepEqual(result.ban,{actorUid:'mod',targetUid:'reader',reason:'Repeated spam',startsAt:new Date(f.now()).toISOString(),endsAt});
+  const events=[...f.store.data.values()];
+  assert.ok(events.some(v=>v.action==='account_banned' && v.actorUid==='mod' && v.targetUid==='reader' && v.reason==='Repeated spam'));
+  assert.ok(events.some(v=>v.type==='ban_changed' && v.userId==='reader' && v.message.includes(endsAt)));
+  await assert.rejects(f.policy.authorize(f.proof),{code:'ACCOUNT_RESTRICTED'});
+  f.advance(1000);
+  await f.policy.authorize(f.proof);
+});
+
+test('permanent bans require moderator lift and leave immutable audit and notifications', async () => {
+  const f=setup();
+  await f.policy.authorize(f.proof,{bootstrap:true});
+  const actor={uid:'mod',role:'moderator'};
+  await f.policy.ban('reader',actor,{reason:'Serious violation',permanent:true});
+  f.advance(60_000);
+  await assert.rejects(f.policy.authorize(f.proof),{code:'ACCOUNT_RESTRICTED'});
+  await assert.rejects(f.policy.liftBan('reader',{uid:'other',role:'reader'},'Appeal accepted'),{code:'FORBIDDEN'});
+  assert.deepEqual(await f.policy.liftBan('reader',actor,'Appeal accepted'),{revision:3});
+  await f.policy.authorize(f.proof);
+  const audit=[...f.store.data.values()].filter(v=>v.action==='account_banned' || v.action==='account_ban_lifted');
+  assert.deepEqual(audit.map(v=>v.action),['account_banned','account_ban_lifted']);
+  assert.equal([...f.store.data.values()].filter(v=>v.type==='ban_changed').length,2);
+});
+
+test('ban policy rejects invalid inputs and competing bans without partial writes', async () => {
+  const f=setup();
+  await f.policy.authorize(f.proof,{bootstrap:true});
+  const actor={uid:'mod',role:'moderator'};
+  const before=structuredClone([...f.store.data]);
+  for (const [who,input] of [
+    [{uid:'reader',role:'reader'},{reason:'spam',permanent:true}],
+    [actor,{reason:' ',permanent:true}],
+    [actor,{reason:'spam',endsAt:new Date(f.now()).toISOString()}],
+    [actor,{reason:'spam',permanent:true,endsAt:new Date(f.now()+1000).toISOString()}],
+  ]) await assert.rejects(f.policy.ban('reader',who,input));
+  assert.deepEqual([...f.store.data],before);
+  const results=await Promise.allSettled([
+    f.policy.ban('reader',actor,{reason:'spam',permanent:true}),
+    f.policy.ban('reader',{uid:'mod2',role:'moderator'},{reason:'spam',permanent:true}),
+  ]);
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal(results.filter(r=>r.status==='rejected' && r.reason.code==='INVALID_STATE').length,1);
+  assert.equal([...f.store.data.values()].filter(v=>v.action==='account_banned').length,1);
+  assert.equal([...f.store.data.values()].filter(v=>v.type==='ban_changed').length,1);
+});
+
+test('a restricted moderator and transaction failures cannot partially ban a user', async () => {
+  const f=setup();
+  await f.policy.authorize(f.proof,{bootstrap:true});
+  f.store.data.set('accounts/mod',{uid:'mod',revision:1,ban:{
+    actorUid:'other',targetUid:'mod',reason:'restricted',
+    startsAt:new Date(f.now()-1000).toISOString(),permanent:true,
+  }});
+  const before=structuredClone([...f.store.data]);
+  await assert.rejects(f.policy.ban('reader',{uid:'mod',role:'moderator'},{reason:'spam',permanent:true}),{code:'ACCOUNT_RESTRICTED'});
+  assert.deepEqual([...f.store.data],before);
+
+  const failingStore={transaction: operation => f.store.transaction(tx => operation({
+    ...tx,
+    create(path,value) {
+      if (path.startsWith('notifications/')) throw new Error('injected write failure');
+      tx.create(path,value);
+    },
+  }))};
+  const policy=new AccountSessionPolicy(failingStore,f.now);
+  await assert.rejects(policy.ban('reader',{uid:'other',role:'moderator'},{reason:'spam',permanent:true}),/injected write failure/);
+  assert.deepEqual([...f.store.data],before);
+});
+
 test('S2-T06: redaction removes public names/content and hides owned books in current repositories', async () => {
   const comments=new CommentRepository();
   const books=new BookRepository();

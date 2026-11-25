@@ -6,6 +6,7 @@ import { AuthCloudError } from './auth-errors.js';
 export const SESSION_IDLE_MS = 30 * 60 * 1000;
 export const DELETION_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
 export type Ban = {actorUid: string; targetUid: string; reason: string; startsAt: string; endsAt?: string; permanent?: boolean};
+export type BanInput = {reason: string; endsAt?: string; permanent?: boolean};
 export type AccountState = {
   uid: string; revision: number; updatedAt: string;
   deletionRequestedAt?: string; permanentDeletionAt?: string; deletionJobId?: string;
@@ -24,14 +25,19 @@ const digest = (value: string) => createHash('sha256').update(value).digest('hex
 const accountPath = (uid: string) => `accounts/${encodeURIComponent(uid)}`;
 const recoveryId = (uid: string, jobId: string) => digest(`account-recovery:${uid}:${jobId}`);
 const sessionPath = (p: SessionProof) => `authSessions/${digest(`${p.uid}:${p.authTime}`)}`;
+function isActiveBan(ban: Ban | undefined, now: number): boolean {
+  if (!ban) return false;
+  const startsAt = Date.parse(ban.startsAt);
+  const endsAt = Date.parse(ban.endsAt ?? '');
+  return !Number.isFinite(startsAt) || (!ban.permanent && !Number.isFinite(endsAt)) ||
+    (startsAt <= now && (ban.permanent === true || endsAt > now));
+}
 
 export class AccountSessionPolicy {
   constructor(private readonly store: AuthStateStore, private readonly now: () => number = Date.now) {}
   private active(account: AccountState | null): void {
     if (account?.deletionRequestedAt) throw new AuthCloudError('ACCOUNT_RESTRICTED', 'Account is pending deletion during the 30-day grace period.', undefined, 403, true);
-    const ban = account?.ban;
-    if (ban && (!Number.isFinite(Date.parse(ban.startsAt)) || (!ban.permanent && (!ban.endsAt || !Number.isFinite(Date.parse(ban.endsAt)))) ||
-      (Date.parse(ban.startsAt) <= this.now() && (ban.permanent || Date.parse(ban.endsAt!) > this.now())))) {
+    if (isActiveBan(account?.ban, this.now())) {
       throw new AuthCloudError('ACCOUNT_RESTRICTED', 'This account is restricted.', undefined, 403);
     }
   }
@@ -69,6 +75,61 @@ export class AccountSessionPolicy {
     await this.store.transaction(async tx => {
       const account = await tx.get<AccountState>(accountPath(uid));
       tx.set(accountPath(uid), {...account, uid, tokensValidAfter: now, revision: (account?.revision ?? 0) + 1, updatedAt: new Date(now).toISOString()});
+    });
+  }
+  async ban(uid: string, actor: {uid: string; role: string}, input: BanInput): Promise<{ban: Ban; revision: number}> {
+    if (actor.role !== 'moderator') throw new AuthCloudError('FORBIDDEN', 'Moderator access is required.', undefined, 403);
+    if (uid === actor.uid) throw new AuthCloudError('VALIDATION_ERROR', 'A moderator cannot ban their own account.', 'uid');
+    const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+    if (!reason || reason.length > 500) throw new AuthCloudError('VALIDATION_ERROR', 'Reason must contain 1 to 500 characters.', 'reason');
+    const now = this.now();
+    const end = typeof input.endsAt === 'string' ? Date.parse(input.endsAt) : NaN;
+    const invalidDuration = input.permanent === true
+      ? input.endsAt !== undefined
+      : (input.permanent !== undefined && input.permanent !== false) || !Number.isFinite(end) || end <= now;
+    if (invalidDuration) {
+      throw new AuthCloudError('VALIDATION_ERROR', 'Specify a permanent ban or a future end time.', 'endsAt');
+    }
+    return this.store.transaction(async tx => {
+      const actorAccount = await tx.get<AccountState>(accountPath(actor.uid));
+      const account = await tx.get<AccountState>(accountPath(uid));
+      this.active(actorAccount);
+      if (!account) throw new AuthCloudError('NOT_FOUND', 'Account not found.', undefined, 404);
+      if (account.deletionRequestedAt) throw new AuthCloudError('INVALID_STATE', 'Account is pending deletion.', undefined, 409);
+      if (account.ban && (isActiveBan(account.ban, now) || Date.parse(account.ban.startsAt) > now)) {
+        throw new AuthCloudError('INVALID_STATE', 'Account already has an active ban.', undefined, 409);
+      }
+      const at = new Date(now).toISOString();
+      const ban: Ban = {actorUid: actor.uid, targetUid: uid, reason, startsAt: at,
+        ...(input.permanent === true ? {permanent: true} : {endsAt: new Date(end).toISOString()})};
+      const revision = account.revision + 1;
+      const eventId = digest(`account_banned:${uid}:${revision}`);
+      tx.set(accountPath(uid), {...account, ban, revision, updatedAt: at});
+      tx.create(`accountAudit/${eventId}`, {actorUid: actor.uid, targetUid: uid, reason, action: 'account_banned', timestamp: at, ban});
+      tx.create(`notifications/${eventId}`, {id: eventId, userId: uid, type: 'ban_changed',
+        message: `Your account was banned: ${reason}. ${ban.permanent ? 'The ban is permanent.' : `The ban ends at ${ban.endsAt}.`}`, read: false, createdAt: at});
+      return {ban, revision};
+    });
+  }
+  async liftBan(uid: string, actor: {uid: string; role: string}, reasonInput: string): Promise<{revision: number}> {
+    if (actor.role !== 'moderator') throw new AuthCloudError('FORBIDDEN', 'Moderator access is required.', undefined, 403);
+    const reason = typeof reasonInput === 'string' ? reasonInput.trim() : '';
+    if (!reason || reason.length > 500) throw new AuthCloudError('VALIDATION_ERROR', 'Reason must contain 1 to 500 characters.', 'reason');
+    return this.store.transaction(async tx => {
+      const actorAccount = await tx.get<AccountState>(accountPath(actor.uid));
+      const account = await tx.get<AccountState>(accountPath(uid));
+      this.active(actorAccount);
+      if (!account) throw new AuthCloudError('NOT_FOUND', 'Account not found.', undefined, 404);
+      if (!account.ban) throw new AuthCloudError('INVALID_STATE', 'Account has no ban to lift.', undefined, 409);
+      const at = new Date(this.now()).toISOString();
+      const revision = account.revision + 1;
+      const eventId = digest(`account_ban_lifted:${uid}:${revision}`);
+      const {ban: _ban, ...updated} = account;
+      tx.set(accountPath(uid), {...updated, revision, updatedAt: at});
+      tx.create(`accountAudit/${eventId}`, {actorUid: actor.uid, targetUid: uid, reason, action: 'account_ban_lifted', timestamp: at});
+      tx.create(`notifications/${eventId}`, {id: eventId, userId: uid, type: 'ban_changed',
+        message: `Your ban was lifted: ${reason}.`, read: false, createdAt: at});
+      return {revision};
     });
   }
   async requestDeletion(uid: string, email: string): Promise<DeletionResult> {

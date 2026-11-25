@@ -43,6 +43,13 @@ coordination between server instances.
 After those additions, `npm test` reported 20 Sprint 1 and 141 Sprint 2
 passes, five Sprint 2 TODO, and zero failures.
 
+The account policy now has transactional ban and lift operations with
+in-memory transaction tests for audit, notification records, restriction,
+expiration, authorization, and competing requests. These operations are not
+exposed by HTTP: public-content visibility, notification delivery to restricted
+users, unauthorized-attempt auditing, and deployed Firestore evidence remain
+unresolved. `S2-AC-008` and its ban test cases remain pending.
+
 ---
 
 ## 2. Detailed Traceable Test Cases (`S2-T10`)
