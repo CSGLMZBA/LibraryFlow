@@ -49,10 +49,9 @@ expiration, authorization, and competing requests. Public backend catalog,
 book detail, comment, and signed-download paths consult durable account state;
 they fail closed when it cannot be read. Tests exercise hiding and restoration
 with an in-memory transactional account store, not live Firestore. These
-operations are available through feature-gated HTTP routes, disabled by default:
-frontend offline-cache behavior,
-notification delivery to restricted users, unauthorized-attempt auditing, and
-deployed Firestore evidence remain unresolved. Previously issued signed
+operations are available through feature-gated HTTP routes, disabled by default.
+Frontend offline-cache behavior, proactive notification delivery, and deployed
+Firestore evidence remain unresolved. Previously issued signed
 download URLs remain valid until their expiry. `S2-AC-008` and its ban test
 cases remain pending.
 For an authenticated sign-in attempt, an active valid ban now provides its
@@ -67,6 +66,11 @@ Sprint 2 TODO, and zero failures.
 The disabled-by-default ban routes are tested for temporary/permanent bans,
 moderator-only lifts, unauthorized-attempt audit, and audit-store failures.
 This does not prove deployment behavior or complete the pending acceptance case.
+On 2026-11-25, `npm test` reported 20 Sprint 1 and 154 Sprint 2 passes, five
+Sprint 2 TODO, and zero failures. Anonymous deployment checks passed 7/7, but
+an unauthenticated probe of the new ban route returned 404 rather than the
+route's 401. The serving Render backend therefore had not exposed the new route
+at the time of the probe; the latest commit's deployment was not confirmed.
 
 ---
 
