@@ -175,22 +175,41 @@ in-memory fake of Supabase Storage and a fake `fetch`; no live bucket was used.
 | TC-S2-030, TC-S2-054 (policy), TC-S2-055 | `npm test` on local Windows after PR #27 (branch `feature/S2-T07-storage-signed-access`) | 108 passed, 0 failed, 0 skipped. TC-S2-030 scanned the built frontend bundle. |
 | TC-S2-027 to TC-S2-029, TC-S2-059 to TC-S2-062 | `node --import tsx --test docs/testing/s2-storage-deployment.test.mjs` (Linux, Node 22.23.5) on `feature/S2-T07-storage-routes` | 26 tests: 25 passed, 0 failed, 1 skipped (TC-S2-030, no build output). Mutation check: removing the oversized-object deletion, raising the URL lifetime to 3600 s, or letting readers download pending books each made the suite fail. |
 
-Still required before `Passed`:
+Owner's local runs on Windows: after PR #28, `npm run build`,
+`npm run typecheck`, and `npm test` passed with 0 failed and 0 skipped; after
+PR #30, Sprint 1 passed 20/20 and Sprint 2 passed 126/126 with 0 skipped.
 
-- TC-S2-027 and TC-S2-028 live checks: after `npm run storage:setup`, the
-  operations owner runs `npm run storage:verify` once with the team's
-  Supabase credentials and pastes the PASS/FAIL output here. The script
-  uploads a small PDF through a signed URL, confirms anonymous and keyless
-  reads are denied and the signed download works, confirms uploads over
-  20 MB and non-PDF/EPUB uploads are rejected by the bucket, and deletes every
-  test object under `books/__storage-verify__/`.
-- 2026-11-24: Carlos ran `npm run storage:setup`; output reported bucket
-  `books` updated with `public: false`, `file_size_limit: 20971520`, and
-  `allowed_mime_types: application/pdf, application/epub+zip`. The bucket name
-  differs from `book-files` in SPEC-002 §4 and `render.yaml`; Carlos owns the
-  final alignment of the bucket name in Supabase, Render, and `render.yaml`.
-- Independent review by Cesar (S2-T10) and the owner's local `npm test` run
-  on this branch.
+#### Live storage verification — 2026-11-24
+
+- `npm run storage:setup` (Carlos): bucket `books` updated with
+  `public: false`, `file_size_limit: 20971520`, and
+  `allowed_mime_types: application/pdf, application/epub+zip`.
+- The first live run exposed a defect: Supabase rejected the signed upload URL
+  request because it had no JSON body. Fixed by Carlos in `3f25f37`
+  (`fix(storage): send JSON body for signed upload`), with a regression
+  assertion in TC-S2-027.
+- `npm run storage:verify` (Carlos, `develop` at `3f25f37`, run at
+  `2026-11-25T01:34:24Z`) against bucket `books`:
+
+| Test ID | Check | Result | Observed |
+|---|---|---|---|
+| TC-S2-027 | Bucket is private with 20 MB and PDF/EPUB limits | PASS | settings match SPEC-002 §4.1 |
+| TC-S2-027 | Signed upload of a small PDF succeeds | PASS | upload HTTP 200; stored 50 bytes |
+| TC-S2-027 | Anonymous public URL is denied | PASS | HTTP 400 |
+| TC-S2-027 | Object read without a key is denied | PASS | HTTP 400 |
+| TC-S2-029 | Signed download URL returns the object | PASS | HTTP 200 |
+| TC-S2-028 | Upload larger than 20 MB is rejected | PASS | upload HTTP 400; object not stored |
+| TC-S2-028 | Upload with a non-PDF/EPUB type is rejected | PASS | upload HTTP 400; object not stored |
+
+Result: all 7 checks passed.
+
+Open items, not blocking the storage evidence:
+
+- Bucket name: the live bucket is `books`; SPEC-002 §4, `.env.example`, and
+  `render.yaml` use `book-files`. Carlos owns the alignment before the S2-T09
+  deployment.
+- Rows TC-S2-027 to TC-S2-030, TC-S2-055, and TC-S2-059 to TC-S2-062 stay
+  `Pending` until Cesar (S2-T10) reviews this evidence and records `Passed`.
 
 ## 4. Defect Log (`S2-T10`)
 

@@ -202,3 +202,18 @@ approve the worker route and the hooks in their code.
 1. Carlos runs `npm run storage:verify` and the output is recorded.
 2. Bucket name aligned in Supabase, Render, and `render.yaml` (Carlos).
 3. Cesar reviews the evidence and marks the rows.
+
+---
+
+# Session 4 — Live evidence recorded (2026-11-24)
+
+- PR #30 merged (`e1122c4`). The first live run found that Supabase rejects a
+  signed upload URL request without a JSON body; Carlos fixed it in `3f25f37`
+  with a regression assertion.
+- Carlos ran `npm run storage:verify` on `develop` at `3f25f37` against bucket
+  `books`: 7 of 7 checks passed (TC-S2-027, TC-S2-028, TC-S2-029 control).
+- The output is recorded in `S2-ACCEPTANCE-REGISTER.md`. Rows stay `Pending`
+  for Cesar's S2-T10 review.
+- Status: implementation and live verification complete; awaiting
+  independent review. Open item for S2-T09: bucket name alignment
+  (`books` vs `book-files`), owned by Carlos.
