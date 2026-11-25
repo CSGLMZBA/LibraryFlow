@@ -54,6 +54,10 @@ notification delivery to restricted users, unauthorized-attempt auditing, and
 deployed Firestore evidence remain unresolved. Previously issued signed
 download URLs remain valid until their expiry. `S2-AC-008` and its ban test
 cases remain pending.
+For an authenticated sign-in attempt, an active valid ban now provides its
+reason and duration in the restricted-account response; tests cover policy,
+HTTP envelope and client propagation. This is an on-sign-in notice, not
+evidence of proactive notification delivery.
 On 2026-11-25, a read-only lookup of a randomly named absent account using the
 configured Firestore passed. This checks connectivity and the absent-account
 case only; it is not deployed or live ban/visibility acceptance evidence.

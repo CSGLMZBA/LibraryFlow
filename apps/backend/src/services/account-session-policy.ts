@@ -43,8 +43,16 @@ export class AccountSessionPolicy {
   }
   private active(account: AccountState | null): void {
     if (account?.deletionRequestedAt) throw new AuthCloudError('ACCOUNT_RESTRICTED', 'Account is pending deletion during the 30-day grace period.', undefined, 403, true);
-    if (isActiveBan(account?.ban, this.now())) {
-      throw new AuthCloudError('ACCOUNT_RESTRICTED', 'This account is restricted.', undefined, 403);
+    const ban = account?.ban;
+    if (isActiveBan(ban, this.now())) {
+      const reason = typeof ban?.reason === 'string' ? ban.reason.trim() : '';
+      const validEnd = ban?.endsAt && Number.isFinite(Date.parse(ban.endsAt));
+      const duration = ban?.permanent === true ? 'The ban is permanent.' :
+        validEnd ? `The ban ends at ${ban.endsAt}.` : '';
+      const message = reason && duration
+        ? `Your account is banned: ${reason}. ${duration}`
+        : 'This account is restricted.';
+      throw new AuthCloudError('ACCOUNT_RESTRICTED', message, undefined, 403);
     }
   }
   async authorize(proof: SessionProof, options: {bootstrap?: boolean; touch?: boolean} = {}): Promise<void> {

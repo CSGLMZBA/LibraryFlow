@@ -61,6 +61,20 @@ test('S2-T01: login provisions SDK persistence and exposes only a verified safe 
   assert.equal(state.requests[1].headers.Authorization, 'Bearer signed-in-token');
 });
 
+test('a ban notice returned at login reaches the client without retaining credentials', async () => {
+  const {state,create}=fixture();
+  state.failure={code:'ACCOUNT_RESTRICTED',message:'Your account is banned: Repeated spam. The ban is permanent.'};
+  const service=create();
+  await assert.rejects(service.login('reader@example.com','Test1234!'),error=>{
+    assert.equal(error.code,'ACCOUNT_RESTRICTED');
+    assert.match(error.message,/Repeated spam/);
+    assert.match(error.message,/permanent/);
+    return true;
+  });
+  assert.equal(state.signedOut,1);
+  assert.equal(service.getAccessToken(),null);
+});
+
 test('S2-T01: revoked credentials clear SDK state and cannot provide an access token', async () => {
   const {state, create} = fixture();
   state.failure = {code: 'AUTH_INVALID', message: 'Invalid session.'};

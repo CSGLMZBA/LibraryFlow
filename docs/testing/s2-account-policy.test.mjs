@@ -137,7 +137,7 @@ test('TC-S2-052: active temporary and permanent bans block otherwise-valid sessi
     {startsAt:new Date(f.now()-1000).toISOString(),permanent:true},
   ]) {
     f.store.data.set('accounts/reader',{uid:'reader',revision:2,ban});
-    await assert.rejects(f.policy.authorize(f.proof),{code:'ACCOUNT_RESTRICTED'});
+      await assert.rejects(f.policy.authorize(f.proof),{code:'ACCOUNT_RESTRICTED'});
   }
 });
 
@@ -152,7 +152,12 @@ test('moderator ban transaction restricts sessions, creates audit and notificati
   const events=[...f.store.data.values()];
   assert.ok(events.some(v=>v.action==='account_banned' && v.actorUid==='mod' && v.targetUid==='reader' && v.reason==='Repeated spam'));
   assert.ok(events.some(v=>v.type==='ban_changed' && v.userId==='reader' && v.message.includes(endsAt)));
-  await assert.rejects(f.policy.authorize(f.proof),{code:'ACCOUNT_RESTRICTED'});
+  await assert.rejects(f.policy.authorize(f.proof),error => {
+    assert.equal(error.code,'ACCOUNT_RESTRICTED');
+    assert.match(error.message,/Repeated spam/);
+    assert.ok(error.message.includes(endsAt));
+    return true;
+  });
   f.advance(1000);
   await f.policy.authorize(f.proof);
 });
@@ -163,7 +168,12 @@ test('permanent bans require moderator lift and leave immutable audit and notifi
   const actor={uid:'mod',role:'moderator'};
   await f.policy.ban('reader',actor,{reason:'Serious violation',permanent:true});
   f.advance(60_000);
-  await assert.rejects(f.policy.authorize(f.proof),{code:'ACCOUNT_RESTRICTED'});
+  await assert.rejects(f.policy.authorize(f.proof),error => {
+    assert.equal(error.code,'ACCOUNT_RESTRICTED');
+    assert.match(error.message,/Serious violation/);
+    assert.match(error.message,/permanent/);
+    return true;
+  });
   await assert.rejects(f.policy.liftBan('reader',{uid:'other',role:'reader'},'Appeal accepted'),{code:'FORBIDDEN'});
   assert.deepEqual(await f.policy.liftBan('reader',actor,'Appeal accepted'),{revision:3});
   await f.policy.authorize(f.proof);

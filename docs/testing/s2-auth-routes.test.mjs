@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createAuthRouter } from '../../apps/backend/src/routes/auth-routes.ts';
 import { AuthCloudError } from '../../apps/backend/src/services/firebase-auth-service.ts';
+import { AccountSessionPolicy, tokenProof } from '../../apps/backend/src/services/account-session-policy.ts';
 
 const cloudSession = {user: {id: 'uid-from-token', role: 'reader'}, token: 'verified-token', authenticatedAt: '2026-11-21T00:00:00Z'};
 function services(overrides = {}) {
@@ -70,6 +71,27 @@ test('S2-T01 HTTP: restricted accounts receive the contracted error at login', a
   })), 'POST', '/login', {body: {email: 'reader@example.com', password: 'Test1234!'}});
   assert.equal(res.statusCode, 403);
   assert.equal(res.body.error.code, 'ACCOUNT_RESTRICTED');
+});
+
+test('a verified banned account receives the reason and duration without a session', async () => {
+  const now=Date.parse('2026-11-25T12:00:00Z');
+  const account={uid:'reader',revision:2,ban:{actorUid:'mod',targetUid:'reader',reason:'Repeated spam',
+    startsAt:new Date(now-1000).toISOString(),endsAt:new Date(now+3600000).toISOString()}};
+  const store={async transaction(fn){return fn({async get(path){return path==='accounts/reader'?account:null;}});}};
+  const policy=new AccountSessionPolicy(store,()=>now);
+  const router=createAuthRouter(services({
+    async loginCloud(email,password) {
+      assert.equal(email,'reader@example.com'); assert.equal(password,'Test1234!');
+      await policy.authorize(tokenProof('reader',now/1000,now/1000,'verified-token'),{bootstrap:true});
+      assert.fail('Restricted account must not receive a session');
+    },
+  }));
+  const res=await dispatch(router,'POST','/login',{body:{email:'reader@example.com',password:'Test1234!'}});
+  assert.equal(res.statusCode,403);
+  assert.match(res.body.error.message,/Repeated spam/);
+  assert.ok(res.body.error.message.includes(account.ban.endsAt));
+  assert.equal(res.body.data,undefined);
+  assert.equal(res.headers['Cache-Control'],'no-store');
 });
 
 test('S2-T01 HTTP: provider failure does not pretend credentials were revoked', async () => {
