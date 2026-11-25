@@ -334,6 +334,67 @@ Failures increment `attempts`, store a safe error, and schedule exponential
 backoff. Jobs are not deleted from the database, so cleanup is auditable and
 idempotent.
 
+### 5.1 Book file deletion worker (S2-T08)
+
+> **Status: Agreed in the team chat on 2026-11-24.** Juan Carlos Zuniga Alfaro
+> approved the scheduling hooks in `rejectBook` and `deleteBook`. Carlos Gabriel
+> Martinez Bazaldua approved the internal route and the GitHub Actions trigger,
+> naming the backend URL secret `RENDER_BACKEND_URL`. Final approval is the
+> S2-T08 pull request review.
+
+Scheduling:
+
+| Event | Job kind | `targetId` | `dueAt` |
+|---|---|---|---|
+| Moderator rejects a book that has `fileObjectPath` | `rejected-book-file` | object key | rejection time + 24 hours |
+| Moderator deletes a book that has `fileObjectPath` | `deleted-book-file` | object key | now |
+| Owner completes an upload that replaces a different `fileObjectPath` | `deleted-book-file` | previous object key | now |
+
+- For book file kinds, `targetId` is the object key inside the private bucket,
+  so the job does not depend on the book record surviving a restart.
+- The job id is derived from the kind and the object key. Scheduling the same
+  file twice keeps one job.
+- If a book changes state but its job cannot be recorded, the request fails
+  with a message saying so. Deleting the book again retries the scheduling.
+
+Worker:
+
+```text
+POST /api/v1/internal/deletion-jobs/run
+Authorization: Bearer <DELETION_WORKER_SECRET>
+200 { success: true, data: { claimed: number, completed: number, failed: number } }
+401 AUTH_REQUIRED        missing or wrong secret
+503 SERVICE_UNAVAILABLE  secret not configured or shorter than 32 characters
+500 INTERNAL_ERROR       run failed
+```
+
+- Not for browsers. The secret is compared in constant time and never logged.
+- Each run claims at most 10 due jobs, in `dueAt` (or `nextAttemptAt`) order.
+- A failure sets `failed`, increments `attempts`, stores a safe `lastError`,
+  and sets `nextAttemptAt` to now + 1 min × 2^(attempts − 1), capped at 6 hours.
+  After 8 attempts `nextAttemptAt` is removed and the job waits for manual
+  review.
+- A job left in `processing` for 15 minutes is reclaimed. Deleting an object
+  that no longer exists succeeds, so repeating a job is safe.
+- `completed` jobs are never claimed again. No job is ever deleted.
+- The worker reads only open jobs (`pending`, `failed`, `processing`), up to
+  200 per run.
+
+Trigger: `.github/workflows/deletion-worker.yml` calls the route every
+15 minutes with the repository secrets `RENDER_BACKEND_URL` and
+`DELETION_WORKER_SECRET`. GitHub runs scheduled workflows only from the default
+branch (`main`), so the schedule starts when this file reaches `main`; it can
+also be started manually with `workflow_dispatch`.
+
+`account-data` jobs (created by S2-T06): the worker leaves them `pending` and
+untouched until their scope is agreed. Bryan proposed on 2026-11-24: after the
+30-day grace period, verify that the job matches the account, the date has
+passed, and no restoration was approved; then delete the Firebase
+Authentication user and the personal Firestore documents (`accounts`,
+`profiles`, and associated personal references); keep minimal audit records;
+do not delete books or their stored files until Carlos and Juan decide. The
+exact list of documents is pending team confirmation.
+
 ## 6. Account, Session, Ban, and Audit Contract
 
 Account deletion:

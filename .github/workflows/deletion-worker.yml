@@ -1,0 +1,43 @@
+# S2-T08 deletion worker trigger (SPEC-002 §5.1).
+#
+# Render's free plan has no scheduler, so GitHub Actions calls the protected
+# internal route every 15 minutes. GitHub runs scheduled workflows only from the
+# default branch (`main`); runs may start a few minutes late.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   RENDER_BACKEND_URL      e.g. https://libraryflow-api.onrender.com (no trailing slash needed)
+#   DELETION_WORKER_SECRET  same value as the Render environment variable
+name: Deletion worker
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: deletion-worker
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Run due deletion jobs
+        env:
+          RENDER_BACKEND_URL: ${{ secrets.RENDER_BACKEND_URL }}
+          DELETION_WORKER_SECRET: ${{ secrets.DELETION_WORKER_SECRET }}
+        run: |
+          if [ -z "$RENDER_BACKEND_URL" ] || [ -z "$DELETION_WORKER_SECRET" ]; then
+            echo "::error::Set RENDER_BACKEND_URL and DELETION_WORKER_SECRET in the repository secrets."
+            exit 1
+          fi
+          # Retries cover a sleeping Render instance (first request can take ~1 minute).
+          curl --fail-with-body --silent --show-error \
+            --retry 6 --retry-delay 20 --retry-all-errors --max-time 90 \
+            -X POST \
+            -H "Authorization: Bearer ${DELETION_WORKER_SECRET}" \
+            "${RENDER_BACKEND_URL%/}/api/v1/internal/deletion-jobs/run"
+          echo

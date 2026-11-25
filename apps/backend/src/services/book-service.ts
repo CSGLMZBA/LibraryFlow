@@ -13,6 +13,11 @@ import {
   bookRepository as defaultBookRepository,
   BookRepository,
 } from "../repositories/book-repository.js";
+import {
+  DeletionScheduleError,
+  deletionJobService,
+  type BookFileDeletionScheduler,
+} from "./deletion-job-service.js";
 
 export class RevisionConflictError extends Error {
   public constructor(
@@ -30,6 +35,7 @@ export class BookService {
 
   public constructor(
     private readonly repository: BookRepository = defaultBookRepository,
+    private readonly deletions: BookFileDeletionScheduler = deletionJobService,
   ) {}
 
   async createBook(dto: CreateBookDto, ownerId: string): Promise<Book> {
@@ -186,6 +192,13 @@ export class BookService {
     });
     if (!updatedBook) {
       throw new Error("Book could not be deleted.");
+    }
+    // S2-T08: delete the stored file immediately (idempotent; retried by deleting again).
+    if (book.fileObjectPath) {
+      await this.deletions.scheduleDeletedBookFile(book.fileObjectPath).catch((error: unknown) => {
+        console.error(`[deletion-worker] Could not schedule file cleanup for book ${id}: ${error instanceof Error ? error.name : typeof error}`);
+        throw new DeletionScheduleError("deleted");
+      });
     }
     return updatedBook;
   }

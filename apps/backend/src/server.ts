@@ -6,6 +6,7 @@ import { authRouter } from "./routes/auth-routes.js";
 import { bookRouter } from "./routes/book-routes.js";
 import { classificationRouter } from "./routes/classification-routes.js";
 import { moderationRouter } from "./routes/moderation-routes.js";
+import { internalRouter } from "./routes/internal-routes.js";
 import { publisherApplicationRouter } from "./routes/publisher-application-routes.js";
 
 import { accountRouter } from "./routes/account-routes.js";
@@ -33,6 +34,7 @@ app.use((request, response, next) => {
 app.use(express.json({ limit: "100kb" }));
 
 app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/internal", internalRouter);
 app.use("/api/v1", accountRouter);
 app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/classifications", classificationRouter);

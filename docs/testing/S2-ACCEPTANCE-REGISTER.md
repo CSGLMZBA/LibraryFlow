@@ -91,11 +91,11 @@ No item may be marked passed without a dated command or manual scenario.
 
 | Test ID | AC / Story | Criterion | Preconditions | Steps | Expected Result | Type | Status |
 |---|---|---|---|---|---|---|---|
-| TC-S2-031 | `S2-AC-007` / SPEC-002 §5 | Rejection creates 24h deletion job | Moderator rejects a book | Check `deletionJobs` collection | `DeletionJob` created with `kind: "rejected-book-file"`, `dueAt = rejectedAt + 24h`, `status: "pending"`, `attempts: 0` | Automated | Not started |
-| TC-S2-032 | `S2-AC-007` / SPEC-002 §5 | Worker claims and completes a job | Pending deletion job with `dueAt` in the past | Worker runs | Job transitions: `pending` → `processing` (with `claimedAt`) → `completed` (with `completedAt`); file removed from Supabase bucket | Automated | Not started |
-| TC-S2-033 | `S2-AC-007` / SPEC-002 §5 | Failed job retries with exponential backoff | Deletion job that fails during processing | Worker runs; simulate storage failure | `status: "failed"`; `attempts` incremented; `lastError` stores safe message; `nextAttemptAt` set with backoff; job NOT deleted from database | Automated | Not started |
-| TC-S2-034 | `S2-AC-007` / SPEC-002 §5 | Completed job is never reprocessed | Completed deletion job exists | Worker runs again | Job is skipped; `completedAt` unchanged; file remains deleted | Automated | Not started |
-| TC-S2-035 | `S2-AC-007` / SPEC-002 §5 | Permanent deletion creates immediate cleanup job | Moderator permanently deletes a book | Check `deletionJobs` collection | `DeletionJob` created with `kind: "deleted-book-file"`, `dueAt = now`, `status: "pending"`; book record marked `deleted` | Automated | Not started |
+| TC-S2-031 | `S2-AC-007` / SPEC-002 §5 | Rejection creates 24h deletion job | Moderator rejects a book | Check `deletionJobs` collection | `DeletionJob` created with `kind: "rejected-book-file"`, `dueAt = rejectedAt + 24h`, `status: "pending"`, `attempts: 0` | Automated | Pending |
+| TC-S2-032 | `S2-AC-007` / SPEC-002 §5 | Worker claims and completes a job | Pending deletion job with `dueAt` in the past | Worker runs | Job transitions: `pending` → `processing` (with `claimedAt`) → `completed` (with `completedAt`); file removed from Supabase bucket | Automated | Pending |
+| TC-S2-033 | `S2-AC-007` / SPEC-002 §5 | Failed job retries with exponential backoff | Deletion job that fails during processing | Worker runs; simulate storage failure | `status: "failed"`; `attempts` incremented; `lastError` stores safe message; `nextAttemptAt` set with backoff; job NOT deleted from database | Automated | Pending |
+| TC-S2-034 | `S2-AC-007` / SPEC-002 §5 | Completed job is never reprocessed | Completed deletion job exists | Worker runs again | Job is skipped; `completedAt` unchanged; file remains deleted | Automated | Pending |
+| TC-S2-035 | `S2-AC-007` / SPEC-002 §5 | Permanent deletion creates immediate cleanup job | Moderator permanently deletes a book | Check `deletionJobs` collection | `DeletionJob` created with `kind: "deleted-book-file"`, `dueAt = now`, `status: "pending"`; book record marked `deleted` | Automated | Pending |
 
 ### 2.8 Moderation (`S2-AC-008`: `US-MOD-004`, `US-MOD-007`, `US-MOD-008`)
 
@@ -172,6 +172,35 @@ moderator accounts. Runner and setup: S2-AUTH-SESSION-HANDOFF.md.
 Typecheck and production build passed. The existing test command reported
 20 Sprint 1 and 97 Sprint 2 passes. Acceptance remains Pending until
 independent review and verification in the team's deployed environment.
+
+### S2-T08 deletion worker automated verification — 2026-11-24
+
+Owner: Jorge Enriquez Rico (agent: Harbor). Contract: SPEC-002 §5, §5.1.
+Before this change TC-S2-031 to TC-S2-035 were stubs (`assert.ok(true)`); they
+now test the worker with an in-memory job store, a fake storage, and a
+controllable clock.
+
+| Test IDs | Covered |
+|---|---|
+| TC-S2-031 | `rejectBook` creates one `rejected-book-file` job due 24 h later; no job without a stored file; scheduling twice keeps one job |
+| TC-S2-032 | No claim before `dueAt`; claim then `completed` with `claimedAt` and `completedAt`; object deleted |
+| TC-S2-033 | Failure → `failed`, `attempts` + 1, safe `lastError`, backoff 1/2/4 min capped at 6 h; no retry before `nextAttemptAt`; stops after 8 attempts |
+| TC-S2-034 | Completed jobs never reclaimed, including a job completed between listing and claiming; concurrent runs claim once; stale `processing` reclaimed after 15 min; `account-data` jobs untouched |
+| TC-S2-035 | `deleteBook` and file replacement create immediate `deleted-book-file` jobs; repeated delete keeps one job; scheduling failure is reported |
+| Route and trigger | Only `Bearer <DELETION_WORKER_SECRET>` (≥ 32 characters) runs the worker; 401 otherwise, 503 when not configured; workflow uses repository secrets only |
+
+Command: `node --import tsx --test docs/testing/s2-storage-deployment.test.mjs`
+(Linux, Node 22.23.5): 34 tests, 33 passed, 0 failed, 1 skipped (TC-S2-030
+needs a frontend build). Sprint 1 domain, revisions, publisher application, and
+security suites still pass. Mutation check: reprocessing completed jobs,
+unlimited retries, deleting rejected files immediately, touching
+`account-data` jobs, and skipping replaced-file cleanup each made the suite
+fail.
+
+Live evidence still required: Carlos adds the repository secrets, the workflow
+reaches `main`, and one manual `workflow_dispatch` run returns HTTP 200 with
+the run summary. `account-data` processing is out of scope until its list of
+documents is agreed.
 
 ### S2-T07 storage and CORS automated verification — 2026-11-23
 
