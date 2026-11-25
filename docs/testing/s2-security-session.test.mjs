@@ -140,10 +140,6 @@ function createTestHarness() {
   };
 }
 
-// ===========================================================================
-// S2-AC-005: Cloud Synchronization (SPEC-002 §3)
-// ===========================================================================
-
 describe('S2-AC-005: Cloud Synchronization and Revision Control', () => {
   const sampleDto = {
     publisherName: 'Sync Press',
@@ -216,10 +212,6 @@ describe('S2-AC-005: Cloud Synchronization and Revision Control', () => {
     assert.equal((await appService.getMyApplications('reader-replay-1')).length, 1);
   });
 });
-
-// ===========================================================================
-// S2-AC-008: Moderation (US-MOD-004, US-MOD-007, US-MOD-008)
-// ===========================================================================
 
 describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => {
   test('TC-S2-036: apply a temporary ban', () => {
@@ -344,9 +336,3 @@ describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => 
     assert.equal((await bookService.getApprovedCatalog({ search: 'Ephemeral' })).length, 0);
   });
 });
-
-// ===========================================================================
-// S2-AC-009: Session Lifecycle (US-REA-019, US-REA-020, US-REA-017)
-// ===========================================================================
-// S2-AC-009 behavioral cases run in s2-account-policy.test.mjs,
-// s2-auth-lifecycle.test.mjs and s2-account-routes.test.mjs via npm test.
