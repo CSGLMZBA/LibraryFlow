@@ -128,12 +128,12 @@ No item may be marked passed without a dated command or manual scenario.
 
 | Test ID | AC / Story | Criterion | Preconditions | Steps | Expected Result | Type | Status |
 |---|---|---|---|---|---|---|---|
-| TC-S2-053 | `S2-AC-010` / SPEC-002 §8 | Health endpoint is accessible and unauthenticated | Deployed Render backend | GET `/health` without authentication | 200 `HealthResponse`; no authentication required | Manual | Not started |
-| TC-S2-054 | `S2-AC-010` / SPEC-002 §8 | CORS allows only configured origins | Deployed backend | 1) Request from `FRONTEND_ORIGIN` → allowed; 2) Request from `https://evil.example.com` → blocked | Only configured `FRONTEND_ORIGIN` values receive CORS headers; `*` is never used in production | Manual | Not started |
+| TC-S2-053 | `S2-AC-010` / SPEC-002 §8 | Health endpoint is accessible and unauthenticated | Deployed Render backend | GET `/health` without authentication | 200 `HealthResponse`; no authentication required | Manual | Pending |
+| TC-S2-054 | `S2-AC-010` / SPEC-002 §8 | CORS allows only configured origins | Deployed backend | 1) Request from `FRONTEND_ORIGIN` → allowed; 2) Request from `https://evil.example.com` → blocked | Only configured `FRONTEND_ORIGIN` values receive CORS headers; `*` is never used in production | Manual | Pending |
 | TC-S2-055 | `S2-AC-010` / SPEC-002 §8 | No secrets in source or VITE_* variables | Repository and Netlify build output | Search repository for `FIREBASE_PRIVATE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `DELETION_WORKER_SECRET` in source; verify no `VITE_` name contains a service key | Zero matches; all secrets in platform environment only | Automated | Pending |
-| TC-S2-056 | `S2-AC-010` / SPEC-002 §8 | Frontend environment uses only public config | Netlify build environment | Verify `VITE_API_BASE_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` are public-only | No service-role keys, private keys, or worker secrets exposed | Manual | Not started |
-| TC-S2-057 | `S2-AC-010` / Sprint 2 DoD | Backup and rollback evidence | Deployed platform | 1) Take backup snapshot; 2) Deploy breaking change; 3) Roll back; 4) Verify restored health | Backup captured; rollback completes; health returns 200; no data loss | Manual | Not started |
-| TC-S2-058 | `S2-AC-010` / Sprint 2 DoD | Netlify frontend communicates with Render backend | Deployed frontend and backend | Open Netlify URL; login; perform application submission | Frontend API calls reach Render backend through CORS; full round-trip succeeds | Manual | Not started |
+| TC-S2-056 | `S2-AC-010` / SPEC-002 §8 | Frontend environment uses only public config | Netlify build environment | Verify `VITE_API_BASE_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` are public-only | No service-role keys, private keys, or worker secrets exposed | Manual | Pending |
+| TC-S2-057 | `S2-AC-010` / Sprint 2 DoD | Backup and rollback evidence | Deployed platform | 1) Take backup snapshot; 2) Deploy breaking change; 3) Roll back; 4) Verify restored health | Backup captured; rollback completes; health returns 200; no data loss | Manual | Pending |
+| TC-S2-058 | `S2-AC-010` / Sprint 2 DoD | Netlify frontend communicates with Render backend | Deployed frontend and backend | Open Netlify URL; login; perform application submission | Frontend API calls reach Render backend through CORS; full round-trip succeeds | Manual | Pending |
 
 ---
 
@@ -248,6 +248,25 @@ Open items, not blocking the storage evidence:
   deployment.
 - Rows TC-S2-027 to TC-S2-030, TC-S2-055, and TC-S2-059 to TC-S2-062 stay
   `Pending` until Cesar (S2-T10) reviews this evidence and records `Passed`.
+
+### S2-T09 deployment readiness — automated verification — 2026-11-24
+
+Owner: Jorge Enriquez Rico (agent: Harbor). Contract: SPEC-002 §8. Procedure:
+`docs/deployment/SPRINT-2-DEPLOYMENT.md`.
+
+| Test IDs | Automated now | Live evidence still required |
+|---|---|---|
+| TC-S2-053 | `healthHandler` returns 200 `HealthResponse` with `Cache-Control: no-store`; `/health` is registered without a guard; `render.yaml` uses it as `healthCheckPath` | `npm run deploy:check` against Render |
+| TC-S2-054 | Policy tests (S2-T07); `deploy:check` detects a wildcard CORS deployment | `npm run deploy:check` against Render and Netlify |
+| TC-S2-056 | Every `VITE_` name in frontend code, `.env.example`, and `netlify.toml` is on the public allowlist; `deploy:check` finds a server secret in a lazily loaded chunk | `deploy:check` on the published site; Netlify variable list reviewed |
+| TC-S2-057 | `npm run backup:firestore` exports every collection, subcollection, and page, never overwrites a file, records a SHA-256, and writes to git-ignored `backups/` | Backup taken before deploy; rollback drill per guide §5 |
+| TC-S2-058 | Guide contains the manual round-trip procedure and evidence template | Signed-in round trip on the Netlify site |
+
+Command: `node --import tsx --test docs/testing/s2-storage-deployment.test.mjs`
+(Linux, Node 22.23.5): 33 tests, 32 passed, 0 failed, 1 skipped (TC-S2-030
+needs a frontend build). Mutation check: an always-passing untrusted-origin
+check, skipping lazy chunks, stopping after one backup page, and a wrong
+health body each made the suite fail.
 
 ## 4. Defect Log (`S2-T10`)
 

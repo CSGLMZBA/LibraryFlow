@@ -8,6 +8,8 @@
 node_modules/
 dist/
 coverage/
+# Firestore backups contain personal data (scripts/backup-firestore.mjs).
+backups/
 *.local
 .DS_Store
 *.tsbuildinfo
