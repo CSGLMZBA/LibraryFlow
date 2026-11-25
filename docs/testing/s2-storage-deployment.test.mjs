@@ -45,6 +45,11 @@ import {
 } from '../../apps/backend/src/services/storage-service.ts';
 import { createAuthGuard } from '../../apps/backend/src/middleware/auth-guard.ts';
 import { verifyBookStorage } from '../../scripts/verify-storage-live.mjs';
+import { HEALTH_RESPONSE, healthHandler } from '../../apps/backend/src/routes/health-routes.ts';
+import { checkDeployment, UNTRUSTED_ORIGIN } from '../../scripts/check-deployment.mjs';
+import { PAGE_SIZE, exportFirestore, serializeValue, writeBackup } from '../../scripts/backup-firestore.mjs';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import {
   buildBookBucketConfig,
   findBucketConfigProblems,
@@ -206,6 +211,64 @@ const LIVE_ENV = {
   SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
   SUPABASE_BOOK_BUCKET: 'book-files',
 };
+
+// ── Deployment test helpers (S2-T09) ────────────────────────────────────────
+const RENDER_URL = 'https://libraryflow-api.onrender.com';
+const NETLIFY_ORIGIN = 'https://libraryflow.netlify.app';
+
+/** Fake Render backend plus Netlify site. Options introduce one defect each. */
+function createFakeDeployment({ wildcardCors = false, leakInLazyChunk = false, sleepyResponses = 0 } = {}) {
+  let remainingSleepy = sleepyResponses;
+  const fetchImpl = async (url, init = {}) => {
+    const { origin, pathname } = new URL(url);
+    const requestOrigin = init.headers?.Origin;
+    if (origin === RENDER_URL) {
+      if (remainingSleepy > 0) { remainingSleepy -= 1; return new Response('waking up', { status: 503 }); }
+      const headers = new Headers({ 'Content-Type': 'application/json' });
+      if (wildcardCors) headers.set('Access-Control-Allow-Origin', '*');
+      else if (requestOrigin === NETLIFY_ORIGIN) headers.set('Access-Control-Allow-Origin', NETLIFY_ORIGIN);
+      if (init.method === 'OPTIONS') return new Response(null, { status: 204, headers });
+      if (pathname === '/health') return new Response(JSON.stringify(HEALTH_RESPONSE), { status: 200, headers });
+      return new Response(JSON.stringify({ success: false, error: { code: 'AUTH_REQUIRED', message: 'Sign in.' } }), { status: 401, headers });
+    }
+    if (origin === NETLIFY_ORIGIN) {
+      if (pathname === '/') {
+        return new Response('<!doctype html><div id="root"></div><script src="https://cdn.tailwindcss.com"></script><script type="module" crossorigin src="/assets/index-a1.js"></script>');
+      }
+      if (pathname === '/assets/index-a1.js') {
+        return new Response('const VITE_API_BASE_URL="https://libraryflow-api.onrender.com";const l=()=>import("./firebase-client-b2.js");');
+      }
+      if (pathname === '/assets/firebase-client-b2.js') {
+        return new Response(leakInLazyChunk ? 'const k="FIREBASE_PRIVATE_KEY";' : 'export const apiKey="public-web-key";');
+      }
+    }
+    return new Response('not found', { status: 404 });
+  };
+  return fetchImpl;
+}
+
+const noWait = { sleep: async () => {}, now: (() => { let t = 0; return () => (t += 1000); })() };
+
+/** Minimal fake of the firebase-admin Firestore API used by the backup script. */
+function createFakeFirestore(tree) {
+  const collectionRef = (id, docs) => {
+    const ordered = Object.entries(docs).sort(([a], [b]) => a.localeCompare(b));
+    const query = (offset, size) => ({
+      async get() {
+        const page = ordered.slice(offset, offset + size).map(([docId, doc]) => ({
+          id: docId,
+          data: () => doc.data,
+          ref: { listCollections: async () => Object.entries(doc.sub ?? {}).map(([subId, subDocs]) => collectionRef(subId, subDocs)) },
+          _index: ordered.findIndex(([key]) => key === docId),
+        }));
+        return { docs: page };
+      },
+      startAfter: (last) => query(last._index + 1, size),
+    });
+    return { id, limit: (size) => query(0, size) };
+  };
+  return { listCollections: async () => Object.entries(tree).map(([id, docs]) => collectionRef(id, docs)) };
+}
 
 const fakeVerify = async (token) => ({
   'reader-token': READER,
@@ -590,12 +653,37 @@ describe('S2-AC-007: Scheduled Cleanup — Deletion Jobs', () => {
 // ===========================================================================
 
 describe('S2-AC-010: Deployment', () => {
-  test('TC-S2-053: health endpoint is accessible and unauthenticated', async () => {
-    // STUB: awaiting S2-T09 deployment
-    // Verification (deployed):
-    //   curl -s https://<render-url>/health | jq .
-    // Expected: 200 HealthResponse; no authentication required
-    assert.ok(true, 'STUB: pending S2-T09 deployment — manual verification');
+  test('TC-S2-053: health handler returns 200 HealthResponse without authentication', () => {
+    const result = { status: null, body: null, headers: {} };
+    const response = {
+      setHeader(name, value) { result.headers[name] = value; },
+      status(code) { result.status = code; return this; },
+      json(body) { result.body = body; return this; },
+    };
+    healthHandler({ headers: {} }, response);
+    assert.equal(result.status, 200);
+    assert.deepEqual(result.body, { status: 'ok', service: 'library-flow-api' });
+    assert.equal(result.headers['Cache-Control'], 'no-store');
+
+    const server = readFileSync(join(repoRoot, 'apps/backend/src/server.ts'), 'utf8');
+    assert.match(server, /app\.get\("\/health", healthHandler\);/, '/health must be registered without a guard');
+    const render = readFileSync(join(repoRoot, 'render.yaml'), 'utf8');
+    assert.match(render, /healthCheckPath: \/health/, 'Render must use /health as its health check');
+  });
+
+  test('TC-S2-053/054/058: deploy:check passes for a healthy deployment, waking a sleeping instance', async () => {
+    const { checks } = await checkDeployment(RENDER_URL, NETLIFY_ORIGIN, { fetchImpl: createFakeDeployment({ sleepyResponses: 2 }), ...noWait });
+    assert.deepEqual(checks.filter((check) => !check.passed), []);
+    assert.equal(checks.length, 7);
+    assert.deepEqual([...new Set(checks.map((check) => check.id))].sort(), ['TC-S2-053', 'TC-S2-054', 'TC-S2-056', 'TC-S2-058']);
+  });
+
+  test('TC-S2-054: deploy:check reports a wildcard CORS deployment', async () => {
+    const { checks } = await checkDeployment(RENDER_URL, NETLIFY_ORIGIN, { fetchImpl: createFakeDeployment({ wildcardCors: true }), ...noWait });
+    const failed = checks.filter((check) => !check.passed).map((check) => check.name);
+    assert.ok(failed.includes('CORS gives no allow header to an untrusted origin'));
+    assert.ok(failed.includes('CORS allows the configured frontend origin'));
+    assert.equal(UNTRUSTED_ORIGIN.endsWith('.invalid'), true);
   });
 
   test('TC-S2-054: CORS allows only configured origins', () => {
@@ -664,24 +752,80 @@ describe('S2-AC-010: Deployment', () => {
     assert.deepEqual([...new Set(unsafeViteNames)], [], 'VITE_ variables must contain public configuration only');
   });
 
-  test('TC-S2-056: frontend environment uses only public config', async () => {
-    // STUB: awaiting S2-T09 Netlify configuration
-    // Expected: only VITE_API_BASE_URL, VITE_FIREBASE_API_KEY,
-    //           VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID
-    assert.ok(true, 'STUB: pending S2-T09 environment verification — manual');
+  test('TC-S2-056: frontend code uses only public VITE_ variables', () => {
+    const PUBLIC_VITE_NAMES = new Set([
+      'VITE_API_BASE_URL', 'VITE_AUTH_MODE', 'VITE_FIREBASE_API_KEY',
+      'VITE_FIREBASE_AUTH_DOMAIN', 'VITE_FIREBASE_PROJECT_ID', 'VITE_FIREBASE_AUTH_EMULATOR_HOST',
+    ]);
+    const sources = [
+      ...trackedFiles().filter((file) => file.startsWith('apps/frontend/')),
+      '.env.example', 'netlify.toml',
+    ];
+    const used = new Set(sources.flatMap((file) => readFileSync(join(repoRoot, file), 'utf8').match(/VITE_[A-Z0-9_]+/g) ?? []));
+    const unexpected = [...used].filter((name) => !PUBLIC_VITE_NAMES.has(name));
+    assert.deepEqual(unexpected, [], 'New VITE_ variables must be reviewed as public configuration first');
+    for (const required of ['VITE_API_BASE_URL', 'VITE_FIREBASE_API_KEY', 'VITE_FIREBASE_AUTH_DOMAIN', 'VITE_FIREBASE_PROJECT_ID']) {
+      assert.ok(used.has(required), `${required} (SPEC-002 §8) must be documented or used`);
+    }
   });
 
-  test('TC-S2-057: backup and rollback evidence', async () => {
-    // STUB: awaiting S2-T09 backup/rollback implementation
-    // Expected: backup captured → breaking deploy → rollback → health 200;
-    //           no data loss
-    assert.ok(true, 'STUB: pending S2-T09 backup/rollback — manual');
+  test('TC-S2-056: deploy:check finds a server secret in a lazily loaded bundle chunk', async () => {
+    const { checks } = await checkDeployment(RENDER_URL, NETLIFY_ORIGIN, { fetchImpl: createFakeDeployment({ leakInLazyChunk: true }), ...noWait });
+    const bundleCheck = checks.find((check) => check.id === 'TC-S2-056');
+    assert.equal(bundleCheck.passed, false);
+    assert.match(bundleCheck.detail, /firebase-client-b2\.js/);
   });
 
-  test('TC-S2-058: Netlify frontend communicates with Render backend', async () => {
-    // STUB: awaiting S2-T09 full deployment
-    // Expected: frontend API calls reach Render through CORS;
-    //           full round-trip succeeds
-    assert.ok(true, 'STUB: pending S2-T09 end-to-end — manual');
+  test('TC-S2-057: Firestore backup exports every collection, subcollection, and page', async () => {
+    const books = {};
+    for (let index = 0; index < PAGE_SIZE + 3; index += 1) {
+      books[`book-${String(index).padStart(4, '0')}`] = { data: { title: `Book ${index}` } };
+    }
+    const timestamp = { seconds: 1, nanoseconds: 0, toDate: () => new Date('2026-11-24T12:00:00.000Z') };
+    const db = createFakeFirestore({
+      books,
+      deletionJobs: { 'job-1': { data: { status: 'pending', dueAt: timestamp, attempts: 0 } } },
+      users: { 'user-1': { data: { role: 'reader', tags: ['a', null] }, sub: { sessions: { 's-1': { data: { active: true } } } } } },
+    });
+
+    const { collections, counts } = await exportFirestore(db);
+    assert.equal(collections.books.length, PAGE_SIZE + 3, 'Pagination must reach every document');
+    assert.deepEqual(counts, { books: PAGE_SIZE + 3, deletionJobs: 1, users: 1, 'users/user-1/sessions': 1 });
+    assert.deepEqual(collections.deletionJobs[0].data.dueAt, { __type: 'timestamp', value: '2026-11-24T12:00:00.000Z' });
+    assert.deepEqual(collections.users[0].subcollections.sessions[0], { id: 's-1', data: { active: true } });
+    assert.deepEqual(serializeValue({ point: { latitude: 1, longitude: 2 } }), { point: { __type: 'geopoint', latitude: 1, longitude: 2 } });
+  });
+
+  test('TC-S2-057: backup file is written once, checksummed, and its folder is git-ignored', async () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'lf-backup-'));
+    try {
+      const db = createFakeFirestore({ books: { 'b-1': { data: { title: 'One' } } } });
+      const now = new Date('2026-11-24T12:00:00.000Z');
+      const result = await writeBackup(db, { projectId: 'demo-project', outDir, now });
+      const content = readFileSync(result.file, 'utf8');
+      const parsed = JSON.parse(content);
+
+      assert.equal(parsed.format, 'libraryflow-firestore-backup/v1');
+      assert.equal(parsed.projectId, 'demo-project');
+      assert.equal(result.totalDocuments, 1);
+      assert.match(result.sha256, /^[0-9a-f]{64}$/);
+      assert.equal(result.sha256, (await import('node:crypto')).createHash('sha256').update(content).digest('hex'));
+      await assert.rejects(writeBackup(db, { projectId: 'demo-project', outDir, now }), /EEXIST/, 'A backup is never overwritten');
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+
+    const ignored = execFileSync('git', ['check-ignore', 'backups/firestore-demo.json'], { cwd: repoRoot, encoding: 'utf8' }).trim();
+    assert.equal(ignored, 'backups/firestore-demo.json');
+    assert.ok(existsSync(join(repoRoot, 'docs/deployment/SPRINT-2-DEPLOYMENT.md')), 'Rollback procedure must be documented');
+  });
+
+  test('TC-S2-058: end-to-end round trip is a documented manual check', () => {
+    // deploy:check covers connectivity, CORS, and the published bundle. The
+    // signed-in round trip (login, submit an application) stays manual and is
+    // recorded with the evidence template in SPRINT-2-DEPLOYMENT.md.
+    const guide = readFileSync(join(repoRoot, 'docs/deployment/SPRINT-2-DEPLOYMENT.md'), 'utf8');
+    assert.match(guide, /TC-S2-058/);
+    assert.match(guide, /npm run deploy:check/);
   });
 });
