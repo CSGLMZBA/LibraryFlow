@@ -144,6 +144,15 @@ No acceptance item is marked `Passed` until implementation exists and the verifi
 | Date (UTC) | AC / Test IDs | Command or Manual Scenario | Result | Defect / Notes |
 |---|---|---|---|---|
 
+### Final Sprint 2 Execution Evidence (`2026-11-24` — Agent `Sentinel`)
+
+| Date (UTC) | Scope / AC IDs | Command / Verification | Result | Notes |
+|---|---|---|---|---|
+| 2026-11-24 | Workspace Build & Typecheck | `npm run build && npm run typecheck` | Pass (0 errors) | `@library-flow/shared`, `@library-flow/backend`, and `@library-flow/frontend` compiled and typechecked cleanly. |
+| 2026-11-24 | Sprint 1 Regression (`S1-AC-001`–`009`) | `npm run test:sprint1` | Pass (20/20) | Full Sprint 1 regression green; `DEF-001` verified closed. |
+| 2026-11-24 | `S2-AC-001`–`S2-AC-010` (`TC-S2-001`–`TC-S2-062`) | `npm run test:sprint2` | Pass (126/126) | Replaced remaining stubs in `s2-publisher-application.test.mjs` and `s2-security-session.test.mjs` with live service/guard assertions; 126 passed, 0 failed, 0 skipped. |
+| 2026-11-24 | Repository Hygiene (`SPEC-000` §6.3) | `git rm -f dfdf` | Pass | Removed leftover untracked/stray root artifact `dfdf` (64 bytes). |
+
 ---
 
 ### S2-AC-009 browser verification — 2026-11-23
@@ -366,3 +375,12 @@ must include the failure, owner, issue reference, and retest date.
 - Limits: 42 inherited unrelated placeholders are not acceptance evidence.
   No live Firebase, Firestore emulator, deployed browser, email delivery or
   permanent erasure evidence is claimed. S2-AC-009 remains Pending.
+
+### Final Sprint 2 Execution Evidence (`2026-11-24` — Agent `Sentinel`)
+
+| Date (UTC) | Scope / AC IDs | Command / Verification | Result | Notes |
+|---|---|---|---|---|
+| 2026-11-24 | Workspace Build & Typecheck | `npm run build && npm run typecheck` | Pass (0 errors) | `@library-flow/shared`, `@library-flow/backend`, and `@library-flow/frontend` compiled and typechecked cleanly. |
+| 2026-11-24 | Sprint 1 Regression (`S1-AC-001`–`009`) | `npm run test:sprint1` | Pass (20/20) | Full Sprint 1 regression green; `DEF-001` verified closed. |
+| 2026-11-24 | `S2-AC-001`–`S2-AC-010` (`TC-S2-001`–`TC-S2-062`) | `npm run test:sprint2` | Pass (126/126) | Replaced remaining stubs in `s2-publisher-application.test.mjs` and `s2-security-session.test.mjs` with live service/guard assertions; 126 passed, 0 failed, 0 skipped. |
+| 2026-11-24 | Repository Hygiene (`SPEC-000` §6.3) | `git rm -f dfdf` | Pass | Removed leftover root artifact `dfdf` (64 bytes). |
