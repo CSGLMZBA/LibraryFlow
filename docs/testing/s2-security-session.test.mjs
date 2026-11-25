@@ -128,7 +128,7 @@ function createTestHarness() {
 
   return {
     appService: new PublisherApplicationService(appRepo, notifRepo),
-    bookService: new BookService(bookRepo),
+    bookService: new BookService(bookRepo, undefined, async () => true),
     moderationService: new ModerationService(bookRepo, commentRepo, notifRepo),
     appRepo,
     bookRepo,

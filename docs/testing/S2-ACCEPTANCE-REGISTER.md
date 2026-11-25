@@ -45,10 +45,20 @@ passes, five Sprint 2 TODO, and zero failures.
 
 The account policy now has transactional ban and lift operations with
 in-memory transaction tests for audit, notification records, restriction,
-expiration, authorization, and competing requests. These operations are not
-exposed by HTTP: public-content visibility, notification delivery to restricted
-users, unauthorized-attempt auditing, and deployed Firestore evidence remain
-unresolved. `S2-AC-008` and its ban test cases remain pending.
+expiration, authorization, and competing requests. Public backend catalog,
+book detail, comment, and signed-download paths consult durable account state;
+they fail closed when it cannot be read. Tests exercise hiding and restoration
+with an in-memory transactional account store, not live Firestore. These
+operations are not exposed by HTTP: frontend offline-cache behavior,
+notification delivery to restricted users, unauthorized-attempt auditing, and
+deployed Firestore evidence remain unresolved. Previously issued signed
+download URLs remain valid until their expiry. `S2-AC-008` and its ban test
+cases remain pending.
+On 2026-11-25, a read-only lookup of a randomly named absent account using the
+configured Firestore passed. This checks connectivity and the absent-account
+case only; it is not deployed or live ban/visibility acceptance evidence.
+`npm test` subsequently reported 20 Sprint 1 and 147 Sprint 2 passes, five
+Sprint 2 TODO, and zero failures.
 
 ---
 

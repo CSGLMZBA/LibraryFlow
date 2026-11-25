@@ -35,6 +35,12 @@ function isActiveBan(ban: Ban | undefined, now: number): boolean {
 
 export class AccountSessionPolicy {
   constructor(private readonly store: AuthStateStore, private readonly now: () => number = Date.now) {}
+  async isPublicContentVisible(uid: string): Promise<boolean> {
+    return this.store.transaction(async tx => {
+      const account = await tx.get<AccountState>(accountPath(uid));
+      return !account?.deletionRequestedAt && !isActiveBan(account?.ban, this.now());
+    });
+  }
   private active(account: AccountState | null): void {
     if (account?.deletionRequestedAt) throw new AuthCloudError('ACCOUNT_RESTRICTED', 'Account is pending deletion during the 30-day grace period.', undefined, 403, true);
     if (isActiveBan(account?.ban, this.now())) {

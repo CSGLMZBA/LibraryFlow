@@ -18,6 +18,7 @@ import {
   deletionJobService,
   type BookFileDeletionScheduler,
 } from "./deletion-job-service.js";
+import { publicContentVisibility, visibleItems, type PublicContentVisibility } from "./public-content-visibility.js";
 
 export class RevisionConflictError extends Error {
   public constructor(
@@ -34,6 +35,7 @@ export class BookService {
   public constructor(
     private readonly repository: BookRepository = defaultBookRepository,
     private readonly deletions: BookFileDeletionScheduler = deletionJobService,
+    private readonly visible: PublicContentVisibility = publicContentVisibility,
   ) {}
 
   async createBook(dto: CreateBookDto, ownerId: string): Promise<Book> {
@@ -90,7 +92,8 @@ export class BookService {
   }
 
   async getApprovedCatalog(filters?: BookFilterQuery): Promise<Book[]> {
-    return this.repository.findApproved(filters);
+    const books = await this.repository.findApproved(filters);
+    return visibleItems(books, book => book.ownerId, this.visible);
   }
 
   async getBookDetails(
@@ -103,15 +106,12 @@ export class BookService {
       throw new Error("Book not found.");
     }
 
-    if (
-      book.status === "approved" ||
-      isModerator ||
-      book.ownerId === requesterId
-    ) {
+    if (isModerator || book.ownerId === requesterId) {
       return book;
     }
+    if (book.status === "approved" && await this.visible(book.ownerId)) return book;
 
-    throw new Error("You are not authorized to view this book.");
+    throw new Error("Book not found or not authorized.");
   }
 
   async updateBookMetadata(

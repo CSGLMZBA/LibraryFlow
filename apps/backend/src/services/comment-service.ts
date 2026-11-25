@@ -8,11 +8,13 @@ import {
   commentRepository as defaultCommentRepository,
   CommentRepository,
 } from "../repositories/comment-repository.js";
+import { publicContentVisibility, visibleItems, type PublicContentVisibility } from "./public-content-visibility.js";
 
 export class CommentService {
   public constructor(
     private readonly books: BookRepository = defaultBookRepository,
     private readonly comments: CommentRepository = defaultCommentRepository,
+    private readonly visible: PublicContentVisibility = publicContentVisibility,
   ) {}
 
   async addComment(
@@ -28,6 +30,7 @@ export class CommentService {
     if (book.status !== "approved") {
       throw new Error("Comments are only allowed on approved books.");
     }
+    if (!await this.visible(book.ownerId)) throw new Error("Book not found.");
 
     const normalizedContent = content.trim();
     if (
@@ -60,8 +63,10 @@ export class CommentService {
     if (book.status !== "approved") {
       throw new Error("Comments are only available for approved books.");
     }
+    if (!await this.visible(book.ownerId)) throw new Error("Book not found.");
 
-    return this.comments.findByBookId(bookId);
+    const comments = await this.comments.findByBookId(bookId);
+    return visibleItems(comments, comment => comment.authorId, this.visible);
   }
 }
 

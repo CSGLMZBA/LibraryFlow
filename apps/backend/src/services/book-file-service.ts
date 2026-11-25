@@ -27,6 +27,7 @@ import {
   deletionJobService,
   type BookFileDeletionScheduler,
 } from "./deletion-job-service.js";
+import { publicContentVisibility, type PublicContentVisibility } from "./public-content-visibility.js";
 
 /** Signed download URLs expire after at most 10 minutes (SPEC-002 §4). */
 export const DOWNLOAD_URL_TTL_SECONDS = 600;
@@ -106,17 +107,20 @@ export class BookFileService {
   private readonly storage: BookFileStorage | null;
   private readonly now: () => Date;
   private readonly deletions: BookFileDeletionScheduler;
+  private readonly visible: PublicContentVisibility;
 
   public constructor(
     repository: BookRepository = defaultBookRepository,
     storage: BookFileStorage | null = createBookFileStorageFromEnv(),
     now: () => Date = () => new Date(),
     deletions: BookFileDeletionScheduler = deletionJobService,
+    visible: PublicContentVisibility = publicContentVisibility,
   ) {
     this.repository = repository;
     this.storage = storage;
     this.now = now;
     this.deletions = deletions;
+    this.visible = visible;
   }
 
   async createUploadUrl(
@@ -234,6 +238,9 @@ export class BookFileService {
       requester.role === "moderator" ||
       book.ownerId === requester.uid;
     if (!canRead) {
+      throw notFound();
+    }
+    if (requester.role !== "moderator" && requester.uid !== book.ownerId && !await this.visible(book.ownerId)) {
       throw notFound();
     }
 

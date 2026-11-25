@@ -7,6 +7,7 @@ import {
 import { RevisionConflictError } from "../services/book-service.js";
 import { StorageUnavailableError } from "../services/storage-service.js";
 import { DeletionScheduleError } from "../services/deletion-job-service.js";
+import { PublicVisibilityUnavailableError } from "../services/public-content-visibility.js";
 
 function requesterFrom(response: Response): BookFileRequester {
   const auth = response.locals.auth as BookFileRequester;
@@ -15,6 +16,11 @@ function requesterFrom(response: Response): BookFileRequester {
 
 /** Maps book file errors to the SPEC-002 §1 envelope without leaking URLs or keys. */
 export function sendBookFileError(response: Response, error: unknown): void {
+  if (error instanceof PublicVisibilityUnavailableError) {
+    console.error(`[public-content] Visibility verification unavailable: ${error.cause instanceof Error ? error.cause.name : typeof error.cause}`);
+    response.status(503).json({success: false, error: {code: "VISIBILITY_UNAVAILABLE", message: error.message}});
+    return;
+  }
   if (error instanceof BookFileError) {
     response.status(error.status).json({
       success: false,

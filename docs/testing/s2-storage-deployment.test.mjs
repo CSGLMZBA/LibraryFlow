@@ -131,7 +131,7 @@ async function setupFileService(books = [makeBook()]) {
   const repository = new BookRepository();
   for (const book of books) await repository.save(book);
   const storage = new FakeBookFileStorage();
-  const service = new BookFileService(repository, storage, () => FIXED_NOW);
+  const service = new BookFileService(repository, storage, () => FIXED_NOW, undefined, async () => true);
   return { repository, storage, service };
 }
 
@@ -475,7 +475,7 @@ describe('S2-AC-006: Supabase Storage', () => {
   test('TC-S2-029: storage failures surface as errors, never as a fake URL', async () => {
     const repository = new BookRepository();
     await repository.save(makeBook({ status: 'approved', fileObjectPath: 'books/book-1/3/book.pdf' }));
-    const unconfigured = new BookFileService(repository, null, () => FIXED_NOW);
+    const unconfigured = new BookFileService(repository, null, () => FIXED_NOW, undefined, async () => true);
     await assert.rejects(unconfigured.createDownloadUrl('book-1', READER), StorageUnavailableError);
   });
 

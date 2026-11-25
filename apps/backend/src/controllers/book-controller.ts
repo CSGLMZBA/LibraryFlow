@@ -4,8 +4,14 @@ import {
   bookService,
   RevisionConflictError,
 } from "../services/book-service.js";
+import { PublicVisibilityUnavailableError } from "../services/public-content-visibility.js";
 
 function sendError(response: Response, error: unknown): void {
+  if (error instanceof PublicVisibilityUnavailableError) {
+    console.error(`[public-content] Visibility verification unavailable: ${error.cause instanceof Error ? error.cause.name : typeof error.cause}`);
+    response.status(503).json({success: false, error: {code: "VISIBILITY_UNAVAILABLE", message: error.message}});
+    return;
+  }
   if (error instanceof RevisionConflictError) {
     response.status(409).json({
       success: false,

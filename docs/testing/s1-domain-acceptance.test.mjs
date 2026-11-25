@@ -7,6 +7,7 @@ import { ClassificationService } from '../../apps/backend/src/services/classific
 import { CommentService } from '../../apps/backend/src/services/comment-service.ts';
 import { ModerationService } from '../../apps/backend/src/services/moderation-service.ts';
 import { commentRepository as frontendCommentRepo } from '../../apps/frontend/src/repositories/comment-repository.ts';
+const visible = async () => true;
 
 function createInMemoryRepos() {
   const categoriesMap = new Map();
@@ -85,7 +86,7 @@ function createInMemoryRepos() {
 
 test('S1-AC-002 (TC-008, TC-010): valid EPUB/PDF up to 20 MB enters pending; invalid file rejected', async () => {
   const { bookRepo } = createInMemoryRepos();
-  const service = new BookService(bookRepo);
+  const service = new BookService(bookRepo, undefined, visible);
 
   const validBook = await service.createBook(
     {
@@ -139,7 +140,7 @@ test('S1-AC-002 (TC-008, TC-010): valid EPUB/PDF up to 20 MB enters pending; inv
 
 test('S1-AC-003 (TC-014, TC-015): approve exposes book; reject notifies owner and schedules +24h deletion', async () => {
   const { bookRepo, commentRepo, notificationRepo } = createInMemoryRepos();
-  const bookService = new BookService(bookRepo);
+  const bookService = new BookService(bookRepo, undefined, visible);
   const modService = new ModerationService(bookRepo, commentRepo, notificationRepo);
 
   const b1 = await bookService.createBook(
@@ -170,7 +171,7 @@ test('S1-AC-003 (TC-014, TC-015): approve exposes book; reject notifies owner an
 
 test('S1-AC-004 & S1-AC-005 (TC-017..TC-022): owner-only metadata update, identity preservation & search filters', async () => {
   const { bookRepo, commentRepo, notificationRepo } = createInMemoryRepos();
-  const bookService = new BookService(bookRepo);
+  const bookService = new BookService(bookRepo, undefined, visible);
   const modService = new ModerationService(bookRepo, commentRepo, notificationRepo);
 
   const created = await bookService.createBook(
@@ -224,8 +225,8 @@ test('S1-AC-006 (TC-023, TC-024): category and genre uniqueness and rename', () 
 
 test('S1-AC-007 (TC-027, TC-030): comment creation, moderation audit, notification, and newest-first order', async () => {
   const { bookRepo, commentRepo, notificationRepo } = createInMemoryRepos();
-  const bookService = new BookService(bookRepo);
-  const commentService = new CommentService(bookRepo, commentRepo);
+  const bookService = new BookService(bookRepo, undefined, visible);
+  const commentService = new CommentService(bookRepo, commentRepo, visible);
   const modService = new ModerationService(bookRepo, commentRepo, notificationRepo);
 
   const book = await bookService.createBook(

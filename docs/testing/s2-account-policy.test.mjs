@@ -3,6 +3,9 @@ import {test} from 'node:test';
 import {AccountSessionPolicy, SESSION_IDLE_MS, DELETION_GRACE_MS, tokenProof} from '../../apps/backend/src/services/account-session-policy.ts';
 import {CommentRepository} from '../../apps/backend/src/repositories/comment-repository.ts';
 import {BookRepository} from '../../apps/backend/src/repositories/book-repository.ts';
+import {BookService} from '../../apps/backend/src/services/book-service.ts';
+import {CommentService} from '../../apps/backend/src/services/comment-service.ts';
+import {BookFileService} from '../../apps/backend/src/services/book-file-service.ts';
 
 export class MemoryAuthStore {
   data = new Map();
@@ -212,6 +215,51 @@ test('a restricted moderator and transaction failures cannot partially ban a use
   const policy=new AccountSessionPolicy(failingStore,f.now);
   await assert.rejects(policy.ban('reader',{uid:'other',role:'moderator'},{reason:'spam',permanent:true}),/injected write failure/);
   assert.deepEqual([...f.store.data],before);
+});
+
+test('public books, comments and downloads follow durable restriction, lift, and expiry', async () => {
+  const f=setup();
+  const books=new BookRepository();
+  const comments=new CommentRepository();
+  const visible=uid=>f.policy.isPublicContentVisible(uid);
+  const catalog=new BookService(books,undefined,visible);
+  const discussion=new CommentService(books,comments,visible);
+  const storage={async createSignedDownloadUrl(){return 'https://storage.example/file';}};
+  const files=new BookFileService(books,storage,undefined,undefined,visible);
+  const book={id:'book',ownerId:'owner',title:'A book',author:'Author',status:'approved',
+    fileObjectPath:'books/book/file.pdf',fileType:'pdf',fileSizeBytes:1,
+    categoryIds:[],genreIds:[],revision:1,createdAt:new Date(f.now()).toISOString(),updatedAt:new Date(f.now()).toISOString()};
+  await books.save(book);
+  await comments.create({id:'c',bookId:'book',authorId:'reader',authorDisplayName:'Reader',content:'Hello',
+    createdAt:new Date(f.now()).toISOString(),isDeleted:false});
+  await f.policy.authorize(f.proof,{bootstrap:true});
+  await f.policy.ban('reader',{uid:'mod',role:'moderator'},{reason:'Spam',endsAt:new Date(f.now()+1000).toISOString()});
+  assert.deepEqual(await discussion.getCommentsForBook('book'),[]);
+  f.advance(1000);
+  assert.equal((await discussion.getCommentsForBook('book')).length,1);
+
+  f.store.data.set('accounts/owner',{uid:'owner',revision:1,updatedAt:new Date(f.now()).toISOString()});
+  await f.policy.ban('owner',{uid:'mod',role:'moderator'},{reason:'Violation',permanent:true});
+  assert.deepEqual(await catalog.getApprovedCatalog(),[]);
+  await assert.rejects(catalog.getBookDetails('book'),/not found/i);
+  await assert.rejects(discussion.getCommentsForBook('book'),/not found/i);
+  await assert.rejects(discussion.addComment('book','New','reader','Reader'),/not found/i);
+  await assert.rejects(files.createDownloadUrl('book',{uid:'reader',role:'reader'}),{status:404});
+  assert.equal((await catalog.getBookDetails('book','mod',true)).id,'book');
+  await f.policy.liftBan('owner',{uid:'mod',role:'moderator'},'Appeal accepted');
+  assert.equal((await catalog.getApprovedCatalog()).length,1);
+  assert.equal((await discussion.getCommentsForBook('book')).length,1);
+  assert.equal((await files.createDownloadUrl('book',{uid:'reader',role:'reader'})).downloadUrl,'https://storage.example/file');
+  f.store.data.set('accounts/owner',{...f.store.data.get('accounts/owner'),deletionRequestedAt:new Date(f.now()).toISOString()});
+  assert.deepEqual(await catalog.getApprovedCatalog(),[]);
+});
+
+test('public content fails closed if account restriction state cannot be read', async () => {
+  const books=new BookRepository();
+  await books.save({id:'book',ownerId:'owner',title:'A',author:'B',status:'approved',categoryIds:[],genreIds:[]});
+  const visibility=async()=>{throw new Error('state store unavailable');};
+  await assert.rejects(new BookService(books,undefined,visibility).getApprovedCatalog(),/state store unavailable/);
+  await assert.rejects(new CommentService(books,new CommentRepository(),visibility).getCommentsForBook('book'),/state store unavailable/);
 });
 
 test('S2-T06: redaction removes public names/content and hides owned books in current repositories', async () => {
