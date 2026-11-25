@@ -1,8 +1,7 @@
 /**
  * Sprint 2 — Security, Session Lifecycle, and Moderation Tests
  *
- * Covers: S2-AC-005 (TC-S2-023 through TC-S2-026) — Cloud Synchronization
- *         S2-AC-008 (TC-S2-036 through TC-S2-043) — Moderation
+ * Partial service and guard checks for S2-AC-005 and S2-AC-008.
  *         S2-AC-009 (TC-S2-044 through TC-S2-052) — Session Lifecycle (delegated to s2-account-policy.test.mjs)
  *
  * Owner: Cesar (Sentinel)
@@ -17,7 +16,6 @@ import {
 } from '../../apps/backend/src/services/publisher-application-service.ts';
 import { BookService } from '../../apps/backend/src/services/book-service.ts';
 import { ModerationService } from '../../apps/backend/src/services/moderation-service.ts';
-import { AuthCloudError } from '../../apps/backend/src/services/auth-errors.ts';
 import { createAuthGuard } from '../../apps/backend/src/middleware/auth-guard.ts';
 
 function fakeResponse() {
@@ -41,7 +39,6 @@ function createTestHarness() {
   const books = new Map();
   const comments = new Map();
   const notifications = [];
-  const processedMutationIds = new Set();
 
   const appRepo = {
     async save(app) {
@@ -136,7 +133,6 @@ function createTestHarness() {
     appRepo,
     bookRepo,
     notifRepo,
-    processedMutationIds,
   };
 }
 
@@ -149,7 +145,7 @@ describe('S2-AC-005: Cloud Synchronization and Revision Control', () => {
     website: 'https://syncpress.example.com',
   };
 
-  test('TC-S2-023: revision-controlled mutations succeed then conflict', async () => {
+  test('approved applications reject a later terminal transition', async () => {
     const { appService } = createTestHarness();
     const created = await appService.submitApplication('reader-sync-1', sampleDto);
     assert.equal(created.revision, 1);
@@ -163,7 +159,7 @@ describe('S2-AC-005: Cloud Synchronization and Revision Control', () => {
     );
   });
 
-  test('TC-S2-024: conflict response preserves server value — no silent overwrite', async () => {
+  test('rejected withdrawal leaves approved application unchanged', async () => {
     const { appService, appRepo } = createTestHarness();
     const created = await appService.submitApplication('reader-sync-2', sampleDto);
     await appService.approveApplication(created.id, 'mod-winner');
@@ -179,7 +175,7 @@ describe('S2-AC-005: Cloud Synchronization and Revision Control', () => {
     assert.equal(persisted?.revision, 2);
   });
 
-  test('TC-S2-025: stable IDs survive reload', async () => {
+  test('application ID is preserved on in-memory lookup', async () => {
     const { appService, appRepo } = createTestHarness();
     const created = await appService.submitApplication('reader-sync-3', sampleDto);
 
@@ -191,60 +187,14 @@ describe('S2-AC-005: Cloud Synchronization and Revision Control', () => {
     assert.equal(reloadedByUser[0]?.revision, 1);
   });
 
-  test('TC-S2-026: offline mutation IDs and idempotent replay', async () => {
-    const { appService, processedMutationIds } = createTestHarness();
-    const mutationId = 'mut-offline-001';
-
-    async function replayOnce(id) {
-      if (processedMutationIds.has(id)) {
-        return { replayed: true, duplicateIgnored: true };
-      }
-      const created = await appService.submitApplication('reader-replay-1', sampleDto);
-      processedMutationIds.add(id);
-      return { replayed: false, created };
-    }
-
-    const first = await replayOnce(mutationId);
-    const second = await replayOnce(mutationId);
-
-    assert.equal(first.replayed, false);
-    assert.equal(second.duplicateIgnored, true);
-    assert.equal((await appService.getMyApplications('reader-replay-1')).length, 1);
-  });
+  test.todo('TC-S2-026: replay a queued offline mutation through the actual client and server');
 });
 
 describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => {
-  test('TC-S2-036: apply a temporary ban', () => {
-    const startsAt = new Date('2026-11-24T12:00:00.000Z');
-    const endsAt = new Date('2026-12-01T12:00:00.000Z');
-    const banRecord = {
-      actorUid: 'mod-1',
-      targetUid: 'user-temp-ban',
-      reason: 'Repeated spam comments',
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      permanent: false,
-    };
+  test.todo('TC-S2-036: apply a temporary ban through the moderation API');
+  test.todo('TC-S2-037: apply a permanent ban through the moderation API');
 
-    assert.equal(banRecord.permanent, false);
-    assert.ok(new Date(banRecord.endsAt).getTime() > new Date(banRecord.startsAt).getTime());
-  });
-
-  test('TC-S2-037: apply a permanent ban', () => {
-    const banRecord = {
-      actorUid: 'mod-1',
-      targetUid: 'user-perm-ban',
-      reason: 'Severe terms violation',
-      startsAt: '2026-11-24T12:00:00.000Z',
-      endsAt: null,
-      permanent: true,
-    };
-
-    assert.equal(banRecord.permanent, true);
-    assert.equal(banRecord.endsAt, null);
-  });
-
-  test('TC-S2-038: non-moderator cannot ban', async () => {
+  test('moderator role guard rejects a reader', async () => {
     const res = fakeResponse();
     let allowed = false;
     await createAuthGuard(async () => ({ uid: 'reader-1', role: 'reader' }), 'moderator')(
@@ -258,16 +208,8 @@ describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => 
     assert.equal(allowed, false);
   });
 
-  test('TC-S2-039: banned user cannot comment, upload, or access moderation targets', () => {
-    const restrictionError = new AuthCloudError(
-      'ACCOUNT_RESTRICTED',
-      'Account is restricted due to active moderation ban.',
-      undefined,
-      403,
-    );
-    assert.equal(restrictionError.code, 'ACCOUNT_RESTRICTED');
-    assert.equal(restrictionError.httpStatus, 403);
-  });
+  test.todo('TC-S2-038: a non-moderator cannot call the ban endpoint');
+  test.todo('TC-S2-039: banned users are restricted and their public content is hidden');
 
   test('TC-S2-040: revoke publisher privileges', async () => {
     const { appService, notifRepo } = createTestHarness();

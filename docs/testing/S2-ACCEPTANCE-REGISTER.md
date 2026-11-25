@@ -28,14 +28,13 @@ scenarios. The application repository currently stores records in memory.
 
 The revision/conflict suite now runs as part of `npm test`; it exercises book
 service conflicts and in-process replay, including authorization and isolation
-between requesters and books. On 2026-11-25, `npm test` passed 20 Sprint 1 and
-143 Sprint 2 tests. This is not evidence of concurrent transactional
+between requesters and books. This is not evidence of concurrent transactional
 conflict handling, durable replay after a restart, or the complete offline
-browser scenario. In particular, the `TC-S2-026` test in
-`s2-security-session.test.mjs` uses a test-local set and does not establish
-the registered IndexedDB-to-server acceptance case. The tests named
-`TC-S2-036`, `TC-S2-037`, and `TC-S2-039` in that file use fabricated
-objects or errors, not working ban endpoints.
+browser scenario. Previously fabricated `TC-S2-026`, `TC-S2-036`,
+`TC-S2-037`, and `TC-S2-039` assertions have been replaced with explicit
+TODOs, as has the untested ban-endpoint authorization case `TC-S2-038`.
+On 2026-11-25, `npm run test:sprint2` reported 139 passed, five TODO,
+and zero failed. TODOs are outstanding acceptance work, not passes.
 
 ---
 
