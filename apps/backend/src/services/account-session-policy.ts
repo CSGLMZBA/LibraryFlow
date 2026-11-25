@@ -91,6 +91,17 @@ export class AccountSessionPolicy {
       tx.set(accountPath(uid), {...account, uid, tokensValidAfter: now, revision: (account?.revision ?? 0) + 1, updatedAt: new Date(now).toISOString()});
     });
   }
+  async recordUnauthorizedBanAttempt(uid: string, actor: {uid: string; role: string}, action: 'ban' | 'lift'): Promise<void> {
+    if (actor.role === 'moderator') throw new AuthCloudError('INVALID_STATE', 'Moderator actions are not unauthorized attempts.', undefined, 409);
+    const now = this.now();
+    await this.store.transaction(async tx => {
+      const actorAccount = await tx.get<AccountState>(accountPath(actor.uid));
+      this.active(actorAccount);
+      tx.create(`accountAudit/${crypto.randomUUID()}`, {actorUid: actor.uid, targetUid: uid,
+        action: 'unauthorized_ban_attempt', attemptedAction: action,
+        reason: 'A non-moderator attempted a moderation action.', timestamp: new Date(now).toISOString()});
+    });
+  }
   async ban(uid: string, actor: {uid: string; role: string}, input: BanInput): Promise<{ban: Ban; revision: number}> {
     if (actor.role !== 'moderator') throw new AuthCloudError('FORBIDDEN', 'Moderator access is required.', undefined, 403);
     if (uid === actor.uid) throw new AuthCloudError('VALIDATION_ERROR', 'A moderator cannot ban their own account.', 'uid');

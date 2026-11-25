@@ -6,6 +6,7 @@ import { authRouter } from "./routes/auth-routes.js";
 import { bookRouter } from "./routes/book-routes.js";
 import { classificationRouter } from "./routes/classification-routes.js";
 import { moderationRouter } from "./routes/moderation-routes.js";
+import { banRouter } from "./routes/ban-routes.js";
 import { internalRouter } from "./routes/internal-routes.js";
 import { publisherApplicationRouter } from "./routes/publisher-application-routes.js";
 
@@ -41,6 +42,7 @@ app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/classifications", classificationRouter);
 app.use("/api/v1/publisher-applications", publisherApplicationRouter);
 app.use("/api/v1/moderation", moderationRouter);
+app.use("/api/v1/moderation", banRouter);
 app.delete("/api/v1/comments/:commentId", moderatorGuard, removeComment);
 
 app.get("/health", healthHandler);

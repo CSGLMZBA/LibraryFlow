@@ -425,6 +425,14 @@ targets, and authenticated restricted actions. Every ban, lift, revocation,
 deletion, restore, and application decision writes an immutable audit record
 with actor, target, reason, action, and timestamp.
 
+Implementation status: `POST /moderation/accounts/:uid/ban` accepts
+`{reason, endsAt}` or `{reason, permanent: true}`, and
+`POST /moderation/accounts/:uid/lift-ban` accepts `{reason}`. These routes
+are disabled unless `ENABLE_BAN_API=true`; the frontend currently uses
+separate local content, so enabling them does not yet satisfy public hiding.
+Sign-in displays the active ban reason and duration; a notification record
+is written transactionally, but proactive delivery remains unimplemented.
+
 ## 7. Notifications
 
 Collection: `notifications/{notificationId}` with a unique idempotency key
