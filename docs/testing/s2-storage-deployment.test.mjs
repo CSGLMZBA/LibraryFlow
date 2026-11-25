@@ -44,6 +44,21 @@ import {
   createBookFileStorageFromEnv,
 } from '../../apps/backend/src/services/storage-service.ts';
 import { createAuthGuard } from '../../apps/backend/src/middleware/auth-guard.ts';
+import { MemoryDeletionJobStore } from '../../apps/backend/src/repositories/deletion-job-store.ts';
+import {
+  DeletionJobService,
+  DeletionScheduleError,
+  MAX_ATTEMPTS,
+  REJECTED_BOOK_FILE_DELAY_MS,
+  STALE_CLAIM_MS,
+  bookFileJobId,
+  retryDelayMs,
+} from '../../apps/backend/src/services/deletion-job-service.ts';
+import { isWorkerAuthorized, requireWorkerSecret } from '../../apps/backend/src/middleware/worker-secret.ts';
+import { ModerationService } from '../../apps/backend/src/services/moderation-service.ts';
+import { BookService } from '../../apps/backend/src/services/book-service.ts';
+import { CommentRepository } from '../../apps/backend/src/repositories/comment-repository.ts';
+import { NotificationRepository } from '../../apps/backend/src/repositories/notification-repository.ts';
 import { verifyBookStorage } from '../../scripts/verify-storage-live.mjs';
 import {
   buildBookBucketConfig,
@@ -549,39 +564,264 @@ describe('S2-AC-006: Live storage verification script (storage:verify)', () => {
   });
 });
 
+// ── Deletion worker helpers (S2-T08) ────────────────────────────────────────
+const REJECTED_AT = new Date('2026-11-24T12:00:00.000Z');
+const FILE_PATH = 'books/book-1/3/book.pdf';
+
+/** Clock the test can move forward. */
+function createClock(start = REJECTED_AT) {
+  let current = start.getTime();
+  return { now: () => new Date(current), advance: (ms) => { current += ms; } };
+}
+
+/** Storage fake whose deleteObject can be told to fail. */
+function createDeletingStorage() {
+  const storage = new FakeBookFileStorage();
+  storage.failDeletes = 0;
+  storage.deleted = [];
+  storage.deleteObject = async (objectPath) => {
+    if (storage.failDeletes > 0) {
+      storage.failDeletes -= 1;
+      throw new StorageUnavailableError('delete-object', 503);
+    }
+    storage.deleted.push(objectPath);
+  };
+  return storage;
+}
+
+function setupWorker() {
+  const store = new MemoryDeletionJobStore();
+  const storage = createDeletingStorage();
+  const clock = createClock();
+  const worker = new DeletionJobService(store, storage, clock.now);
+  return { store, storage, clock, worker };
+}
+
 describe('S2-AC-007: Scheduled Cleanup — Deletion Jobs', () => {
-  test('TC-S2-031: rejection creates 24h deletion job', async () => {
-    // STUB: awaiting S2-T08 deletion job creation
-    // Expected: DeletionJob created with kind: "rejected-book-file",
-    //           dueAt = rejectedAt + 24h, status: "pending", attempts: 0
-    assert.ok(true, 'STUB: pending S2-T08 rejection job creation');
+  test('TC-S2-031: rejection creates one 24h deletion job for the book file', async () => {
+    const { store, worker } = setupWorker();
+    const books = new BookRepository();
+    await books.save(makeBook({ fileObjectPath: FILE_PATH }));
+    await books.save(makeBook({ id: 'book-no-file' }));
+    const moderation = new ModerationService(books, new CommentRepository(), new NotificationRepository(), worker);
+
+    const rejected = await moderation.rejectBook('book-1', 'Missing rights statement.', MODERATOR.uid);
+    assert.equal(rejected.status, 'rejected');
+
+    const job = await store.get(bookFileJobId('rejected-book-file', FILE_PATH));
+    assert.ok(job, 'A rejected-book-file job must exist');
+    assert.equal(job.kind, 'rejected-book-file');
+    assert.equal(job.targetId, FILE_PATH);
+    assert.equal(job.status, 'pending');
+    assert.equal(job.attempts, 0);
+    assert.equal(Date.parse(job.dueAt) - Date.parse(rejected.rejectionDate), REJECTED_BOOK_FILE_DELAY_MS);
+
+    await moderation.rejectBook('book-no-file', 'Missing rights statement.', MODERATOR.uid);
+    assert.equal((await store.listByStatus(['pending'], 10)).length, 1, 'A book without a stored file creates no job');
+
+    // Scheduling twice for the same file keeps one job.
+    await worker.scheduleRejectedBookFile(FILE_PATH, REJECTED_AT);
+    assert.equal((await store.listByStatus(['pending'], 10)).length, 1);
   });
 
-  test('TC-S2-032: worker claims and completes a job', async () => {
-    // STUB: awaiting S2-T08 worker implementation
-    // Expected: pending → processing (claimedAt) → completed (completedAt);
-    //           file removed from Supabase bucket
-    assert.ok(true, 'STUB: pending S2-T08 worker claim/complete');
+  test('TC-S2-032: worker claims and completes a due job, and not before it is due', async () => {
+    const { store, storage, clock, worker } = setupWorker();
+    const job = await worker.scheduleRejectedBookFile(FILE_PATH, REJECTED_AT);
+
+    clock.advance(REJECTED_BOOK_FILE_DELAY_MS - 1000);
+    assert.deepEqual(await worker.runDueJobs(), { claimed: 0, completed: 0, failed: 0 });
+    assert.deepEqual(storage.deleted, []);
+
+    clock.advance(1000);
+    assert.deepEqual(await worker.runDueJobs(), { claimed: 1, completed: 1, failed: 0 });
+    assert.deepEqual(storage.deleted, [FILE_PATH]);
+    const completed = await store.get(job.id);
+    assert.equal(completed.status, 'completed');
+    assert.ok(completed.claimedAt, 'The claim timestamp is kept');
+    assert.equal(completed.completedAt, clock.now().toISOString());
   });
 
-  test('TC-S2-033: failed job retries with exponential backoff', async () => {
-    // STUB: awaiting S2-T08 retry logic
-    // Expected: status: "failed"; attempts incremented; lastError stored;
-    //           nextAttemptAt set with backoff; job NOT deleted from database
-    assert.ok(true, 'STUB: pending S2-T08 retry backoff');
+  test('TC-S2-033: failed job retries with exponential backoff and a safe error', async () => {
+    const { store, storage, clock, worker } = setupWorker();
+    const job = await worker.scheduleDeletedBookFile(FILE_PATH);
+    storage.failDeletes = 2;
+
+    assert.deepEqual(await worker.runDueJobs(), { claimed: 1, completed: 0, failed: 1 });
+    let current = await store.get(job.id);
+    assert.equal(current.status, 'failed');
+    assert.equal(current.attempts, 1);
+    assert.equal(current.lastError, 'Book file storage failed (delete-object, HTTP 503).');
+    assert.equal(Date.parse(current.nextAttemptAt) - clock.now().getTime(), retryDelayMs(1));
+    assert.equal(retryDelayMs(1), 60_000);
+    assert.equal(retryDelayMs(2), 120_000);
+    assert.equal(retryDelayMs(3), 240_000);
+    assert.equal(retryDelayMs(30), 6 * 60 * 60 * 1000, 'Backoff is capped at 6 hours');
+
+    // Not retried before nextAttemptAt.
+    clock.advance(retryDelayMs(1) - 1);
+    assert.equal((await worker.runDueJobs()).claimed, 0);
+    clock.advance(1);
+    assert.equal((await worker.runDueJobs()).failed, 1);
+    current = await store.get(job.id);
+    assert.equal(current.attempts, 2);
+    assert.equal(Date.parse(current.nextAttemptAt) - clock.now().getTime(), retryDelayMs(2));
+
+    clock.advance(retryDelayMs(2));
+    assert.equal((await worker.runDueJobs()).completed, 1);
+    current = await store.get(job.id);
+    assert.equal(current.status, 'completed');
+    assert.equal(current.nextAttemptAt, undefined, 'A completed job has no next attempt');
+    assert.ok(await store.get(job.id), 'Jobs are never deleted from the store');
   });
 
-  test('TC-S2-034: completed job is never reprocessed', async () => {
-    // STUB: awaiting S2-T08 idempotency guard
-    // Expected: worker skips completed job; completedAt unchanged
-    assert.ok(true, 'STUB: pending S2-T08 idempotency');
+  test('TC-S2-033: retries stop after MAX_ATTEMPTS and the job stays failed for review', async () => {
+    const { store, storage, clock, worker } = setupWorker();
+    const job = await worker.scheduleDeletedBookFile(FILE_PATH);
+    storage.failDeletes = MAX_ATTEMPTS + 5;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+      assert.equal((await worker.runDueJobs()).failed, 1, `attempt ${attempt}`);
+      clock.advance(retryDelayMs(attempt));
+    }
+    const exhausted = await store.get(job.id);
+    assert.equal(exhausted.status, 'failed');
+    assert.equal(exhausted.attempts, MAX_ATTEMPTS);
+    assert.equal(exhausted.nextAttemptAt, undefined);
+    clock.advance(24 * 60 * 60 * 1000);
+    assert.equal((await worker.runDueJobs()).claimed, 0, 'An exhausted job is not retried automatically');
   });
 
-  test('TC-S2-035: permanent deletion creates immediate cleanup job', async () => {
-    // STUB: awaiting S2-T08 implementation
-    // Expected: DeletionJob with kind: "deleted-book-file", dueAt = now,
-    //           status: "pending"; book record marked "deleted"
-    assert.ok(true, 'STUB: pending S2-T08 immediate deletion job');
+  test('TC-S2-034: completed job is never reprocessed; concurrent runs claim a job once', async () => {
+    const { store, storage, clock, worker } = setupWorker();
+    const job = await worker.scheduleDeletedBookFile(FILE_PATH);
+    await worker.runDueJobs();
+    const completedAt = (await store.get(job.id)).completedAt;
+
+    clock.advance(60 * 60 * 1000);
+    assert.deepEqual(await worker.runDueJobs(), { claimed: 0, completed: 0, failed: 0 });
+    assert.equal((await store.get(job.id)).completedAt, completedAt);
+    assert.deepEqual(storage.deleted, [FILE_PATH]);
+
+    // Two runs at the same time: only one claims each job.
+    const second = await worker.scheduleDeletedBookFile('books/book-2/1/other.pdf');
+    const [first, other] = await Promise.all([worker.runDueJobs(), worker.runDueJobs()]);
+    assert.equal(first.claimed + other.claimed, 1);
+    assert.equal((await store.get(second.id)).status, 'completed');
+
+    // A job completed by another run between listing and claiming is not claimed again.
+    const raced = await worker.scheduleDeletedBookFile('books/book-4/1/raced.pdf');
+    const racingStore = Object.create(store);
+    racingStore.claim = async (id, canClaim, claim) => {
+      await store.update(id, { status: 'completed', completedAt: clock.now().toISOString() });
+      return store.claim(id, canClaim, claim);
+    };
+    const racingWorker = new DeletionJobService(racingStore, storage, clock.now);
+    assert.deepEqual(await racingWorker.runDueJobs(), { claimed: 0, completed: 0, failed: 0 });
+    assert.equal((await store.get(raced.id)).status, 'completed');
+    assert.equal(storage.deleted.includes('books/book-4/1/raced.pdf'), false);
+
+    // A run that crashed after claiming is recovered after STALE_CLAIM_MS.
+    const stale = await worker.scheduleDeletedBookFile('books/book-3/1/stale.pdf');
+    await store.update(stale.id, { status: 'processing', claimedAt: clock.now().toISOString() });
+    assert.equal((await worker.runDueJobs()).claimed, 0);
+    clock.advance(STALE_CLAIM_MS);
+    assert.equal((await worker.runDueJobs()).completed, 1);
+  });
+
+  test('TC-S2-034: account-data jobs are left pending and untouched', async () => {
+    const { store, storage, clock, worker } = setupWorker();
+    const accountJob = {
+      id: 'account-job-1', kind: 'account-data', targetId: 'user-1',
+      dueAt: '2026-01-01T00:00:00.000Z', status: 'pending', attempts: 0,
+    };
+    await store.createIfAbsent(accountJob);
+    clock.advance(365 * 24 * 60 * 60 * 1000);
+    assert.deepEqual(await worker.runDueJobs(), { claimed: 0, completed: 0, failed: 0 });
+    assert.deepEqual(await store.get('account-job-1'), accountJob);
+    assert.deepEqual(storage.deleted, []);
+  });
+
+  test('TC-S2-035: permanent deletion and file replacement create immediate cleanup jobs', async () => {
+    const { store, clock, worker } = setupWorker();
+    const books = new BookRepository();
+    await books.save(makeBook({ status: 'approved', fileObjectPath: FILE_PATH }));
+    const bookService = new BookService(books, worker);
+
+    const deleted = await bookService.deleteBook('book-1', MODERATOR.uid);
+    assert.equal(deleted.status, 'deleted');
+    const job = await store.get(bookFileJobId('deleted-book-file', FILE_PATH));
+    assert.equal(job.kind, 'deleted-book-file');
+    assert.equal(job.dueAt, clock.now().toISOString());
+    assert.equal(job.status, 'pending');
+
+    // Deleting again keeps a single job, so a failed scheduling can be retried safely.
+    await bookService.deleteBook('book-1', MODERATOR.uid);
+    assert.equal((await store.listByStatus(['pending'], 10)).length, 1);
+
+    // Replacing a file schedules the previous object.
+    const fileBooks = new BookRepository();
+    await fileBooks.save(makeBook({ id: 'book-r', fileObjectPath: 'books/book-r/2/old.pdf' }));
+    const fakeStorage = new FakeBookFileStorage();
+    const files = new BookFileService(fileBooks, fakeStorage, clock.now, worker);
+    const { objectPath } = await files.createUploadUrl('book-r', OWNER, validUploadRequest());
+    fakeStorage.objects.set(objectPath, { sizeBytes: 1000, mimeType: 'application/pdf' });
+    await files.completeUpload('book-r', OWNER, { objectPath, revision: 3 });
+    const replaced = await store.get(bookFileJobId('deleted-book-file', 'books/book-r/2/old.pdf'));
+    assert.equal(replaced.status, 'pending');
+    assert.equal(replaced.dueAt, clock.now().toISOString());
+  });
+
+  test('TC-S2-035: a scheduling failure is reported, never silent', async () => {
+    const books = new BookRepository();
+    await books.save(makeBook({ status: 'approved', fileObjectPath: FILE_PATH }));
+    const failingScheduler = {
+      scheduleDeletedBookFile: async () => { throw new Error('firestore down'); },
+      scheduleRejectedBookFile: async () => { throw new Error('firestore down'); },
+    };
+    await assert.rejects(new BookService(books, failingScheduler).deleteBook('book-1', MODERATOR.uid), DeletionScheduleError);
+  });
+
+  test('S2-T08: worker route accepts only the deletion worker secret', async () => {
+    const secret = 'x'.repeat(40);
+    assert.equal(isWorkerAuthorized(`Bearer ${secret}`, secret), true);
+    assert.equal(isWorkerAuthorized(`Bearer ${secret}x`, secret), false);
+    assert.equal(isWorkerAuthorized(secret, secret), false);
+    assert.equal(isWorkerAuthorized(undefined, secret), false);
+    assert.equal(isWorkerAuthorized('Bearer short', 'short'), false, 'Short secrets are refused');
+
+    const run = async (authorization, configured) => {
+      const previous = process.env.DELETION_WORKER_SECRET;
+      if (configured === undefined) delete process.env.DELETION_WORKER_SECRET;
+      else process.env.DELETION_WORKER_SECRET = configured;
+      const result = { status: 200, body: null, nextCalled: false };
+      const response = { status(code) { result.status = code; return this; }, json(body) { result.body = body; return this; } };
+      try {
+        requireWorkerSecret({ headers: { authorization } }, response, () => { result.nextCalled = true; });
+      } finally {
+        if (previous === undefined) delete process.env.DELETION_WORKER_SECRET;
+        else process.env.DELETION_WORKER_SECRET = previous;
+      }
+      return result;
+    };
+    assert.equal((await run(`Bearer ${secret}`, secret)).nextCalled, true);
+    assert.equal((await run('Bearer wrong', secret)).status, 401);
+    assert.equal((await run(undefined, secret)).body.error.code, 'AUTH_REQUIRED');
+    assert.equal((await run(`Bearer ${secret}`, undefined)).status, 503);
+
+    const server = readFileSync(join(repoRoot, 'apps/backend/src/server.ts'), 'utf8');
+    assert.match(server, /app\.use\("\/api\/v1\/internal", internalRouter\);/);
+    const routes = readFileSync(join(repoRoot, 'apps/backend/src/routes/internal-routes.ts'), 'utf8');
+    assert.match(routes, /internalRouter\.post\("\/deletion-jobs\/run", requireWorkerSecret, runDeletionJobs\);/);
+  });
+
+  test('S2-T08: scheduled workflow calls the worker route with repository secrets only', () => {
+    const workflow = readFileSync(join(repoRoot, '.github/workflows/deletion-worker.yml'), 'utf8');
+    assert.match(workflow, /cron: "\*\/15 \* \* \* \*"/);
+    assert.match(workflow, /RENDER_BACKEND_URL: \$\{\{ secrets\.RENDER_BACKEND_URL \}\}/);
+    assert.match(workflow, /DELETION_WORKER_SECRET: \$\{\{ secrets\.DELETION_WORKER_SECRET \}\}/);
+    assert.match(workflow, /\/api\/v1\/internal\/deletion-jobs\/run/);
+    assert.match(workflow, /^permissions: \{\}$/m);
+    assert.equal(SECRET_VALUE_PATTERN.test(workflow), false);
   });
 });
 
