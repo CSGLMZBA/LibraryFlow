@@ -16,6 +16,7 @@
     "start": "npm run dev:backend",
     "admin:moderator": "node --env-file=.env scripts/set-moderator.mjs",
     "storage:setup": "node --env-file=.env scripts/setup-storage-bucket.mjs",
+    "storage:verify": "node --env-file=.env --import tsx scripts/verify-storage-live.mjs",
     "typecheck": "npm run typecheck -w @library-flow/shared && npm run typecheck -w @library-flow/backend -w @library-flow/frontend"
   }
 }

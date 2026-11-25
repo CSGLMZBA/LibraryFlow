@@ -158,3 +158,47 @@ Not run in this session: the project's own `npm run typecheck`,
 3. Cesar reviews the evidence (S2-T10) and marks the rows.
 4. Frontend consumers (publisher upload and reader download UI) use the three
    routes; that UI work is outside S2-T07.
+
+---
+
+# Session 3 — Live verification tooling (2026-11-24)
+
+## Context
+
+- PR #28 merged into `develop` (`48f9fa3`).
+- Carlos ran `npm run storage:setup`: bucket `books` updated, private, 20 MB
+  limit, PDF and EPUB only. The contract and `render.yaml` use `book-files`.
+  Carlos stated the Render value matches his bucket and that he will align
+  the names before deployment. Tracked for S2-T09.
+
+## Work completed
+
+- `scripts/verify-storage-live.mjs` and `npm run storage:verify`: seven live
+  checks for TC-S2-027, TC-S2-028, and a TC-S2-029 control, using the
+  backend's own storage client. Prints PASS/FAIL only; never prints keys,
+  signed URLs, or tokens; removes its test objects.
+- Tests in `docs/testing/s2-storage-deployment.test.mjs` against a fake
+  Supabase: a secure bucket passes all checks; a public bucket without limits
+  fails the expected checks; missing variables are rejected.
+- Register: live-check instructions and the `storage:setup` result.
+
+## Verification observed in this session
+
+- `node --import tsx --test docs/testing/s2-storage-deployment.test.mjs`
+  (Linux, Node 22.23.5): 29 tests, 28 passed, 0 failed, 1 skipped
+  (TC-S2-030 needs a frontend build).
+- Not run here: `npm run storage:verify` against the real project (needs the
+  service-role key), and the owner's full `npm run build`, `typecheck`,
+  `test`.
+
+## Scope note
+
+An unapproved S2-T08 draft was found in the working tree during this session.
+It is not part of this branch. S2-T08 starts only after Juan and Carlos
+approve the worker route and the hooks in their code.
+
+## Remaining for S2-T07 to be Done
+
+1. Carlos runs `npm run storage:verify` and the output is recorded.
+2. Bucket name aligned in Supabase, Render, and `render.yaml` (Carlos).
+3. Cesar reviews the evidence and marks the rows.

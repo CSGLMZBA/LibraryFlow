@@ -44,6 +44,7 @@ import {
   createBookFileStorageFromEnv,
 } from '../../apps/backend/src/services/storage-service.ts';
 import { createAuthGuard } from '../../apps/backend/src/middleware/auth-guard.ts';
+import { verifyBookStorage } from '../../scripts/verify-storage-live.mjs';
 import {
   buildBookBucketConfig,
   findBucketConfigProblems,
@@ -140,6 +141,71 @@ async function runGuard(guard, token) {
   await guard(request, response, () => { result.nextCalled = true; });
   return result;
 }
+
+/**
+ * Fake Supabase Storage for the live verification script. `secure: true`
+ * behaves like a correctly configured private bucket.
+ */
+function createFakeSupabase({ secure }) {
+  const limit = 20 * 1024 * 1024;
+  const allowed = ['application/pdf', 'application/epub+zip'];
+  const objects = new Map();
+  const seenUrls = [];
+  const bucketSettings = secure
+    ? { public: false, file_size_limit: limit, allowed_mime_types: allowed }
+    : { public: true, file_size_limit: null, allowed_mime_types: null };
+
+  const fetchImpl = async (url, init = {}) => {
+    seenUrls.push(url);
+    const { pathname } = new URL(url);
+    const method = init.method ?? 'GET';
+    const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
+    const objectPath = (prefix) => decodeURIComponent(pathname.slice(prefix.length));
+
+    if (method === 'GET' && pathname === '/storage/v1/bucket/book-files') return json(bucketSettings);
+    if (method === 'POST' && pathname.startsWith('/storage/v1/object/upload/sign/book-files/')) {
+      return json({ url: `${pathname.slice('/storage/v1'.length)}?token=upload-token` });
+    }
+    if (method === 'PUT' && pathname.startsWith('/storage/v1/object/upload/sign/book-files/')) {
+      const size = init.body.byteLength;
+      const type = init.headers['Content-Type'];
+      if (secure && size > limit) return json({ error: 'Payload too large' }, 413);
+      if (secure && !allowed.includes(type)) return json({ error: 'invalid_mime_type' }, 400);
+      objects.set(objectPath('/storage/v1/object/upload/sign/book-files/'), { size, type });
+      return json({ Key: 'ok' });
+    }
+    if (method === 'POST' && pathname === '/storage/v1/object/list/book-files') {
+      const { prefix, search } = JSON.parse(init.body);
+      const object = objects.get(`${prefix}/${search}`);
+      return json(object ? [{ name: search, metadata: { size: object.size, mimetype: object.type } }] : []);
+    }
+    if (method === 'GET' && pathname.startsWith('/storage/v1/object/public/book-files/')) {
+      return objects.has(objectPath('/storage/v1/object/public/book-files/')) && !secure
+        ? new Response('file') : json({ error: 'not found' }, 400);
+    }
+    if (method === 'POST' && pathname.startsWith('/storage/v1/object/sign/book-files/')) {
+      return json({ signedURL: `${pathname.slice('/storage/v1'.length)}?token=download-token` });
+    }
+    if (method === 'GET' && pathname.startsWith('/storage/v1/object/sign/book-files/')) {
+      return objects.has(objectPath('/storage/v1/object/sign/book-files/')) ? new Response('file') : json({}, 404);
+    }
+    if (method === 'GET' && pathname.startsWith('/storage/v1/object/book-files/')) {
+      return init.headers?.apikey || !secure ? new Response('file') : json({ error: 'unauthorized' }, 400);
+    }
+    if (method === 'DELETE' && pathname === '/storage/v1/object/book-files') {
+      for (const prefix of JSON.parse(init.body).prefixes) objects.delete(prefix);
+      return json([]);
+    }
+    return json({ error: `unexpected ${method} ${pathname}` }, 500);
+  };
+  return { fetchImpl, objects, seenUrls };
+}
+
+const LIVE_ENV = {
+  SUPABASE_URL: 'https://project.supabase.co',
+  SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
+  SUPABASE_BOOK_BUCKET: 'book-files',
+};
 
 const fakeVerify = async (token) => ({
   'reader-token': READER,
@@ -448,6 +514,37 @@ describe('S2-AC-006: Book file routes (SPEC-002 §4.1)', () => {
     }
     await rejectsWith(service.createDownloadUrl('no-file', READER), 404, 'NOT_FOUND');
     await rejectsWith(service.createDownloadUrl('missing', READER), 404, 'NOT_FOUND');
+  });
+});
+
+describe('S2-AC-006: Live storage verification script (storage:verify)', () => {
+  test('TC-S2-027/028: all live checks pass against a correctly configured private bucket', async () => {
+    const supabase = createFakeSupabase({ secure: true });
+    const { bucket, checks } = await verifyBookStorage(LIVE_ENV, supabase.fetchImpl, 'run-1');
+
+    assert.equal(bucket, 'book-files');
+    assert.equal(checks.length, 7);
+    assert.deepEqual(checks.filter((check) => !check.passed), []);
+    assert.deepEqual([...new Set(checks.map((check) => check.id))], ['TC-S2-027', 'TC-S2-029', 'TC-S2-028']);
+    assert.equal(supabase.objects.size, 0, 'Every test object must be removed');
+    assert.equal(JSON.stringify(checks).includes(FAKE_SERVICE_KEY), false);
+    assert.equal(JSON.stringify(checks).includes('token'), false);
+  });
+
+  test('TC-S2-027/028: a public bucket without limits is reported as failing', async () => {
+    const supabase = createFakeSupabase({ secure: false });
+    const { checks } = await verifyBookStorage(LIVE_ENV, supabase.fetchImpl, 'run-2');
+    const failed = checks.filter((check) => !check.passed).map((check) => check.name);
+
+    assert.ok(failed.includes('Bucket is private with 20 MB and PDF/EPUB limits'));
+    assert.ok(failed.includes('Anonymous public URL is denied'));
+    assert.ok(failed.includes('Upload larger than 20 MB is rejected'));
+    assert.ok(failed.includes('Upload with a non-PDF/EPUB type is rejected'));
+    assert.equal(supabase.objects.size, 0, 'Test objects are removed even when checks fail');
+  });
+
+  test('storage:verify requires all storage variables', async () => {
+    await assert.rejects(verifyBookStorage({ SUPABASE_URL: 'https://project.supabase.co' }), /SUPABASE_SERVICE_ROLE_KEY/);
   });
 });
 
