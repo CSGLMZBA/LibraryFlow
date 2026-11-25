@@ -7,20 +7,23 @@ export type VerifySessionToken = (token: string) => Promise<VerifiedIdentity | n
 export function createAuthGuard(verify: VerifySessionToken, requiredRole?: VerifiedRole) {
   return async (req:Request,res:Response,next:NextFunction):Promise<void> => {
     const header=req.headers.authorization;
-    const token=header?.startsWith('Bearer ') ? header.slice(7) : '';
-    if(!token) {res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'Sign-in is required.'}});return;}
+    const token=header?.startsWith('Bearer ') ? header.slice(7).trim() : '';
+    if(!token) {res.status(401).json({success:false,error:{code:'AUTH_REQUIRED',message:'Sign-in is required.'}});return;}
     try {
       const identity=await verify(token);
       if(!identity || !identity.uid || !['reader','publisher','moderator'].includes(identity.role)) {
-        res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'Invalid session.'}});return;
+        res.status(401).json({success:false,error:{code:'AUTH_INVALID',message:'Invalid session.'}});return;
       }
       if(requiredRole && identity.role!==requiredRole) {
-        res.status(403).json({success:false,error:{code:'FORBIDDEN',message:'Acceso no autorizado.'}});return;
+        res.status(403).json({success:false,error:{code:'FORBIDDEN',message:'Access is not authorized.'}});return;
       }
       res.locals.auth=identity;
       next();
-    } catch {
-      res.status(401).json({success:false,error:{code:'UNAUTHENTICATED',message:'The session could not be validated.'}});
+    } catch (error) {
+      if ((error as {code?: string}).code === 'ACCOUNT_RESTRICTED') {
+        res.status(403).json({success:false,error:{code:'ACCOUNT_RESTRICTED',message:'This account is restricted or pending deletion.'}});return;
+      }
+      res.status(503).json({success:false,error:{code:'AUTH_UNAVAILABLE',message:'The authentication service is unavailable.'}});
     }
   };
 }

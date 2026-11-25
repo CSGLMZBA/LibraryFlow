@@ -13,10 +13,29 @@ import {
   bookRepository as defaultBookRepository,
   BookRepository,
 } from "../repositories/book-repository.js";
+import {
+  DeletionScheduleError,
+  deletionJobService,
+  type BookFileDeletionScheduler,
+} from "./deletion-job-service.js";
+
+export class RevisionConflictError extends Error {
+  public constructor(
+    public readonly resourceId: string,
+    public readonly serverRevision: number,
+    public readonly serverValue: unknown,
+  ) {
+    super("The record changed. Reload it before retrying.");
+    this.name = "RevisionConflictError";
+  }
+}
 
 export class BookService {
+  private readonly processedMutations = new Map<string, Book>();
+
   public constructor(
     private readonly repository: BookRepository = defaultBookRepository,
+    private readonly deletions: BookFileDeletionScheduler = deletionJobService,
   ) {}
 
   async createBook(dto: CreateBookDto, ownerId: string): Promise<Book> {
@@ -66,6 +85,7 @@ export class BookService {
       genreIds: [...dto.genreIds],
       createdAt: now,
       updatedAt: now,
+      revision: 1,
     };
 
     return this.repository.save(book);
@@ -102,6 +122,13 @@ export class BookService {
     requesterId: string,
     isModerator = false,
   ): Promise<Book> {
+    if (dto.mutationId) {
+      const cachedResult = this.processedMutations.get(dto.mutationId);
+      if (cachedResult) {
+        return cachedResult;
+      }
+    }
+
     const book = await this.repository.findById(id);
     if (!book) {
       throw new Error("Book not found.");
@@ -109,6 +136,13 @@ export class BookService {
 
     if (!isModerator && book.ownerId !== requesterId) {
       throw new Error("You are not authorized to update this book.");
+    }
+
+    if (
+      dto.clientRevision !== undefined &&
+      book.revision !== dto.clientRevision
+    ) {
+      throw new RevisionConflictError(book.id, book.revision, book);
     }
 
     const updates: Partial<Book> = {};
@@ -134,9 +168,37 @@ export class BookService {
     }
 
     updates.updatedAt = new Date().toISOString();
+    updates.revision = book.revision + 1;
     const updatedBook = await this.repository.update(id, updates);
     if (!updatedBook) {
       throw new Error("Book could not be updated.");
+    }
+    if (dto.mutationId) {
+      this.processedMutations.set(dto.mutationId, updatedBook);
+    }
+    return updatedBook;
+  }
+
+  async deleteBook(id: string, _moderatorUid: string): Promise<Book> {
+    const book = await this.repository.findById(id);
+    if (!book) {
+      throw new Error("Book not found.");
+    }
+
+    const updatedBook = await this.repository.update(id, {
+      status: "deleted",
+      revision: book.revision + 1,
+      updatedAt: new Date().toISOString(),
+    });
+    if (!updatedBook) {
+      throw new Error("Book could not be deleted.");
+    }
+    // S2-T08: delete the stored file immediately (idempotent; retried by deleting again).
+    if (book.fileObjectPath) {
+      await this.deletions.scheduleDeletedBookFile(book.fileObjectPath).catch((error: unknown) => {
+        console.error(`[deletion-worker] Could not schedule file cleanup for book ${id}: ${error instanceof Error ? error.name : typeof error}`);
+        throw new DeletionScheduleError("deleted");
+      });
     }
     return updatedBook;
   }

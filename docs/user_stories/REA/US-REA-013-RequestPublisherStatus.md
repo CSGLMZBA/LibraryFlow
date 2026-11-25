@@ -1,90 +1,88 @@
-## US-REA-013 – Request publisher status
+# US-REA-013 - Request Publisher Status
 
 ## User Story
 
-As a user, I want to request the status of a publisher, so that I can determine if they are approved and trustworthy.
+As a reader, I want to request publisher status, so that an administrator can
+verify my publishing identity before I receive upload access.
 
 ## Acceptance Criteria
 
-### CA-001 – Request publisher status
+### CA-001 - Submit a Publisher Application
 
-Given that the user is logged in
-And submits a request for publisher status
-And the publisher data is filled out correctly
-When the request is processed
-Then the user must receive a confirmation of their request
-And the publisher's status must be put on hold until reviewed.
+Given that I am signed in as a reader
+When I submit complete publisher details
+Then I receive confirmation
+And one pending application is created
+And my account remains a reader until a decision is made.
 
-## CA-002 – Validate publisher data
-Given that the user submits a request for publisher status
-And the publisher data is incomplete or invalid
-When the request is processed
-Then the user must receive an error message indicating the missing or invalid data
-And the request must not be submitted for review.
+### CA-002 - Validate Publisher Data
 
-## CA-003 – Review publisher status request
-Given that the user has submitted a request for publisher status
-And the request is pending review
-When an administrator reviews the request
-Then the administrator must be able to approve or reject the request
-And the user must be notified of the decision.
+Given that I submit a publisher application
+When any required value is missing or invalid
+Then no application is created
+And field-specific validation feedback is displayed.
 
-## CA-004 – Notify user of decision
-Given that the administrator has reviewed the publisher status request
-When the request is approved or rejected
-Then the user must receive a notification of the decision
-And the publisher's status must be updated accordingly in persistent storage.
+### CA-003 - Review the Application
 
-## CA-005 – Handle duplicate requests
-Given that the user has already submitted a request for publisher status
-When they attempt to submit another request
-Then the system must prevent the duplicate request
-And the user must be notified that their previous request is still pending review or has already been processed
+Given that an administrator opens pending applications
+When they approve or reject an application
+Then the application status and reviewer data are persisted
+And the applicant receives an in-app notification.
 
-## CA-006 – Handle request expiration
-Given that the user has submitted a request for publisher status
-And the request has been pending for a specified period (30 days)
-When the request has not been reviewed by an administrator
-Then the system must automatically mark the request as expired
-And the user must be notified that their request has expired and they need to submit a new request.
+### CA-004 - Prevent Duplicate Applications
 
-## CA-007 – Handle request withdrawal
-Given that the user has submitted a request for publisher status
-And the request is still pending review
-When the user chooses to withdraw their request
-Then the system must mark the request as withdrawn
-And the user must be notified that their request has been successfully withdrawn
+Given that I already have a pending or approved application
+When I attempt to submit another application
+Then the duplicate request is rejected
+And the existing status is shown.
 
-## CA-008 – Handle request resubmission
-Given that the user has withdrawn or had their request for publisher status rejected
-When they choose to resubmit their request
-Then the system must allow them to submit a new request
-And the user must be notified that their new request has been successfully submitted for review.
+### CA-005 - Withdraw a Pending Application
 
-## CA-009 – Successful publisher status request
-Given that the user has submitted a request for publisher status
-And the request has been approved by an administrator
-When the request is processed
-Then the user's account must be updated to reflect their new publisher status.
+Given that my application is pending
+When I withdraw it
+Then it becomes `withdrawn`
+And I remain a reader.
 
-#### Publisher details to be filled out in the request form:
+### CA-006 - Resubmit after Rejection or Withdrawal
+
+Given that my application was rejected or withdrawn
+When I submit a new valid application
+Then one new pending application is created.
+
+### CA-007 - Expire an Old Pending Application
+
+Given that a pending application remains unresolved for 30 days
+When the expiration operation runs
+Then the application becomes expired
+And the applicant is notified.
+
+## Required Publisher Data
+
 - Publisher name
-- Publisher's legal representative name.
-- Independent publisher status (yes/no)
-- Publisher email (default to user's email)
-- Publisher website (optional)
+- Legal representative name
+- Independent publisher status
+- Publisher email
+- Optional website
 
-## Business rules
+## Business Rules
 
-- **RN-001:** Only authenticated users may request publisher status.
-- **RN-002:** Publisher data must be validated before submission.
-- **RN-003:** Administrators must review and approve or reject publisher status requests.
-- **RN-004:** Users must be notified of the decision regarding their publisher status request.
+- **RN-001:** Public registration never grants publisher status.
+- **RN-002:** Only signed-in readers may submit applications.
+- **RN-003:** A reader may have at most one active application.
+- **RN-004:** Approval requires an administrator and atomic server-side role update.
+- **RN-005:** Rejection or withdrawal never grants publisher privileges.
+- **RN-006:** Pending applicants may not create books or upload files.
+- **RN-007:** Approved publisher status must be revocable.
 
 ## Dependencies
 
-- US-REA-010 must provide authentication.
+- US-REA-010: authentication and role verification
+- US-MOD-005: application approval
+- US-MOD-007: publisher revocation
 
 ## Out of Scope
-* Automatic approval of publisher status requests
-* Editing publisher data after submission
+
+- Automatic approval
+- Public editor or legal verification
+- Editing submitted identity data
+- Collaborative or organization-owned publisher accounts

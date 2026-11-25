@@ -1,18 +1,15 @@
 import {cert, getApps, initializeApp, applicationDefault} from 'firebase-admin/app';
-import {getAuth} from 'firebase-admin/auth';
+import {getAuth, type Auth} from 'firebase-admin/auth';
 import {getFirestore} from 'firebase-admin/firestore';
+import { AuthCloudError } from './auth-errors.js';
+export { AuthCloudError } from './auth-errors.js';
+import { accountSessionPolicy, tokenProof } from './account-session-policy.js';
 import type {VerifiedIdentity, VerifiedRole} from '../middleware/auth-guard.js';
 
 export type PublicUser = {id: string; email: string; displayName: string; role: VerifiedRole; createdAt: string};
 export type CloudSession = {user: PublicUser; token: string; authenticatedAt: string};
-export class AuthCloudError extends Error {
-  constructor(public readonly code: string, message: string, public readonly field?: string, public readonly httpStatus = 400) {
-    super(message);
-    this.name = 'AuthCloudError';
-  }
-}
 
-function authAdmin() {
+export function authAdmin() {
   if (!getApps().length) {
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
@@ -26,12 +23,16 @@ function authAdmin() {
   return getAuth();
 }
 
-async function identityToolkit(endpoint: 'signUp' | 'signInWithPassword', email: string, password: string): Promise<{idToken: string}> {
+export async function identityToolkit(endpoint: 'signUp' | 'signInWithPassword', email: string, password: string): Promise<{idToken: string}> {
   const apiKey = process.env.FIREBASE_WEB_API_KEY;
   if (!apiKey) throw new AuthCloudError('CONFIGURATION_ERROR', 'FIREBASE_WEB_API_KEY is missing.', undefined, 503);
+  const emulator = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  const base = emulator
+    ? `http://${emulator}/identitytoolkit.googleapis.com`
+    : 'https://identitytoolkit.googleapis.com';
   let response: Response;
   try {
-    response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:${endpoint}?key=${encodeURIComponent(apiKey)}`, {
+    response = await fetch(`${base}/v1/accounts:${endpoint}?key=${encodeURIComponent(apiKey)}`, {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({email, password, returnSecureToken: true})
     });
@@ -55,12 +56,13 @@ function roleFromClaims(value: unknown): VerifiedRole | null {
   return value === 'reader' || value === 'publisher' || value === 'moderator' ? value : null;
 }
 
-async function toSession(token: string): Promise<CloudSession> {
-  const admin = authAdmin();
-  const decoded = await admin.verifyIdToken(token, true);
-  const record = await admin.getUser(decoded.uid);
+async function toSession(token: string, bootstrap = true, touch = false): Promise<CloudSession> {
+  if (!token) throw new AuthCloudError('AUTH_REQUIRED', 'Sign-in is required.', undefined, 401);
+  const record = await verifiedFirebaseAccount(token);
+  const decoded = await authAdmin().verifyIdToken(token, true);
+  await accountSessionPolicy.authorize(tokenProof(record.uid, decoded.auth_time, decoded.iat, token), {bootstrap, touch});
   const role = roleFromClaims(record.customClaims?.role);
-  if (!role || !record.email) throw new AuthCloudError('FORBIDDEN', 'Usuario sin rol autorizado.', undefined, 403);
+  if (!role || !record.email) throw new AuthCloudError('FORBIDDEN', 'The account has no authorized role.', undefined, 403);
   return {
     token,
     authenticatedAt: new Date().toISOString(),
@@ -69,7 +71,7 @@ async function toSession(token: string): Promise<CloudSession> {
   };
 }
 
-export async function registerCloud(email: string, password: string, role: 'reader' | 'publisher'): Promise<CloudSession> {
+export async function registerCloud(email: string, password: string, _requestedRole: 'reader' | 'publisher'): Promise<CloudSession> {
   const admin = authAdmin();
   let created: Awaited<ReturnType<typeof admin.createUser>>;
   try {
@@ -99,7 +101,9 @@ export async function registerCloud(email: string, password: string, role: 'read
     }
     if (!reservedName) throw new AuthCloudError('NAME_UNAVAILABLE', 'No username is available.', undefined, 409);
     await admin.updateUser(created.uid, {displayName: reservedName});
-    await admin.setCustomUserClaims(created.uid, {role});
+    // Public registration must never grant publisher privileges.
+    // Publisher claims are assigned only after moderator approval.
+    await admin.setCustomUserClaims(created.uid, {role: 'reader'});
     const signed = await identityToolkit('signInWithPassword', email, password);
     return await toSession(signed.idToken);
   } catch (error) {
@@ -118,25 +122,46 @@ function cryptoNumber(id: string): number {
 }
 export async function loginCloud(email: string, password: string): Promise<CloudSession> {
   const result = await identityToolkit('signInWithPassword', email, password);
-  return toSession(result.idToken);
+  return toSession(result.idToken, true, true);
 }
 export async function verifyFirebaseIdentity(token: string): Promise<VerifiedIdentity | null> {
   try {
+    const record = await verifiedFirebaseAccount(token);
     const decoded = await authAdmin().verifyIdToken(token, true);
-    const record = await authAdmin().getUser(decoded.uid);
+    await accountSessionPolicy.authorize(tokenProof(record.uid, decoded.auth_time, decoded.iat, token), {touch: true});
     const role = roleFromClaims(record.customClaims?.role);
-    if (!role || record.disabled) return null;
-    return {uid: decoded.uid, role};
+    if (!role) return null;
+    return {uid: record.uid, role};
   } catch (error) {
-    if (error instanceof AuthCloudError && error.code === 'CONFIGURATION_ERROR') throw error;
-    return null;
+    if (error instanceof AuthCloudError && error.code === 'AUTH_INVALID') return null;
+    throw error;
   }
 }
-export async function currentCloudSession(token: string): Promise<CloudSession> {
-  try {return await toSession(token);} catch {throw new AuthCloudError('UNAUTHENTICATED', 'Invalid session.', undefined, 401);}
+
+/** Reused by login, restore, refresh and every protected identity check. */
+export async function verifiedFirebaseAccount(token: string, admin: Pick<Auth, 'verifyIdToken' | 'getUser'> = authAdmin()) {
+  try {
+    const decoded = await admin.verifyIdToken(token, true);
+    const record = await admin.getUser(decoded.uid);
+    if (record.disabled) throw new AuthCloudError('AUTH_INVALID', 'The account is disabled.', undefined, 401);
+    return record;
+  } catch (error) {
+    if (error instanceof AuthCloudError) throw error;
+    const code = (error as {code?: string})?.code;
+    if (['auth/id-token-expired', 'auth/id-token-revoked', 'auth/argument-error',
+      'auth/invalid-id-token', 'auth/user-disabled', 'auth/user-not-found'].includes(code ?? '')) {
+      throw new AuthCloudError('AUTH_INVALID', 'Invalid or expired session.', undefined, 401);
+    }
+    throw new AuthCloudError('AUTH_UNAVAILABLE', 'The authentication service is unavailable.', undefined, 503);
+  }
 }
-export async function logoutCloud(token: string): Promise<void> {
-  const identity = await verifyFirebaseIdentity(token);
-  if (!identity) throw new AuthCloudError('UNAUTHENTICATED', 'Invalid session.', undefined, 401);
-  await authAdmin().revokeRefreshTokens(identity.uid);
+export async function currentCloudSession(token: string, bootstrap = true, touch = false): Promise<CloudSession> {
+  return toSession(token, bootstrap, touch);
+}
+export async function logoutCloud(token: string, admin?: Pick<Auth, 'verifyIdToken' | 'getUser' | 'revokeRefreshTokens'>): Promise<void> {
+  const provider = admin ?? authAdmin();
+  const account = await verifiedFirebaseAccount(token, provider);
+  if (!roleFromClaims(account.customClaims?.role)) throw new AuthCloudError('AUTH_INVALID', 'Invalid session.', undefined, 401);
+  if (!admin) await accountSessionPolicy.revoke(account.uid);
+  await provider.revokeRefreshTokens(account.uid);
 }

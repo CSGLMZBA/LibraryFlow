@@ -33,7 +33,7 @@ export const localAuthService: AuthPort = {
   async register(rawEmail: string, password: string, role: PublicRegisterRole): Promise<AuthSession> {
     const email=normalizeEmail(rawEmail);
     validateRegistration(email,password,role);
-    const user = await createLocalUser(email, password, role);
+    const user = await createLocalUser(email, password, 'reader');
     const session: AuthSession={user:publicUser(user),authenticatedAt:new Date().toISOString()};
     await saveSession(session);
     return session;
@@ -58,11 +58,16 @@ export const localAuthService: AuthPort = {
     const session=await readSession();
     if (!session) return null;
     if(!isSession(session)) {await clearSession();throw new AuthError('CORRUPT_SESSION','The local session is invalid.');}
+    const lastActivity = Date.parse(session.lastActivityAt ?? session.authenticatedAt);
+    if (!Number.isFinite(lastActivity) || Date.now() - lastActivity >= 30 * 60 * 1000) { await clearSession(); return null; }
     const stored=await getUser(session.user.email);
     if (!stored || stored.id!==session.user.id || stored.role!==session.user.role || !['reader','publisher','moderator'].includes(stored.role)) {await clearSession();return null;}
+    await saveSession({...session, lastActivityAt: new Date().toISOString()});
     return {user:publicUser(stored),authenticatedAt:session.authenticatedAt};
   },
-  async hasRole(role:UserRole):Promise<boolean> {return (await this.getCurrentSession())?.user.role===role;}
+  async hasRole(role:UserRole):Promise<boolean> {return (await this.getCurrentSession())?.user.role===role;},
+  async refreshSession(): Promise<AuthSession | null> { return this.getCurrentSession(); },
+  getAccessToken(): string | null { return null; }
 };
 /** Cloud adapter must be configured by the platform team with Firebase verification and REST API.
  * Local IndexedDB identity is NEVER a server-side authorization credential. */
@@ -105,6 +110,7 @@ function uiAuthError(error: unknown): AuthResult<never> {
       error: {
         code: error.code,
         message: error.message,
+        ...(error.recoveryAvailable ? {recoveryAvailable: true} : {}),
         ...(supported.includes(field as keyof AuthValidationErrors)
           ? { field: field as keyof AuthValidationErrors }
           : { field: 'general' as const }),
@@ -144,5 +150,7 @@ export const authService = {
   },
   logout: () => configuredAuth.logout(),
   getCurrentSession: () => configuredAuth.getCurrentSession(),
+  refreshSession: () => configuredAuth.refreshSession(),
+  getAccessToken: () => configuredAuth.getAccessToken(),
   hasRole: (role: UserRole) => configuredAuth.hasRole(role),
 };

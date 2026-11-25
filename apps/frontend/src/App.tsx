@@ -5,16 +5,27 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AuthPage } from "./pages/AuthPage";
 import { PublisherDashboardPage } from "./pages/PublisherDashboardPage";
 import ModeratorDashboardPage from "./pages/ModeratorDashboardPage";
+import { PublisherApplicationForm } from "./components/PublisherApplicationForm";
+import { ReaderApplicationStatus } from "./components/ReaderApplicationStatus";
+import { clearReaderApplicationCache } from "./services/reader-application-cache";
 
 function WorkspaceShell() {
   // Get authentication state.
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, authNotice } = useAuth();
 
   // Allow visitors to browse the catalog.
   const [showGuestCatalog, setShowGuestCatalog] = useState(false);
 
   // Switch between the catalog and publisher dashboard.
   const [showPublisherDashboard, setShowPublisherDashboard] =
+    useState(false);
+
+  // Switch between the catalog and publisher application form (readers only).
+  const [showPublisherApplication, setShowPublisherApplication] =
+    useState(false);
+
+  // Reader-only application status view.
+  const [showReaderApplicationStatus, setShowReaderApplicationStatus] =
     useState(false);
 
   return (
@@ -30,7 +41,7 @@ function WorkspaceShell() {
             </h1>
 
             <p className="text-xs text-slate-500">
-              Sprint 1 — Book Sharing &amp; Discovery
+              Sprint 2 — Book Sharing &amp; Discovery
             </p>
           </div>
 
@@ -53,7 +64,11 @@ function WorkspaceShell() {
                 type="button"
                 onClick={() => {
                   setShowPublisherDashboard(false);
-                  void logout();
+                  setShowPublisherApplication(false);
+                  setShowReaderApplicationStatus(false);
+                  void logout().finally(() => {
+                  void clearReaderApplicationCache(user.id);
+                });
                 }}
                 className="rounded-lg border border-slate-300
                            bg-white px-3 py-1.5 text-sm
@@ -70,6 +85,7 @@ function WorkspaceShell() {
 
       {/* Main content */}
       <main className="mx-auto max-w-6xl px-4 py-8">
+        {authNotice && <p role="status" className="mb-4 text-sm">{authNotice}</p>}
 
         {/* Case 1: unauthenticated user */}
         {!isAuthenticated || !user ? (
@@ -112,6 +128,36 @@ function WorkspaceShell() {
 
           /* Case 2: authenticated user */
           <div>
+            {/* Reader-only publisher application navigation */}
+            {user.role === "reader" && (
+              <div className="mb-6 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPublisherApplication((previous) => !previous);
+                    setShowReaderApplicationStatus(false);
+                  }}
+                  className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                >
+                  {showPublisherApplication
+                    ? "Back to catalog"
+                    : "Apply as Publisher"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowReaderApplicationStatus((previous) => !previous);
+                    setShowPublisherApplication(false);
+                  }}
+                  className="rounded-lg border border-indigo-600 bg-white px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                >
+                  {showReaderApplicationStatus
+                    ? "Back to catalog"
+                    : "My application status"}
+                </button>
+              </div>
+            )}
 
             {/* Publisher-only tools */}
             {user.role === "publisher" && (
@@ -124,7 +170,7 @@ function WorkspaceShell() {
                     )
                   }
                   className="rounded-lg bg-indigo-600
-                             px-4 py-2 font-medium
+                             px-4 py-2 text-sm font-medium
                              text-white hover:bg-indigo-700"
                 >
                   {showPublisherDashboard
@@ -133,19 +179,22 @@ function WorkspaceShell() {
                 </button>
               </div>
             )}
-            {/* Show moderator, publisher, or catalog workspace */}
+
+            {/* Show moderator, publisher, reader application, or catalog workspace */}
             {user.role === "moderator" ? (
               <ModeratorDashboardPage moderator={user} />
             ) : user.role === "publisher" &&
             showPublisherDashboard ? (
-
               <PublisherDashboardPage publisher={user} />
-
+            ) : user.role === "reader" &&
+            showReaderApplicationStatus ? (
+              <ReaderApplicationStatus key={user.id} userId={user.id}/>
+            ) : user.role === "reader" &&
+            showPublisherApplication ? (
+              <PublisherApplicationForm />
             ) : (
-
               // Main page after sign-in.
               <CatalogPage />
-
             )}
 
           </div>

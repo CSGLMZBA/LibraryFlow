@@ -1,20 +1,23 @@
-## US-MOD-007 – Remove publishers
+## US-MOD-007 - Remove Publishers
 
 ## User Story
-As a moderator, I want to remove publishers from the platform, so that I can manage the user base and maintain the integrity of the library.
+As an administrator, I want to revoke publisher access, so that I can remove
+storage and publishing privileges while preserving an audit record.
 
 ## Acceptance Criteria
 
-### CA-001 – Remove a publisher
+### CA-001 - Remove Publisher Privileges
 
-Given that the moderator has permission to remove publishers  
-When they select a publisher and confirm removal  
-Then the publisher must no longer be able to publish books 
-And the publisher must be notified of their removal with a reason.
+Given that an administrator selects an approved publisher
+When they confirm removal with a reason
+Then the account role becomes `reader` or is otherwise restricted server-side
+And existing books remain private or are handled according to the moderation policy
+And the publisher receives an in-app notification.
 
 ## Business rules
-- **RN-001:** Only authorized moderators may remove publishers.
-- **RN-002:** Publishers must be notified of their removal status and reason.
+- **RN-001:** Only authorized administrators/moderators may revoke publisher status.
+- **RN-002:** Revocation must immediately block book creation and upload APIs.
+- **RN-003:** Revocation must record the actor, reason, and timestamp.
 
 ## Dependencies
 - US-REA-010 and role-based authorization.

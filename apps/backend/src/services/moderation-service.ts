@@ -15,6 +15,11 @@ import {
   notificationRepository as defaultNotificationRepository,
   NotificationRepository,
 } from "../repositories/notification-repository.js";
+import {
+  DeletionScheduleError,
+  deletionJobService,
+  type BookFileDeletionScheduler,
+} from "./deletion-job-service.js";
 
 export class ModerationService {
   public constructor(
@@ -22,6 +27,7 @@ export class ModerationService {
     private readonly comments: CommentRepository = defaultCommentRepository,
     private readonly notifications: NotificationRepository =
       defaultNotificationRepository,
+    private readonly deletions: BookFileDeletionScheduler = deletionJobService,
   ) {}
 
   async getPendingBooks(): Promise<Book[]> {
@@ -72,6 +78,13 @@ export class ModerationService {
       read: false,
       createdAt: rejectionDate.toISOString(),
     });
+    // S2-T08: delete the stored file 24 hours after rejection.
+    if (book.fileObjectPath) {
+      await this.deletions.scheduleRejectedBookFile(book.fileObjectPath, rejectionDate).catch((error: unknown) => {
+        console.error(`[deletion-worker] Could not schedule file cleanup for book ${book.id}: ${error instanceof Error ? error.name : typeof error}`);
+        throw new DeletionScheduleError("rejected");
+      });
+    }
     return updatedBook;
   }
 
