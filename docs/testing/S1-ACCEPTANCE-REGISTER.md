@@ -118,6 +118,7 @@ No acceptance item is marked `Passed` until implementation exists and the verifi
 | 2026-11-18 | `S1-AC-002`–`S1-AC-006` (`TC-008`–`TC-024`) | `npx tsx --test docs/testing/s1-domain-acceptance.test.mjs` | Pass (4/5 suites) | Book upload/20MB boundary, moderation approval/rejection +24h schedule, owner-only metadata updates, search filters, and unique classifications passed[cite: 10]; UI manual checks pending. |
 | 2026-11-18 | `S1-AC-007` (`TC-027`, `TC-030`) | `npx tsx --test docs/testing/s1-domain-acceptance.test.mjs` | Pass (1/1 suite) | Frontend and backend comment creation, soft-delete/moderation audit, notification behavior, and newest-first ordering pass after `DEF-001` was resolved. |
 | 2026-11-18 | Sprint 1 MVP integration | `npm run typecheck`, `npm run build`, `npm test`, backend health and error-shape checks | Pass (18/18 automated tests) | Added moderator workspace, reader comment posting, seeded local moderator setup, global JSON error handling, cloud auth base URL, setup/deployment documentation, and production build verification. |
+| 2026-11-24 | `S1-AC-001`–`S1-AC-009` (Regression & `DEF-001` Re-test) | `npm run test:sprint1` | Pass (20/20) | Confirmed fix in `apps/frontend/src/repositories/comment-repository.ts` (descending order); `DEF-001` closed and all Sprint 1 criteria verified. |
 
 ## 4. Defect Log (`S1-QA-01`)
 
