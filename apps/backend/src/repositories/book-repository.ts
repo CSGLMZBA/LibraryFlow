@@ -1,8 +1,15 @@
 import type { Book, BookFilterQuery } from "@library-flow/shared";
 
+type MetadataUpdateResult =
+  | { kind: "updated"; book: Book }
+  | { kind: "conflict"; book: Book }
+  | { kind: "not_found" }
+  | { kind: "forbidden" };
+
 export class BookRepository {
   private readonly restrictedOwners = new Set<string>();
   private readonly books = new Map<string, Book>();
+  private readonly processedMetadataMutations = new Map<string, Book>();
 
   async save(book: Book): Promise<Book> {
     const storedBook = this.clone(book);
@@ -78,6 +85,41 @@ export class BookRepository {
     });
     this.books.set(id, updatedBook);
     return this.clone(updatedBook);
+  }
+
+  async updateMetadata(
+    id: string,
+    requesterId: string,
+    isModerator: boolean,
+    clientRevision: number | undefined,
+    mutationId: string | undefined,
+    prepareUpdates: () => Pick<Partial<Book>, "title" | "author" | "categoryIds" | "genreIds">,
+    updatedAt: string,
+  ): Promise<MetadataUpdateResult> {
+    const currentBook = this.books.get(id);
+    if (!currentBook || this.restrictedOwners.has(currentBook.ownerId)) {
+      return { kind: "not_found" };
+    }
+    if (!isModerator && currentBook.ownerId !== requesterId) {
+      return { kind: "forbidden" };
+    }
+
+    const key = mutationId ? JSON.stringify([requesterId, id, mutationId]) : undefined;
+    const cached = key ? this.processedMetadataMutations.get(key) : undefined;
+    if (cached) return { kind: "updated", book: this.clone(cached) };
+    if (clientRevision !== undefined && currentBook.revision !== clientRevision) {
+      return { kind: "conflict", book: this.clone(currentBook) };
+    }
+
+    const updatedBook = this.clone({
+      ...currentBook,
+      ...prepareUpdates(),
+      revision: currentBook.revision + 1,
+      updatedAt,
+    });
+    this.books.set(id, updatedBook);
+    if (key) this.processedMetadataMutations.set(key, this.clone(updatedBook));
+    return { kind: "updated", book: this.clone(updatedBook) };
   }
 
   async redactOwner(uid: string): Promise<void> {

@@ -2,52 +2,19 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { BOOK_MAX_FILE_SIZE_BYTES } from '../../packages/shared/src/schemas/limits.ts';
 import { BookService } from '../../apps/backend/src/services/book-service.ts';
+import { BookRepository } from '../../apps/backend/src/repositories/book-repository.ts';
 import { ClassificationService } from '../../apps/backend/src/services/classification-service.ts';
 import { CommentService } from '../../apps/backend/src/services/comment-service.ts';
 import { ModerationService } from '../../apps/backend/src/services/moderation-service.ts';
 import { commentRepository as frontendCommentRepo } from '../../apps/frontend/src/repositories/comment-repository.ts';
 
 function createInMemoryRepos() {
-  const booksMap = new Map();
   const categoriesMap = new Map();
   const genresMap = new Map();
   const commentsMap = new Map();
   const notifications = [];
 
-  const bookRepo = {
-    async save(book) {
-      booksMap.set(book.id, { ...book });
-      return { ...book };
-    },
-    async findById(id) {
-      const b = booksMap.get(id);
-      return b ? { ...b } : null;
-    },
-    async findApproved(filters = {}) {
-      return Array.from(booksMap.values()).filter((b) => {
-        if (b.status !== 'approved') return false;
-        if (filters.categoryId && !b.categoryIds.includes(filters.categoryId)) return false;
-        if (filters.genreId && !b.genreIds.includes(filters.genreId)) return false;
-        if (filters.search) {
-          const q = filters.search.toLowerCase();
-          if (!b.title.toLowerCase().includes(q) && !b.author.toLowerCase().includes(q)) {
-            return false;
-          }
-        }
-        return true;
-      });
-    },
-    async findPending() {
-      return Array.from(booksMap.values()).filter((b) => b.status === 'pending');
-    },
-    async update(id, patch) {
-      const current = booksMap.get(id);
-      if (!current) return null;
-      const updated = { ...current, ...patch };
-      booksMap.set(id, updated);
-      return { ...updated };
-    },
-  };
+  const bookRepo = new BookRepository();
 
   const classificationRepo = {
     getCategories: () => Array.from(categoriesMap.values()),

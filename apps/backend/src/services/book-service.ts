@@ -31,8 +31,6 @@ export class RevisionConflictError extends Error {
 }
 
 export class BookService {
-  private readonly processedMutations = new Map<string, Book>();
-
   public constructor(
     private readonly repository: BookRepository = defaultBookRepository,
     private readonly deletions: BookFileDeletionScheduler = deletionJobService,
@@ -131,55 +129,28 @@ export class BookService {
       throw new Error("You are not authorized to update this book.");
     }
 
-    const mutationKey = dto.mutationId
-      ? JSON.stringify([requesterId, id, dto.mutationId])
-      : undefined;
-    if (mutationKey) {
-      const cachedResult = this.processedMutations.get(mutationKey);
-      if (cachedResult) {
-        return cachedResult;
-      }
+    const result = await this.repository.updateMetadata(
+      id, requesterId, isModerator, dto.clientRevision, dto.mutationId,
+      () => {
+        const updates: Pick<Partial<Book>, "title" | "author" | "categoryIds" | "genreIds"> = {};
+        if (dto.title !== undefined) {
+          updates.title = this.validateText(dto.title, "title", BOOK_TITLE_MAX_LENGTH);
+        }
+        if (dto.author !== undefined) {
+          updates.author = this.validateText(dto.author, "author", BOOK_AUTHOR_MAX_LENGTH);
+        }
+        if (dto.categoryIds !== undefined) updates.categoryIds = [...dto.categoryIds];
+        if (dto.genreIds !== undefined) updates.genreIds = [...dto.genreIds];
+        return updates;
+      },
+      new Date().toISOString(),
+    );
+    if (result.kind === "not_found") throw new Error("Book not found.");
+    if (result.kind === "forbidden") throw new Error("You are not authorized to update this book.");
+    if (result.kind === "conflict") {
+      throw new RevisionConflictError(result.book.id, result.book.revision, result.book);
     }
-
-    if (
-      dto.clientRevision !== undefined &&
-      book.revision !== dto.clientRevision
-    ) {
-      throw new RevisionConflictError(book.id, book.revision, book);
-    }
-
-    const updates: Partial<Book> = {};
-    if (dto.title !== undefined) {
-      updates.title = this.validateText(
-        dto.title,
-        "title",
-        BOOK_TITLE_MAX_LENGTH,
-      );
-    }
-    if (dto.author !== undefined) {
-      updates.author = this.validateText(
-        dto.author,
-        "author",
-        BOOK_AUTHOR_MAX_LENGTH,
-      );
-    }
-    if (dto.categoryIds !== undefined) {
-      updates.categoryIds = [...dto.categoryIds];
-    }
-    if (dto.genreIds !== undefined) {
-      updates.genreIds = [...dto.genreIds];
-    }
-
-    updates.updatedAt = new Date().toISOString();
-    updates.revision = book.revision + 1;
-    const updatedBook = await this.repository.update(id, updates);
-    if (!updatedBook) {
-      throw new Error("Book could not be updated.");
-    }
-    if (mutationKey) {
-      this.processedMutations.set(mutationKey, updatedBook);
-    }
-    return updatedBook;
+    return result.book;
   }
 
   async deleteBook(id: string, _moderatorUid: string): Promise<Book> {

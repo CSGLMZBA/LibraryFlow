@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  BookService,
   bookService,
   RevisionConflictError,
 } from "../../apps/backend/src/services/book-service.ts";
+import { BookRepository } from "../../apps/backend/src/repositories/book-repository.ts";
 
 const validBookPayload = (title) => ({
   title,
@@ -135,6 +137,44 @@ test("S2-AC-005: mutation replay is authorized and scoped to the requester and b
     () => bookService.updateBookMetadata("missing-book", {title: "Missing", mutationId}, "owner-a"),
     /not found/,
   );
+});
+
+test("concurrent metadata updates with the same revision preserve the winning value", async () => {
+  const repository = new BookRepository();
+  const firstService = new BookService(repository);
+  const secondService = new BookService(repository);
+  const book = await firstService.createBook(validBookPayload("Concurrent"), "owner");
+  const results = await Promise.allSettled([
+    firstService.updateBookMetadata(book.id, {title: "First", clientRevision: 1}, "owner"),
+    secondService.updateBookMetadata(book.id, {title: "Second", clientRevision: 1}, "owner"),
+  ]);
+  const successes = results.filter((result) => result.status === "fulfilled");
+  const failures = results.filter((result) => result.status === "rejected");
+  assert.equal(successes.length, 1);
+  assert.equal(failures.length, 1);
+  const winner = successes[0].value;
+  assert.ok(failures[0].reason instanceof RevisionConflictError);
+  assert.equal(failures[0].reason.serverRevision, 2);
+  assert.deepEqual(failures[0].reason.serverValue, winner);
+  assert.deepEqual(await repository.findById(book.id), winner);
+});
+
+test("concurrent duplicate metadata mutations replay a single result", async () => {
+  const repository = new BookRepository();
+  const firstService = new BookService(repository);
+  const secondService = new BookService(repository);
+  const book = await firstService.createBook(validBookPayload("Concurrent replay"), "owner");
+  const dto = {title: "Updated", clientRevision: 1, mutationId: "concurrent-replay"};
+  const [first, second] = await Promise.all([
+    firstService.updateBookMetadata(book.id, dto, "owner"),
+    secondService.updateBookMetadata(book.id, dto, "owner"),
+  ]);
+  assert.deepEqual(first, second);
+  assert.equal(first.revision, 2);
+  first.categoryIds.push("not-persisted");
+  const replay = await firstService.updateBookMetadata(book.id, dto, "owner");
+  assert.deepEqual(replay.categoryIds, []);
+  assert.deepEqual((await repository.findById(book.id)).categoryIds, []);
 });
 
 test("S2-AC-005 / S2-AC-008 (TC-S2-REV-05): moderator deleteBook sets status to deleted and increments revision", async () => {

@@ -35,6 +35,13 @@ browser scenario. Previously fabricated `TC-S2-026`, `TC-S2-036`,
 TODOs, as has the untested ban-endpoint authorization case `TC-S2-038`.
 On 2026-11-25, `npm run test:sprint2` reported 139 passed, five TODO,
 and zero failed. TODOs are outstanding acceptance work, not passes.
+Additional same-process tests verify that competing book metadata updates
+against one in-memory repository produce one winner and one conflict, and
+that concurrent duplicate mutation IDs replay one result. These checks do
+not demonstrate Firestore transactions, persistence across restarts, or
+coordination between server instances.
+After those additions, `npm test` reported 20 Sprint 1 and 141 Sprint 2
+passes, five Sprint 2 TODO, and zero failures.
 
 ---
 
