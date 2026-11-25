@@ -124,5 +124,10 @@ No acceptance item is marked `Passed` until implementation exists and the verifi
 
 | Defect ID | Related AC / TC | Severity | Summary | Assigned Owner | Status | Re-test Evidence |
 |---|---|---|---|---|---|---|
-| DEF-001 | `S1-AC-007` / `TC-027` (`US-REA-012` `CA-004`) | Medium | Frontend comment repository incorrectly sorted comments oldest-first. | Carlos / Integrator | Resolved | Re-run passed 18/18 Sprint 1 automated tests; newest-first order is verified. |
+| DEF-001 (Closed) | `S1-AC-007` / `TC-027` (`US-REA-012` `CA-004`) | Medium | Frontend comment repository incorrectly sorted comments oldest-first. | Carlos / Integrator | Resolved | Re-run passed 18/18 Sprint 1 automated tests; newest-first order is verified. |
 | DEF-002 | `S1-AC-009` (`SPEC-002` §2, `SPEC-000` §6.3) | Low | Repository hygiene includes leftover `.gitkeep` placeholders and generated build caches. | Carlos / Integrator | Resolved | Populated `.gitkeep` placeholders removed; generated build caches are excluded and no build cache is tracked. |
+### Sprint 1 Regression & Defect Closure (`2026-11-24` — Agent `Sentinel`)
+
+| Date (UTC) | AC / Test IDs | Command | Result | Notes |
+|---|---|---|---|---|
+| 2026-11-24 | `S1-AC-001`–`S1-AC-009` (`DEF-001` Re-test) | `npm run test:sprint1` | Pass (20/20) | Confirmed descending sort fix in `apps/frontend/src/repositories/comment-repository.ts`; `DEF-001` closed. |
