@@ -6,6 +6,7 @@ import {
 } from "../services/book-file-service.js";
 import { RevisionConflictError } from "../services/book-service.js";
 import { StorageUnavailableError } from "../services/storage-service.js";
+import { DeletionScheduleError } from "../services/deletion-job-service.js";
 
 function requesterFrom(response: Response): BookFileRequester {
   const auth = response.locals.auth as BookFileRequester;
@@ -38,6 +39,14 @@ export function sendBookFileError(response: Response, error: unknown): void {
         serverRevision: error.serverRevision,
         serverValue: error.serverValue,
       },
+    });
+    return;
+  }
+
+  if (error instanceof DeletionScheduleError) {
+    response.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: error.message },
     });
     return;
   }

@@ -22,6 +22,11 @@ import {
   createBookFileStorageFromEnv,
   type BookFileStorage,
 } from "./storage-service.js";
+import {
+  DeletionScheduleError,
+  deletionJobService,
+  type BookFileDeletionScheduler,
+} from "./deletion-job-service.js";
 
 /** Signed download URLs expire after at most 10 minutes (SPEC-002 §4). */
 export const DOWNLOAD_URL_TTL_SECONDS = 600;
@@ -100,15 +105,18 @@ export class BookFileService {
   private readonly repository: BookRepository;
   private readonly storage: BookFileStorage | null;
   private readonly now: () => Date;
+  private readonly deletions: BookFileDeletionScheduler;
 
   public constructor(
     repository: BookRepository = defaultBookRepository,
     storage: BookFileStorage | null = createBookFileStorageFromEnv(),
     now: () => Date = () => new Date(),
+    deletions: BookFileDeletionScheduler = deletionJobService,
   ) {
     this.repository = repository;
     this.storage = storage;
     this.now = now;
+    this.deletions = deletions;
   }
 
   async createUploadUrl(
@@ -201,7 +209,14 @@ export class BookFileService {
     if (!updated) {
       throw notFound();
     }
-    // A replaced previous object is cleaned up by the deletion worker (S2-T08).
+    // S2-T08: the replaced previous object is deleted immediately by the worker.
+    const previousPath = book.fileObjectPath;
+    if (previousPath && previousPath !== objectPath) {
+      await this.deletions.scheduleDeletedBookFile(previousPath).catch((error: unknown) => {
+        console.error(`[deletion-worker] Could not schedule cleanup of a replaced file for book ${book.id}: ${error instanceof Error ? error.name : typeof error}`);
+        throw new DeletionScheduleError("replaced");
+      });
+    }
     return updated;
   }
 
