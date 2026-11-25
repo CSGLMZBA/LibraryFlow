@@ -48,6 +48,8 @@ export type SupabaseStorageConfig = {
   bucket: string;
 };
 
+export const DEFAULT_SUPABASE_BOOK_BUCKET = "book-files";
+
 type FetchFunction = typeof fetch;
 
 function encodePath(objectPath: string): string {
@@ -170,37 +172,36 @@ export class SupabaseBookFileStorage implements BookFileStorage {
 }
 
 /**
- * Builds the Supabase storage from environment variables. Returns null when
+ * Builds Supabase storage from environment variables. Returns null when
  * neither SUPABASE_URL nor SUPABASE_SERVICE_ROLE_KEY is set (local mode; the
- * file routes then answer with a storage error). Partial configuration throws.
+ * file routes then answer with a storage error). The contract's canonical
+ * bucket is used unless SUPABASE_BOOK_BUCKET overrides it. Partial URL/key
+ * configuration throws so production never silently disables storage.
  */
 export function createBookFileStorageFromEnv(
   env: Record<string, string | undefined> = process.env,
 ): BookFileStorage | null {
   const url = env.SUPABASE_URL?.trim();
   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-  const bucket = env.SUPABASE_BOOK_BUCKET?.trim();
+  const bucket = env.SUPABASE_BOOK_BUCKET?.trim() || DEFAULT_SUPABASE_BOOK_BUCKET;
 
   if (!url && !serviceRoleKey) {
     return null;
   }
 
-  const missing = [
-    ["SUPABASE_URL", url],
-    ["SUPABASE_SERVICE_ROLE_KEY", serviceRoleKey],
-    ["SUPABASE_BOOK_BUCKET", bucket],
-  ]
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-  if (missing.length > 0) {
+  if (!url || !serviceRoleKey) {
+    const missing = [
+      ...(!url ? ["SUPABASE_URL"] : []),
+      ...(!serviceRoleKey ? ["SUPABASE_SERVICE_ROLE_KEY"] : []),
+    ];
     throw new Error(
       `Book file storage is partially configured. Missing: ${missing.join(", ")}.`,
     );
   }
 
   return new SupabaseBookFileStorage({
-    url: url as string,
-    serviceRoleKey: serviceRoleKey as string,
-    bucket: bucket as string,
+    url,
+    serviceRoleKey,
+    bucket,
   });
 }
