@@ -177,10 +177,18 @@ in-memory fake of Supabase Storage and a fake `fetch`; no live bucket was used.
 
 Still required before `Passed`:
 
-- TC-S2-027 live check: run `npm run storage:setup` against the team bucket,
-  then confirm an anonymous request to the public object URL is denied.
-- TC-S2-028 live check: a direct signed upload larger than 20 MB is rejected
-  by the bucket.
+- TC-S2-027 and TC-S2-028 live checks: after `npm run storage:setup`, the
+  operations owner runs `npm run storage:verify` once with the team's
+  Supabase credentials and pastes the PASS/FAIL output here. The script
+  uploads a small PDF through a signed URL, confirms anonymous and keyless
+  reads are denied and the signed download works, confirms uploads over
+  20 MB and non-PDF/EPUB uploads are rejected by the bucket, and deletes every
+  test object under `books/__storage-verify__/`.
+- 2026-11-24: Carlos ran `npm run storage:setup`; output reported bucket
+  `books` updated with `public: false`, `file_size_limit: 20971520`, and
+  `allowed_mime_types: application/pdf, application/epub+zip`. The bucket name
+  differs from `book-files` in SPEC-002 §4 and `render.yaml`; Carlos owns the
+  final alignment of the bucket name in Supabase, Render, and `render.yaml`.
 - Independent review by Cesar (S2-T10) and the owner's local `npm test` run
   on this branch.
 
