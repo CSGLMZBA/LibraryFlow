@@ -71,7 +71,7 @@ export class SupabaseBookFileStorage implements BookFileStorage {
     const body = await this.request<{ url?: string }>(
       "create-upload-url",
       `/object/upload/sign/${encodeURIComponent(this.bucket)}/${encodePath(objectPath)}`,
-      { method: "POST" },
+      { method: "POST", body: JSON.stringify({}) },
     );
     if (typeof body.url !== "string" || !body.url.includes("token=")) {
       throw new StorageUnavailableError("create-upload-url");

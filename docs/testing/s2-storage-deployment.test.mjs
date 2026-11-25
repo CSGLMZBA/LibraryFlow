@@ -314,6 +314,7 @@ describe('S2-AC-006: Supabase Storage', () => {
 
     const uploadUrl = await storage.createSignedUploadUrl('books/b/1/a.pdf');
     assert.equal(uploadUrl, 'https://project.supabase.co/storage/v1/object/upload/sign/book-files/books/b/1/a.pdf?token=t1');
+    assert.deepEqual(JSON.parse(calls[0].init.body), {});
     const downloadUrl = await storage.createSignedDownloadUrl('books/b/1/a.pdf', 600);
     assert.equal(downloadUrl, 'https://project.supabase.co/storage/v1/object/sign/book-files/books/b/1/a.pdf?token=t2');
     assert.deepEqual(JSON.parse(calls[1].init.body), { expiresIn: 600 });
