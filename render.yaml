@@ -27,6 +27,6 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: SUPABASE_BOOK_BUCKET
-        value: book-files
+        value: books
       - key: DELETION_WORKER_SECRET
         generateValue: true
