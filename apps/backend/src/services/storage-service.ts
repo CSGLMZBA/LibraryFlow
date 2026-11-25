@@ -48,7 +48,7 @@ export type SupabaseStorageConfig = {
   bucket: string;
 };
 
-export const DEFAULT_SUPABASE_BOOK_BUCKET = "book-files";
+export const DEFAULT_SUPABASE_BOOK_BUCKET = "books";
 
 type FetchFunction = typeof fetch;
 

@@ -78,7 +78,7 @@ No item may be marked passed without a dated command or manual scenario.
 
 | Test ID | AC / Story | Criterion | Preconditions | Steps | Expected Result | Type | Status |
 |---|---|---|---|---|---|---|---|
-| TC-S2-027 | `S2-AC-006` / SPEC-002 §4 | Private bucket enforces access | `book-files` bucket is private | Attempt direct URL access without signed token | Access denied; no public URL available | Automated | Pending |
+| TC-S2-027 | `S2-AC-006` / SPEC-002 §4 | Private bucket enforces access | `books` bucket is private | Attempt direct URL access without signed token | Access denied; no public URL available | Automated | Pending |
 | TC-S2-028 | `S2-AC-006` / SPEC-002 §4 | Upload constraint: 20 MB maximum | Authenticated `publisher` | 1) Upload valid PDF ≤ 20 MB → succeeds; 2) Upload PDF > 20 MB → rejected | Valid file stored at `books/{bookId}/{revision}/{sanitizedName}`; oversized file rejected with error | Automated | Pending |
 | TC-S2-029 | `S2-AC-006` / SPEC-002 §4 | Signed download URL for authorized readers | Authenticated `reader`; approved book exists | Request download URL from server | Server returns a temporary signed URL that expires within 10 minutes; no service-role key exposed | Automated / Manual | Pending |
 | TC-S2-030 | `S2-AC-006` / SPEC-002 §4 | No credentials in frontend bundle | Built frontend application | Inspect Netlify bundle for `SUPABASE_SERVICE_ROLE_KEY`, `FIREBASE_PRIVATE_KEY`, `DELETION_WORKER_SECRET` | Zero matches; no service credentials in client-side code | Automated | Pending |
@@ -241,11 +241,23 @@ PR #30, Sprint 1 passed 20/20 and Sprint 2 passed 126/126 with 0 skipped.
 
 Result: all 7 checks passed.
 
+#### Live storage re-verification — 2026-11-25
+
+- Operator: Carlos (project owner); environment: live Supabase project; bucket:
+  `books`; command: `node --env-file=.env --import tsx
+  scripts/verify-storage-live.mjs`.
+- Result: 7/7 checks passed. Bucket settings matched the private 20 MB
+  PDF/EPUB contract; signed upload and download succeeded; anonymous reads,
+  oversized upload, and disallowed MIME upload were rejected. The verifier
+  removed its temporary objects.
+- The run confirms the actual `books` bucket remains the canonical bucket.
+  Acceptance rows remain Pending until Cesar reviews the evidence and updates
+  their statuses.
+
 Open items, not blocking the storage evidence:
 
-- Bucket name: the live bucket is `books`; SPEC-002 §4, `.env.example`, and
-  `render.yaml` use `book-files`. Carlos owns the alignment before the S2-T09
-  deployment.
+- Bucket name: the live bucket is `books`, matching the current canonical
+  contract and configuration.
 - Rows TC-S2-027 to TC-S2-030, TC-S2-055, and TC-S2-059 to TC-S2-062 stay
   `Pending` until Cesar (S2-T10) reviews this evidence and records `Passed`.
 

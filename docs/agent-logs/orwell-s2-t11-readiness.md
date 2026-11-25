@@ -149,6 +149,19 @@ were not changed. Do not delete or migrate objects based on this log alone.
 - `npm run typecheck`: passed. `npm run build`: passed with the existing
   Vite large-chunk warning. `npm test`: 155 passed, 0 failed.
 - No production configuration was changed and no deployment was triggered.
-  After this fix is reviewed and deployed, configure the Render service's
-  `SUPABASE_BOOK_BUCKET=book-files` as well; the repository default protects
-  startup if the dashboard setting is omitted.
+  The operator later clarified that the live canonical bucket is `books`;
+  configuration and this default are being aligned to that existing bucket.
+
+## 2026-11-25 — Canonical bucket correction
+
+- Carlos clarified that the actual Supabase book bucket is `books` and selected
+  it as the canonical bucket. This supersedes the earlier `book-files` choice
+  recorded above.
+- The backend default, Render Blueprint, `.env.example`, SPEC-002 contract,
+  deployment docs, and storage test fixtures are being aligned to `books`.
+- The existing `books` bucket was already confirmed private with the required
+  20 MB PDF/EPUB settings and passed live verification 7/7. The previously
+  created `book-files` bucket is left untouched; no bucket/object deletion or
+  migration is authorized or performed.
+- Render should set `SUPABASE_BOOK_BUCKET=books`. This explicit setting and
+  the code default agree, preventing recurrence of the startup crash.

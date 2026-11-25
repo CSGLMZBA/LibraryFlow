@@ -89,7 +89,7 @@ class FakeBookFileStorage {
   }
   async createSignedUploadUrl(objectPath) {
     this.calls.push(['upload-url', objectPath]);
-    return `https://storage.test/storage/v1/object/upload/sign/book-files/${objectPath}?token=upload-token`;
+    return `https://storage.test/storage/v1/object/upload/sign/books/${objectPath}?token=upload-token`;
   }
   async getObjectInfo(objectPath) {
     this.calls.push(['info', objectPath]);
@@ -97,7 +97,7 @@ class FakeBookFileStorage {
   }
   async createSignedDownloadUrl(objectPath, expiresInSeconds) {
     this.calls.push(['download-url', objectPath, expiresInSeconds]);
-    return `https://storage.test/storage/v1/object/sign/book-files/${objectPath}?token=download-token`;
+    return `https://storage.test/storage/v1/object/sign/books/${objectPath}?token=download-token`;
   }
   async deleteObject(objectPath) {
     this.calls.push(['delete', objectPath]);
@@ -182,37 +182,37 @@ function createFakeSupabase({ secure }) {
     const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
     const objectPath = (prefix) => decodeURIComponent(pathname.slice(prefix.length));
 
-    if (method === 'GET' && pathname === '/storage/v1/bucket/book-files') return json(bucketSettings);
-    if (method === 'POST' && pathname.startsWith('/storage/v1/object/upload/sign/book-files/')) {
+    if (method === 'GET' && pathname === '/storage/v1/bucket/books') return json(bucketSettings);
+    if (method === 'POST' && pathname.startsWith('/storage/v1/object/upload/sign/books/')) {
       return json({ url: `${pathname.slice('/storage/v1'.length)}?token=upload-token` });
     }
-    if (method === 'PUT' && pathname.startsWith('/storage/v1/object/upload/sign/book-files/')) {
+    if (method === 'PUT' && pathname.startsWith('/storage/v1/object/upload/sign/books/')) {
       const size = init.body.byteLength;
       const type = init.headers['Content-Type'];
       if (secure && size > limit) return json({ error: 'Payload too large' }, 413);
       if (secure && !allowed.includes(type)) return json({ error: 'invalid_mime_type' }, 400);
-      objects.set(objectPath('/storage/v1/object/upload/sign/book-files/'), { size, type });
+      objects.set(objectPath('/storage/v1/object/upload/sign/books/'), { size, type });
       return json({ Key: 'ok' });
     }
-    if (method === 'POST' && pathname === '/storage/v1/object/list/book-files') {
+    if (method === 'POST' && pathname === '/storage/v1/object/list/books') {
       const { prefix, search } = JSON.parse(init.body);
       const object = objects.get(`${prefix}/${search}`);
       return json(object ? [{ name: search, metadata: { size: object.size, mimetype: object.type } }] : []);
     }
-    if (method === 'GET' && pathname.startsWith('/storage/v1/object/public/book-files/')) {
-      return objects.has(objectPath('/storage/v1/object/public/book-files/')) && !secure
+    if (method === 'GET' && pathname.startsWith('/storage/v1/object/public/books/')) {
+      return objects.has(objectPath('/storage/v1/object/public/books/')) && !secure
         ? new Response('file') : json({ error: 'not found' }, 400);
     }
-    if (method === 'POST' && pathname.startsWith('/storage/v1/object/sign/book-files/')) {
+    if (method === 'POST' && pathname.startsWith('/storage/v1/object/sign/books/')) {
       return json({ signedURL: `${pathname.slice('/storage/v1'.length)}?token=download-token` });
     }
-    if (method === 'GET' && pathname.startsWith('/storage/v1/object/sign/book-files/')) {
-      return objects.has(objectPath('/storage/v1/object/sign/book-files/')) ? new Response('file') : json({}, 404);
+    if (method === 'GET' && pathname.startsWith('/storage/v1/object/sign/books/')) {
+      return objects.has(objectPath('/storage/v1/object/sign/books/')) ? new Response('file') : json({}, 404);
     }
-    if (method === 'GET' && pathname.startsWith('/storage/v1/object/book-files/')) {
+    if (method === 'GET' && pathname.startsWith('/storage/v1/object/books/')) {
       return init.headers?.apikey || !secure ? new Response('file') : json({ error: 'unauthorized' }, 400);
     }
-    if (method === 'DELETE' && pathname === '/storage/v1/object/book-files') {
+    if (method === 'DELETE' && pathname === '/storage/v1/object/books') {
       for (const prefix of JSON.parse(init.body).prefixes) objects.delete(prefix);
       return json([]);
     }
@@ -224,7 +224,7 @@ function createFakeSupabase({ secure }) {
 const LIVE_ENV = {
   SUPABASE_URL: 'https://project.supabase.co',
   SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
-  SUPABASE_BOOK_BUCKET: 'book-files',
+  SUPABASE_BOOK_BUCKET: 'books',
 };
 
 // ── Deployment test helpers (S2-T09) ────────────────────────────────────────
@@ -327,7 +327,7 @@ function filesUnder(directory) {
 
 describe('S2-AC-006: Supabase Storage', () => {
   test('TC-S2-027: bucket setup enforces a private bucket with upload limits', async () => {
-    const config = buildBookBucketConfig('book-files');
+    const config = buildBookBucketConfig('books');
     assert.equal(config.public, false);
     assert.equal(config.file_size_limit, BOOK_MAX_FILE_SIZE_BYTES);
     assert.deepEqual(config.allowed_mime_types, ['application/pdf', 'application/epub+zip']);
@@ -354,7 +354,7 @@ describe('S2-AC-006: Supabase Storage', () => {
       const summary = await setupBookBucket({
         SUPABASE_URL: 'https://project.supabase.co/',
         SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
-        SUPABASE_BOOK_BUCKET: 'book-files',
+        SUPABASE_BOOK_BUCKET: 'books',
       });
       assert.equal(summary.action, 'created');
       assert.equal(summary.public, false);
@@ -372,10 +372,10 @@ describe('S2-AC-006: Supabase Storage', () => {
     const fakeFetch = async (url, init) => {
       calls.push({ url, init });
       if (url.includes('/object/upload/sign/')) {
-        return new Response(JSON.stringify({ url: '/object/upload/sign/book-files/books/b/1/a.pdf?token=t1' }));
+        return new Response(JSON.stringify({ url: '/object/upload/sign/books/books/b/1/a.pdf?token=t1' }));
       }
       if (url.includes('/object/sign/')) {
-        return new Response(JSON.stringify({ signedURL: '/object/sign/book-files/books/b/1/a.pdf?token=t2' }));
+        return new Response(JSON.stringify({ signedURL: '/object/sign/books/books/b/1/a.pdf?token=t2' }));
       }
       if (url.includes('/object/list/')) {
         return new Response(JSON.stringify([
@@ -386,15 +386,15 @@ describe('S2-AC-006: Supabase Storage', () => {
       return new Response(JSON.stringify({ message: 'Internal' }), { status: 500 });
     };
     const storage = new SupabaseBookFileStorage(
-      { url: 'https://project.supabase.co/', serviceRoleKey: FAKE_SERVICE_KEY, bucket: 'book-files' },
+      { url: 'https://project.supabase.co/', serviceRoleKey: FAKE_SERVICE_KEY, bucket: 'books' },
       fakeFetch,
     );
 
     const uploadUrl = await storage.createSignedUploadUrl('books/b/1/a.pdf');
-    assert.equal(uploadUrl, 'https://project.supabase.co/storage/v1/object/upload/sign/book-files/books/b/1/a.pdf?token=t1');
+    assert.equal(uploadUrl, 'https://project.supabase.co/storage/v1/object/upload/sign/books/books/b/1/a.pdf?token=t1');
     assert.deepEqual(JSON.parse(calls[0].init.body), {});
     const downloadUrl = await storage.createSignedDownloadUrl('books/b/1/a.pdf', 600);
-    assert.equal(downloadUrl, 'https://project.supabase.co/storage/v1/object/sign/book-files/books/b/1/a.pdf?token=t2');
+    assert.equal(downloadUrl, 'https://project.supabase.co/storage/v1/object/sign/books/books/b/1/a.pdf?token=t2');
     assert.deepEqual(JSON.parse(calls[1].init.body), { expiresIn: 600 });
     assert.deepEqual(await storage.getObjectInfo('books/b/1/a.pdf'), { sizeBytes: 2048, mimeType: 'application/pdf' });
     assert.equal(await storage.getObjectInfo('books/b/1/missing.pdf'), null);
@@ -412,7 +412,7 @@ describe('S2-AC-006: Supabase Storage', () => {
 
   test('TC-S2-027: storage configuration defaults to the canonical bucket and requires URL/key together', () => {
     assert.equal(createBookFileStorageFromEnv({}), null);
-    assert.equal(createBookFileStorageFromEnv({ SUPABASE_BOOK_BUCKET: 'book-files' }), null);
+    assert.equal(createBookFileStorageFromEnv({ SUPABASE_BOOK_BUCKET: 'books' }), null);
     const storageWithOverride = createBookFileStorageFromEnv({
       SUPABASE_URL: 'https://project.supabase.co',
       SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
@@ -426,7 +426,7 @@ describe('S2-AC-006: Supabase Storage', () => {
       SUPABASE_SERVICE_ROLE_KEY: FAKE_SERVICE_KEY,
     });
     assert.ok(storageWithDefaultBucket instanceof SupabaseBookFileStorage);
-    assert.equal(storageWithDefaultBucket.bucket, 'book-files');
+    assert.equal(storageWithDefaultBucket.bucket, 'books');
   });
 
   test('TC-S2-028: upload constraint — 20 MB maximum, EPUB or PDF only', async () => {
@@ -605,7 +605,7 @@ describe('S2-AC-006: Live storage verification script (storage:verify)', () => {
     const supabase = createFakeSupabase({ secure: true });
     const { bucket, checks } = await verifyBookStorage(LIVE_ENV, supabase.fetchImpl, 'run-1');
 
-    assert.equal(bucket, 'book-files');
+    assert.equal(bucket, 'books');
     assert.equal(checks.length, 7);
     assert.deepEqual(checks.filter((check) => !check.passed), []);
     assert.deepEqual([...new Set(checks.map((check) => check.id))], ['TC-S2-027', 'TC-S2-029', 'TC-S2-028']);

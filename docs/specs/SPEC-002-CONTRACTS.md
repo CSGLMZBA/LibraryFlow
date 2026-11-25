@@ -196,7 +196,7 @@ Required book constraints:
 - access key is generated server-side from normalized title and author plus a
   collision-safe suffix.
 
-Supabase bucket `book-files` is private. Object key:
+Supabase bucket `books` is private. Object key:
 `books/{bookId}/{revision}/{sanitizedOriginalName}`. The browser never receives
 a service-role key or a permanent public URL. Any temporary download URL is
 generated server-side only for an authorized reader and expires within 10
