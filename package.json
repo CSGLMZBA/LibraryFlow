@@ -19,6 +19,6 @@
     "storage:verify": "node --env-file=.env --import tsx scripts/verify-storage-live.mjs",
     "backup:firestore": "node --env-file=.env scripts/backup-firestore.mjs",
     "deploy:check": "node scripts/check-deployment.mjs",
-    "typecheck": "npm run typecheck -w @library-flow/shared && npm run typecheck -w @library-flow/backend -w @library-flow/frontend"
+    "typecheck": "npm run build -w @library-flow/shared && npm run typecheck -w @library-flow/backend -w @library-flow/frontend"
   }
 }
