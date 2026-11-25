@@ -9,6 +9,7 @@ import { moderationRouter } from "./routes/moderation-routes.js";
 import { publisherApplicationRouter } from "./routes/publisher-application-routes.js";
 
 import { accountRouter } from "./routes/account-routes.js";
+import { healthHandler } from "./routes/health-routes.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3000);
@@ -40,9 +41,7 @@ app.use("/api/v1/publisher-applications", publisherApplicationRouter);
 app.use("/api/v1/moderation", moderationRouter);
 app.delete("/api/v1/comments/:commentId", moderatorGuard, removeComment);
 
-app.get("/health", (_request, response) => {
-  response.json({ status: "ok", service: "library-flow-api" });
-});
+app.get("/health", healthHandler);
 
 app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
   if (error instanceof SyntaxError) {
