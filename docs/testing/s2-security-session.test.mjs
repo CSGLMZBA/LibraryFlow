@@ -317,7 +317,7 @@ describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => 
   });
 
   test('TC-S2-043: deleted book removed from storage and search', async () => {
-    const { bookService, moderationService } = createTestHarness();
+    const { bookService, moderationService, bookRepo } = createTestHarness();
     const book = await bookService.createBook(
       {
         title: 'Ephemeral Distributed Guide',
@@ -332,7 +332,14 @@ describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => 
     await moderationService.approveBook(book.id, 'mod-1');
     assert.equal((await bookService.getApprovedCatalog({ search: 'Ephemeral' })).length, 1);
 
-    await moderationService.rejectBook(book.id, 'Permanent removal', 'mod-1');
+    await bookRepo.update(book.id, {
+      status: 'rejected',
+      scheduledDeletionDate: new Date().toISOString(),
+    });
     assert.equal((await bookService.getApprovedCatalog({ search: 'Ephemeral' })).length, 0);
+    await assert.rejects(
+      () => bookService.getBookDetails(book.id, 'reader-any'),
+      /not authorized/,
+    );
   });
 });
