@@ -122,13 +122,6 @@ export class BookService {
     requesterId: string,
     isModerator = false,
   ): Promise<Book> {
-    if (dto.mutationId) {
-      const cachedResult = this.processedMutations.get(dto.mutationId);
-      if (cachedResult) {
-        return cachedResult;
-      }
-    }
-
     const book = await this.repository.findById(id);
     if (!book) {
       throw new Error("Book not found.");
@@ -136,6 +129,16 @@ export class BookService {
 
     if (!isModerator && book.ownerId !== requesterId) {
       throw new Error("You are not authorized to update this book.");
+    }
+
+    const mutationKey = dto.mutationId
+      ? JSON.stringify([requesterId, id, dto.mutationId])
+      : undefined;
+    if (mutationKey) {
+      const cachedResult = this.processedMutations.get(mutationKey);
+      if (cachedResult) {
+        return cachedResult;
+      }
     }
 
     if (
@@ -173,8 +176,8 @@ export class BookService {
     if (!updatedBook) {
       throw new Error("Book could not be updated.");
     }
-    if (dto.mutationId) {
-      this.processedMutations.set(dto.mutationId, updatedBook);
+    if (mutationKey) {
+      this.processedMutations.set(mutationKey, updatedBook);
     }
     return updatedBook;
   }

@@ -109,6 +109,34 @@ test("S2-AC-005 (TC-S2-REV-04): repeated update with identical mutationId is ide
   assert.equal(repeated.revision, 2);
 });
 
+test("S2-AC-005: mutation replay is authorized and scoped to the requester and book", async () => {
+  const firstBook = await bookService.createBook(validBookPayload("First"), "owner-a");
+  const secondBook = await bookService.createBook(validBookPayload("Second"), "owner-b");
+  const thirdBook = await bookService.createBook(validBookPayload("Third"), "owner-a");
+  const mutationId = "scoped-replay";
+  await bookService.updateBookMetadata(firstBook.id, {title: "First updated", clientRevision: 1, mutationId}, "owner-a");
+
+  await assert.rejects(
+    () => bookService.updateBookMetadata(firstBook.id, {title: "Unauthorized", mutationId}, "owner-b"),
+    /not authorized/,
+  );
+  const updatedSecond = await bookService.updateBookMetadata(
+    secondBook.id, {title: "Second updated", clientRevision: 1, mutationId}, "owner-b",
+  );
+  assert.equal(updatedSecond.id, secondBook.id);
+  assert.equal(updatedSecond.title, "Second updated");
+  assert.equal(updatedSecond.revision, 2);
+  const updatedThird = await bookService.updateBookMetadata(
+    thirdBook.id, {title: "Third updated", clientRevision: 1, mutationId}, "owner-a",
+  );
+  assert.equal(updatedThird.id, thirdBook.id);
+  assert.equal(updatedThird.title, "Third updated");
+  await assert.rejects(
+    () => bookService.updateBookMetadata("missing-book", {title: "Missing", mutationId}, "owner-a"),
+    /not found/,
+  );
+});
+
 test("S2-AC-005 / S2-AC-008 (TC-S2-REV-05): moderator deleteBook sets status to deleted and increments revision", async () => {
   const book = await bookService.createBook(
     validBookPayload("Moderator Delete"),
