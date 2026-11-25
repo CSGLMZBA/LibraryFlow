@@ -182,3 +182,13 @@ were not changed. Do not delete or migrate objects based on this log alone.
 - Next verification is the live Render deployment and all 7 `deploy:check`
   checks, followed by worker configuration and trigger only after the backend
   is confirmed healthy.
+- Pushed to `main` as `145a508`. Render recovered after deploying the commit:
+  `/health` returned 200, the protected book-file download route returned
+  401 `AUTH_REQUIRED`, and exact-origin CORS matched the Netlify site.
+- `deploy:check` completed against live Render and Netlify: all 7 checks
+  passed, including CORS allow/preflight/deny, frontend availability, and
+  published bundle secret scan. The deploy showed the expected recovery after
+  the initial two health-success/route-404 responses during rollout.
+- GitHub Actions currently lists the Deletion worker workflow but no repository
+  secrets. The worker remains unrun pending the operator adding
+  `RENDER_BACKEND_URL` and `DELETION_WORKER_SECRET` as repository secrets.
