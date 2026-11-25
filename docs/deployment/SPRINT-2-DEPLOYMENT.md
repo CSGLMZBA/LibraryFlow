@@ -12,6 +12,11 @@ deployment. Record the evidence in §8 and paste it into
 Never paste keys, private keys, `.env` contents, backup files, or signed URLs
 into chat, pull requests, or the register.
 
+The Render service build command must match `render.yaml` and use
+`npm ci --include=dev`, so the TypeScript compiler comes from the tracked
+lockfile even when `NODE_ENV=production`. Existing services not managed by a
+Blueprint must have this command set in their Render dashboard.
+
 ## 1. Environment variables
 
 ### Render (backend service `libraryflow-api`)

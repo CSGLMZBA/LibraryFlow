@@ -168,7 +168,7 @@ The repository includes `render.yaml`. In Render:
 Render build command:
 
 ```bash
-npm install --include=dev && npm run build --workspace @library-flow/shared && npm run build --workspace @library-flow/backend
+npm ci --include=dev && npm run build --workspace @library-flow/shared && npm run build --workspace @library-flow/backend
 ```
 
 Render start command:

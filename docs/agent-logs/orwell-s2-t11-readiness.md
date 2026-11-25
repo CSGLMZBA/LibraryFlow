@@ -192,3 +192,18 @@ were not changed. Do not delete or migrate objects based on this log alone.
 - GitHub Actions currently lists the Deletion worker workflow but no repository
   secrets. The worker remains unrun pending the operator adding
   `RENDER_BACKEND_URL` and `DELETION_WORKER_SECRET` as repository secrets.
+
+## 2026-11-25 — Render compiler and worker follow-up
+
+- Render reported TypeScript errors TS5102 and TS5090 for the backend
+  `baseUrl` and non-relative path mapping. Replaced that mapping with an
+  equivalent relative path without `baseUrl`.
+- Updated the Blueprint build command and operator documentation to use
+  `npm ci --include=dev` with the tracked lockfile. Existing services need
+  their dashboard build command updated separately.
+- Local `npm run typecheck`, `npm run build`, and `npm test` passed with
+  TypeScript 5.9.3; Sprint 1 passed 20 tests and Sprint 2 passed 135.
+  The reported Render compiler version was not independently verified.
+- The authorized deletion workflow run failed with HTTP 503 because Render
+  reported its worker secret as missing or too short. No cleanup was claimed.
+  Configure a rotated matching secret in Render and GitHub before retesting.
