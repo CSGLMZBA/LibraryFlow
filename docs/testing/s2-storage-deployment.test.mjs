@@ -24,6 +24,7 @@ import { fileURLToPath } from 'node:url';
 import {
   CorsConfigurationError,
   DEVELOPMENT_DEFAULT_ORIGIN,
+  PRODUCTION_DEFAULT_ORIGIN,
   corsHeadersFor,
   isOriginAllowed,
   parseFrontendOrigins,
@@ -961,9 +962,10 @@ describe('S2-AC-010: Deployment', () => {
     }
   });
 
-  test('TC-S2-054: production requires FRONTEND_ORIGIN; development defaults to localhost', () => {
-    assert.throws(() => parseFrontendOrigins(undefined, 'production'), CorsConfigurationError);
-    assert.throws(() => parseFrontendOrigins(' , ', 'production'), CorsConfigurationError);
+  test('TC-S2-054: production defaults to the exact Netlify origin; development defaults to localhost', () => {
+    assert.deepEqual(parseFrontendOrigins(undefined, 'production'), [PRODUCTION_DEFAULT_ORIGIN]);
+    assert.deepEqual(parseFrontendOrigins(' , ', 'production'), [PRODUCTION_DEFAULT_ORIGIN]);
+    assert.deepEqual(parseFrontendOrigins('', 'production'), [PRODUCTION_DEFAULT_ORIGIN]);
     assert.deepEqual(parseFrontendOrigins(undefined, 'development'), [DEVELOPMENT_DEFAULT_ORIGIN]);
     assert.deepEqual(parseFrontendOrigins('', undefined), [DEVELOPMENT_DEFAULT_ORIGIN]);
   });

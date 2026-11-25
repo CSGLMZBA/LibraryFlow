@@ -13,7 +13,7 @@ services:
       - key: APP_MODE
         value: cloud
       - key: FRONTEND_ORIGIN
-        sync: false
+        value: https://library-flow-cgmb.netlify.app
       - key: FIREBASE_PROJECT_ID
         sync: false
       - key: FIREBASE_CLIENT_EMAIL

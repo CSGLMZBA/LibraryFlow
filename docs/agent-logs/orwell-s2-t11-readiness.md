@@ -165,3 +165,20 @@ were not changed. Do not delete or migrate objects based on this log alone.
   migration is authorized or performed.
 - Render should set `SUPABASE_BOOK_BUCKET=books`. This explicit setting and
   the code default agree, preventing recurrence of the startup crash.
+
+## 2026-11-25 — Production CORS startup recovery on main
+
+- Carlos requested that the working fix be applied directly on `main` after
+  Render's latest deploy crashed because `FRONTEND_ORIGIN` was absent.
+- Production CORS now defaults only an absent/blank origin to the exact known
+  Netlify site `https://library-flow-cgmb.netlify.app`. Invalid non-empty
+  origins and wildcard origins remain rejected. The Render Blueprint also
+  declares this exact public origin.
+- Canonical storage bucket is `books`; `render.yaml` and the backend default
+  already use it. No secrets were changed or exposed.
+- Typecheck passed, build passed with the existing Vite chunk-size warning,
+  full tests passed (155/155), and the CORS unit test verifies missing/blank
+  production defaults plus rejection of invalid origins.
+- Next verification is the live Render deployment and all 7 `deploy:check`
+  checks, followed by worker configuration and trigger only after the backend
+  is confirmed healthy.

@@ -2,11 +2,12 @@
  * CORS policy for SPEC-002-CONTRACTS §8 (S2-T07).
  *
  * FRONTEND_ORIGIN is a comma-separated list of exact origins. Wildcards are
- * never accepted. In production an empty list is a configuration error, so the
- * server fails at startup instead of silently allowing or blocking everything.
+ * never accepted. Production defaults to this deployment's exact Netlify
+ * origin when no origin is configured; invalid explicit values fail startup.
  */
 
 export const DEVELOPMENT_DEFAULT_ORIGIN = "http://localhost:5173";
+export const PRODUCTION_DEFAULT_ORIGIN = "https://library-flow-cgmb.netlify.app";
 
 export class CorsConfigurationError extends Error {
   public constructor(message: string) {
@@ -53,8 +54,9 @@ function normalizeOrigin(value: string): string {
 }
 
 /**
- * Parses FRONTEND_ORIGIN into the exact list of allowed origins.
- * Throws CorsConfigurationError for any invalid or unsafe configuration.
+ * Parses FRONTEND_ORIGIN into the exact list of allowed origins. If the
+ * production variable is absent or empty, use this deployment's exact
+ * Netlify origin. Explicitly configured invalid values still fail.
  */
 export function parseFrontendOrigins(
   rawValue: string | undefined,
@@ -67,9 +69,7 @@ export function parseFrontendOrigins(
 
   if (entries.length === 0) {
     if (nodeEnv === "production") {
-      throw new CorsConfigurationError(
-        "FRONTEND_ORIGIN is required when NODE_ENV is production.",
-      );
+      return [PRODUCTION_DEFAULT_ORIGIN];
     }
     return [DEVELOPMENT_DEFAULT_ORIGIN];
   }

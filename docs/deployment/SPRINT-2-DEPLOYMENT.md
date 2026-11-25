@@ -22,7 +22,7 @@ into chat, pull requests, or the register.
 | `APP_MODE` | `cloud` | No | Set by `render.yaml`. |
 | `NODE_VERSION` | `20` | No | Set by `render.yaml`. |
 | `PORT` | set by Render | No | Do not set manually. |
-| `FRONTEND_ORIGIN` | `https://<site>.netlify.app` | No | Exact origin, no trailing `/`, no `*`. Comma-separate several origins. Without it the backend refuses to start. |
+| `FRONTEND_ORIGIN` | `https://library-flow-cgmb.netlify.app` | No | Exact origin, no trailing `/`, no `*`. `render.yaml` sets this deployment default; if the variable is absent the backend uses this same exact origin. Set comma-separated origins when using additional approved sites. |
 | `FIREBASE_PROJECT_ID` | Firebase project ID | No | |
 | `FIREBASE_CLIENT_EMAIL` | service account email | Yes | |
 | `FIREBASE_PRIVATE_KEY` | service account private key | Yes | Keep the `\n` escapes. |
@@ -59,7 +59,9 @@ pull request; never disable scanning for server secrets.
    backend default when `SUPABASE_BOOK_BUCKET` is omitted. The live bucket,
    Render setting (if explicitly set), and `render.yaml` must use this name.
    Do not delete or migrate a legacy bucket as part of this check.
-3. `FRONTEND_ORIGIN` exists in Render with the exact Netlify origin.
+3. `FRONTEND_ORIGIN` in Render matches the exact Netlify origin. The backend
+   defaults to `https://library-flow-cgmb.netlify.app` only when the variable is
+   absent or empty; invalid non-empty production values still prevent startup.
 4. `npm run storage:verify` passed against the live bucket (recorded
    2026-11-24, 7 of 7).
 5. Note the current Render deploy and the current Netlify deploy: they are the
