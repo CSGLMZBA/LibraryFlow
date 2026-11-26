@@ -16,6 +16,17 @@ export class PublisherApplicationRepository {
     return this.clone(storedApplication);
   }
 
+  async saveIfNoActive(application: PublisherApplication): Promise<PublisherApplication> {
+    const active = Array.from(this.applications.values()).some(
+      (candidate) => candidate.applicantUid === application.applicantUid &&
+        (candidate.status === "pending" || candidate.status === "approved"),
+    );
+    if (active) throw new Error("DUPLICATE_ACTIVE_APPLICATION");
+    const stored = this.clone(application);
+    this.applications.set(stored.id, stored);
+    return this.clone(stored);
+  }
+
   async findById(id: string): Promise<PublisherApplication | null> {
     const application = this.applications.get(id);
     return application ? this.clone(application) : null;

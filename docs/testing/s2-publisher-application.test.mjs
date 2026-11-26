@@ -180,6 +180,12 @@ function createIsolatedService(options = {}) {
       apps.set(app.id, { ...app });
       return { ...app };
     },
+    async saveIfNoActive(app) {
+      if ([...apps.values()].some(value => value.applicantUid === app.applicantUid &&
+          ['pending', 'approved'].includes(value.status))) throw new Error('DUPLICATE_ACTIVE_APPLICATION');
+      apps.set(app.id, { ...app });
+      return { ...app };
+    },
     async findById(id) {
       const found = apps.get(id);
       return found ? { ...found } : null;
@@ -296,6 +302,18 @@ describe('S2-AC-001: Publisher Application Submission', () => {
         ),
       /DUPLICATE_ACTIVE_APPLICATION/,
     );
+  });
+
+  test('concurrent submissions produce one active application in one repository', async () => {
+    const repository = new PublisherApplicationRepository();
+    const service = new PublisherApplicationService(repository);
+    const results = await Promise.allSettled([
+      service.submitApplication('concurrent-applicant', validApplication),
+      service.submitApplication('concurrent-applicant', validApplication),
+    ]);
+    assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+    assert.equal(results.find(result => result.status === 'rejected').reason.message, 'DUPLICATE_ACTIVE_APPLICATION');
+    assert.equal((await repository.findByApplicant('concurrent-applicant')).length, 1);
   });
 
   test('TC-S2-004: prevent application by approved publisher', async () => {

@@ -79,7 +79,7 @@ export class PublisherApplicationService {
       revision: 1,
     };
 
-    const savedApplication = await this.applications.save(application);
+    const savedApplication = await this.applications.saveIfNoActive(application);
     this.recordAudit({
       action: "submitted",
       actorUid: applicantUid,

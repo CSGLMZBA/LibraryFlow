@@ -45,6 +45,12 @@ function createTestHarness() {
       apps.set(app.id, { ...app });
       return { ...app };
     },
+    async saveIfNoActive(app) {
+      if ([...apps.values()].some(value => value.applicantUid === app.applicantUid &&
+          ['pending', 'approved'].includes(value.status))) throw new Error('DUPLICATE_ACTIVE_APPLICATION');
+      apps.set(app.id, { ...app });
+      return { ...app };
+    },
     async findById(id) {
       const item = apps.get(id);
       return item ? { ...item } : null;

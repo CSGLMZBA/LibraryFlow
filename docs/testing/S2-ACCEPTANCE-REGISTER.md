@@ -35,7 +35,8 @@ and anonymous access. Withdrawal and rejection now require client revisions
 at the HTTP boundary and compare-and-update in the in-memory repository;
 same-process competing decisions are tested. This is not durable or
 cross-instance conflict protection. Persistence and full browser coverage
-remain pending.
+remain pending. Concurrent submissions are also checked atomically within one
+in-memory repository; this does not prevent duplicates across instances.
 Publisher service tests that assumed role changes, atomic rollback, or revision
 checking have been relabeled as partial simulations; the corresponding
 acceptance scenarios are explicit TODOs. In particular, a notification failure
