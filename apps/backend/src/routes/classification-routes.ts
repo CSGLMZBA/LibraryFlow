@@ -1,12 +1,18 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import {
   createClassification,
   listClassifications,
   updateClassification,
 } from "../controllers/classification-controller.js";
+import { moderatorGuard } from "../middleware/moderator-guard.js";
 
-export const classificationRouter = Router();
+/** Reading is public; creating or renaming classifications is moderator-only (SPEC-001). */
+export function createClassificationRouter(guard: RequestHandler = moderatorGuard) {
+  const router = Router();
+  router.get("/", listClassifications);
+  router.post("/", guard, createClassification);
+  router.patch("/:id", guard, updateClassification);
+  return router;
+}
 
-classificationRouter.get("/", listClassifications);
-classificationRouter.post("/", createClassification);
-classificationRouter.patch("/:id", updateClassification);
+export const classificationRouter = createClassificationRouter();
