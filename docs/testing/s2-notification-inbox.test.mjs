@@ -70,19 +70,35 @@ test("inbox errors fail explicitly without disclosing private backend details",a
 
 test("frontend sends a verified bearer, supports mark-read, and surfaces failures",async()=>{
   const calls=[];
-  const auth={async getCurrentSession(){},getAccessToken(){return "token";}};
+  const auth={async getCurrentSession(){return {user:{id:"alice"}};},getAccessToken(){return "token";}};
   const transport=async(url,init)=>{
     calls.push({url,init});
     return new Response(JSON.stringify({success:true,data:init.method==="GET"?[]:{read:true}}));
   };
   const inbox=createNotificationInboxService(auth,"https://api.example/",transport);
-  assert.deepEqual(await inbox.list(),[]);
-  assert.deepEqual(await inbox.markRead("notice 1"),{read:true});
+  assert.deepEqual(await inbox.list("alice"),[]);
+  assert.deepEqual(await inbox.markRead("alice","notice 1"),{read:true});
   assert.equal(calls[0].init.headers.Authorization,"Bearer token");
   assert.equal(calls[0].init.cache,"no-store");
   assert.equal(calls[1].url,"https://api.example/api/v1/notifications/notice%201/read");
   const unavailable=createNotificationInboxService(auth,"https://api.example",async()=>{throw new Error("offline");});
-  await assert.rejects(unavailable.list(),{code:"NOTIFICATIONS_UNAVAILABLE"});
+  await assert.rejects(unavailable.list("alice"),{code:"NOTIFICATIONS_UNAVAILABLE"});
   const anonymous=createNotificationInboxService({async getCurrentSession(){},getAccessToken(){return null;}},"",transport);
-  await assert.rejects(anonymous.list(),{code:"AUTH_REQUIRED"});
+  await assert.rejects(anonymous.list("alice"),{code:"AUTH_REQUIRED"});
+  await assert.rejects(inbox.list("bob"),{code:"AUTH_REQUIRED"});
+  await assert.rejects(inbox.markRead("bob","notice 1"),{code:"AUTH_REQUIRED"});
+  assert.equal(calls.length, 2, "A changed account must not send an inbox request.");
+  const staleToken=createNotificationInboxService({async getCurrentSession(){return null;},getAccessToken(){return "old-token";}},"",transport);
+  await assert.rejects(staleToken.list("alice"),{code:"AUTH_REQUIRED"});
+  assert.equal(calls.length, 2);
+
+  let resolveSession;
+  const delayed=createNotificationInboxService({
+    getCurrentSession(){return new Promise(resolve=>{resolveSession=resolve;});},
+    getAccessToken(){return "bob-token";},
+  },"",transport);
+  const pending=delayed.list("alice");
+  resolveSession({user:{id:"bob"}});
+  await assert.rejects(pending,{code:"AUTH_REQUIRED"});
+  assert.equal(calls.length, 2, "A session switched during verification must not send a request.");
 });

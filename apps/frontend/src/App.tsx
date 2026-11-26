@@ -130,7 +130,7 @@ function WorkspaceShell() {
           /* Case 2: authenticated user */
           <div>
             {(import.meta as ImportMeta & {env?: {VITE_AUTH_MODE?: string}}).env?.VITE_AUTH_MODE === "cloud" && (
-              <NotificationInbox key={user.id} />
+              <NotificationInbox key={user.id} userId={user.id} />
             )}
             {/* Reader-only publisher application navigation */}
             {user.role === "reader" && (

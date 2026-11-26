@@ -74,6 +74,9 @@ still in memory and do not reach it. A read-only live Firestore query for a
 random absent recipient passed on 2026-11-26; it is not evidence of live
 notification writes or browser delivery. Live browser and Firestore write
 evidence, proactive ban notices, and deletion confirmation email remain pending.
+The inbox client rejects a changed or missing verified session before sending
+requests; component requests are serialized and stale unmounted results ignored.
+The session check is covered by isolated client tests, not browser integration.
 On 2026-11-25, a read-only lookup of a randomly named absent account using the
 configured Firestore passed. This checks connectivity and the absent-account
 case only; it is not deployed or live ban/visibility acceptance evidence.

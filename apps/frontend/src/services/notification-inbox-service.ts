@@ -6,10 +6,12 @@ type AuthConsumer = Pick<typeof authService, "getCurrentSession" | "getAccessTok
 const base = ((import.meta as ImportMeta & {env?: {VITE_API_BASE_URL?: string}}).env?.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
 export function createNotificationInboxService(auth: AuthConsumer = authService, apiBase = base, transport: typeof fetch = fetch) {
-  async function request<T>(path: string, method: "GET" | "POST"): Promise<T> {
-    await auth.getCurrentSession();
+  async function request<T>(uid: string, path: string, method: "GET" | "POST"): Promise<T> {
+    const session = await auth.getCurrentSession();
     const token = auth.getAccessToken();
-    if (!token) throw new AuthError("AUTH_REQUIRED", "A cloud session is required to view notifications.");
+    if (!session || session.user.id !== uid || !token) {
+      throw new AuthError("AUTH_REQUIRED", "The account session changed. Sign in again to view notifications.");
+    }
     let response: Response;
     try {
       response = await transport(`${apiBase.replace(/\/$/, "")}/api/v1/notifications${path}`, {
@@ -25,8 +27,8 @@ export function createNotificationInboxService(auth: AuthConsumer = authService,
     return envelope.data;
   }
   return {
-    list: () => request<InAppNotification[]>("", "GET"),
-    markRead: (id: string) => request<{read: true}>(`/${encodeURIComponent(id)}/read`, "POST"),
+    list: (uid: string) => request<InAppNotification[]>(uid, "", "GET"),
+    markRead: (uid: string, id: string) => request<{read: true}>(uid, `/${encodeURIComponent(id)}/read`, "POST"),
   };
 }
 export const notificationInboxService = createNotificationInboxService();
