@@ -1,6 +1,11 @@
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldPath, getFirestore } from "firebase-admin/firestore";
 import type { InAppNotification } from "@library-flow/shared";
 import { authAdmin } from "./firebase-auth-service.js";
+
+const INBOX_LIMIT = 100;
+const SCAN_PAGE_SIZE = 200;
+// Bounds the work per request: the newest INBOX_LIMIT are exact for up to this many stored records.
+const MAX_SCAN_PAGES = 10;
 
 const notificationTypes: ReadonlySet<string> = new Set([
   "book_rejected", "comment_removed", "publisher_application_approved",
@@ -22,17 +27,31 @@ export class FirestoreNotificationInbox implements NotificationInbox {
     return getFirestore();
   }) {}
   async list(uid: string): Promise<InAppNotification[]> {
-    const snapshot = await this.database().collection("notifications").where("userId", "==", uid).limit(100).get();
-    return snapshot.docs.map(doc => {
-      const value = doc.data();
-      if (value.userId !== uid || !isNotificationType(value.type) ||
-          typeof value.message !== "string" || typeof value.read !== "boolean" ||
-          typeof value.createdAt !== "string" || !Number.isFinite(Date.parse(value.createdAt))) {
-        throw new Error("Invalid notification record.");
-      }
-      return {id: doc.id, userId: uid, type: value.type, message: value.message,
-        read: value.read, createdAt: value.createdAt};
-    }).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    // Equality plus document-ID ordering needs no composite index; sort newest-first after paging.
+    const records: InAppNotification[] = [];
+    let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+    for (let page = 0; page < MAX_SCAN_PAGES; page++) {
+      let query = this.database().collection("notifications").where("userId", "==", uid)
+        .orderBy(FieldPath.documentId()).limit(SCAN_PAGE_SIZE);
+      if (cursor) query = query.startAfter(cursor);
+      const snapshot = await query.get();
+      for (const doc of snapshot.docs) records.push(this.parse(doc, uid));
+      if (snapshot.docs.length < SCAN_PAGE_SIZE) break;
+      cursor = snapshot.docs[snapshot.docs.length - 1];
+    }
+    return records.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id.localeCompare(a.id))
+      .slice(0, INBOX_LIMIT);
+  }
+
+  private parse(doc: FirebaseFirestore.QueryDocumentSnapshot, uid: string): InAppNotification {
+    const value = doc.data();
+    if (value.userId !== uid || !isNotificationType(value.type) ||
+        typeof value.message !== "string" || typeof value.read !== "boolean" ||
+        typeof value.createdAt !== "string" || !Number.isFinite(Date.parse(value.createdAt))) {
+      throw new Error("Invalid notification record.");
+    }
+    return {id: doc.id, userId: uid, type: value.type, message: value.message,
+      read: value.read, createdAt: value.createdAt};
   }
 
   async markRead(uid: string, id: string): Promise<boolean> {

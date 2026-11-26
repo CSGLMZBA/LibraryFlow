@@ -475,10 +475,13 @@ user's data.
 The cloud inbox exposes `GET /notifications` and
 `POST /notifications/:id/read` to an authenticated, unrestricted recipient.
 The server derives the recipient from the verified session and returns 404 for
-another user's notification. Results are limited to 100 records and sorted
-after retrieval; this is not yet a paginated or guaranteed newest-100 inbox.
-Account-policy notifications use Firestore, while older publisher and book
-services still use in-memory notifications and are not visible in this inbox.
+another user's notification. The newest 100 records are returned: the server
+pages through the recipient's records by document ID (no composite index) and
+sorts newest-first, exact for up to 2,000 stored notifications per recipient
+and not paginated for the client. Account-policy notifications and, with
+`ENABLE_CLOUD_CONTENT=true` or `ENABLE_CLOUD_PUBLISHER_APPLICATIONS=true`,
+publisher, book and comment notifications use Firestore; with those flags off
+the older services keep in-memory notifications that this inbox cannot show.
 Banned or deletion-pending users cannot access it; a ban reason and duration
 are shown on a verified sign-in attempt instead. Proactive delivery and email
 remain separate work.

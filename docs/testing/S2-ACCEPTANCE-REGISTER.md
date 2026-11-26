@@ -107,8 +107,10 @@ evidence of proactive notification delivery.
 The cloud frontend now includes a private Firestore notification inbox and
 mark-read action for unrestricted signed-in users. The route and client have
 isolated tests for ownership, failed reads, and authentication. Inbox retrieval
-is capped at 100 without pagination; current publisher/book notifications are
-still in memory and do not reach it. A read-only live Firestore query for a
+returns the newest 100 records (paged by document ID, newest-first; a test with
+450 records proves it, and the live Firestore accepted the query shape in a
+read-only probe); publisher/book notifications reach it only when the cloud
+flags are enabled. A read-only live Firestore query for a
 random absent recipient passed on 2026-11-26; it is not evidence of live
 notification writes or browser delivery. Live browser and Firestore write
 evidence, proactive ban notices, and deletion confirmation email remain pending.

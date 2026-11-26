@@ -16,9 +16,17 @@ function fakeFirestore() {
       return {
         where(field,op,uid) {
           assert.equal(field,"userId"); assert.equal(op,"==");
-          return {limit(n) {return {async get() {
-            return {docs:[...records].filter(([,v])=>v.userId===uid).slice(0,n).map(([id,v])=>({id,data:()=>({...v})}))};
-          }};}};
+          const matching=()=>[...records].filter(([,v])=>v.userId===uid).sort(([a],[b])=>a.localeCompare(b));
+          const build=(after,size)=>({
+            orderBy(){return build(after,size);},
+            startAfter(doc){return build(doc.id,size);},
+            limit(n){return build(after,n);},
+            async get(){
+              const rows=matching().filter(([id])=>after===undefined||id.localeCompare(after)>0).slice(0,size);
+              return {docs:rows.map(([id,v])=>({id,data:()=>({...v})}))};
+            },
+          });
+          return build(undefined,Infinity);
         },
         doc(id) {return {id};},
       };
@@ -101,4 +109,23 @@ test("frontend sends a verified bearer, supports mark-read, and surfaces failure
   resolveSession({user:{id:"bob"}});
   await assert.rejects(pending,{code:"AUTH_REQUIRED"});
   assert.equal(calls.length, 2, "A session switched during verification must not send a request.");
+});
+
+test("inbox returns the newest 100 across pages and rejects malformed records",async()=>{
+  const db=fakeFirestore();
+  db.records.clear();
+  for (let i=0;i<450;i++) {
+    // Document IDs sort opposite to age, so a limit applied before sorting would return the oldest.
+    const id=`n-${String(450-i).padStart(4,"0")}`;
+    db.records.set(id,{userId:"alice",type:"ban_changed",message:`m${i}`,read:false,createdAt:new Date(Date.UTC(2026,10,1,0,0,i)).toISOString()});
+  }
+  db.records.set("other",{userId:"bob",type:"ban_changed",message:"private",read:false,createdAt:"2027-01-01T00:00:00Z"});
+  const inbox=new FirestoreNotificationInbox(()=>db);
+  const list=await inbox.list("alice");
+  assert.equal(list.length,100);
+  assert.deepEqual(list.slice(0,2).map(n=>n.message),["m449","m448"]);
+  assert.equal(list.at(-1).message,"m350");
+  assert.equal(list.some(n=>n.userId!=="alice"),false);
+  db.records.set("bad",{userId:"alice",type:"unknown",message:"x",read:false,createdAt:"2026-11-25T00:00:00Z"});
+  await assert.rejects(inbox.list("alice"),/Invalid notification record/);
 });
