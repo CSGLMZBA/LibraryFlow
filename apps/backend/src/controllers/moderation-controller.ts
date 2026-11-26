@@ -1,7 +1,9 @@
 import type { Request, Response } from "express";
 import { moderationService } from "../services/moderation-service.js";
+import { sendStoreUnavailable } from "./store-errors.js";
 
 function sendError(response: Response, error: unknown): void {
+  if (sendStoreUnavailable(response, error)) return;
   const message = error instanceof Error ? error.message : "Invalid request.";
   response.status(400).json({
     success: false,

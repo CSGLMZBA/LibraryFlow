@@ -1,4 +1,7 @@
+import { createHash } from "node:crypto";
+import { getFirestore } from "firebase-admin/firestore";
 import type { Book, BookFilterQuery } from "@library-flow/shared";
+import { authAdmin } from "../services/firebase-auth-service.js";
 
 type MetadataUpdateResult =
   | { kind: "updated"; book: Book }
@@ -138,4 +141,155 @@ export class BookRepository {
   }
 }
 
-export const bookRepository = new BookRepository();
+type StoredBook = Book & { ownerRestricted?: boolean };
+
+function withoutUndefined<T extends object>(value: T): T {
+  return Object.fromEntries(Object.entries(value).filter(([, entry]) => entry !== undefined)) as T;
+}
+
+export class BookStoreError extends Error {
+  constructor() {
+    super("Book storage is temporarily unavailable.");
+    this.name = "BookStoreError";
+  }
+}
+
+/** Durable Firestore books. Opt in with ENABLE_CLOUD_CONTENT=true. */
+export class FirestoreBookRepository extends BookRepository {
+  constructor(private readonly database: () => FirebaseFirestore.Firestore = () => {
+    authAdmin();
+    return getFirestore();
+  }) {
+    super();
+  }
+
+  private async storage<T>(
+    operation: (db: FirebaseFirestore.Firestore) => Promise<T>,
+    isCallerError: (error: unknown) => boolean = () => false,
+  ): Promise<T> {
+    try {
+      return await operation(this.database());
+    } catch (error) {
+      if (isCallerError(error) || (error instanceof Error && (error.message === "Book ID cannot be changed." || error.message === "Book owner cannot be changed."))) throw error;
+      console.error(`[books] Storage failed: ${error instanceof Error ? error.name : typeof error}`);
+      throw new BookStoreError();
+    }
+  }
+
+  private toBook(data: StoredBook): Book {
+    const { ownerRestricted: _restricted, ...book } = data;
+    return { ...book, categoryIds: [...book.categoryIds], genreIds: [...book.genreIds] };
+  }
+
+  override async save(book: Book): Promise<Book> {
+    await this.storage(db => db.collection("books").doc(book.id).set(withoutUndefined(book)));
+    return this.toBook(book);
+  }
+
+  override async findById(id: string): Promise<Book | null> {
+    const snapshot = await this.storage(db => db.collection("books").doc(id).get());
+    const data = snapshot.exists ? snapshot.data() as StoredBook : undefined;
+    return data && !data.ownerRestricted ? this.toBook(data) : null;
+  }
+
+  override async findApproved(filters?: BookFilterQuery): Promise<Book[]> {
+    const search = filters?.search?.trim().toLocaleLowerCase();
+    const snapshot = await this.storage(db => db.collection("books").where("status", "==", "approved").get());
+    return snapshot.docs.map(doc => doc.data() as StoredBook)
+      .filter(book => !book.ownerRestricted)
+      .filter(book => !search || book.title.toLocaleLowerCase().includes(search) ||
+        book.author.toLocaleLowerCase().includes(search))
+      .filter(book => !filters?.categoryId || book.categoryIds.includes(filters.categoryId))
+      .filter(book => !filters?.genreId || book.genreIds.includes(filters.genreId))
+      .map(book => this.toBook(book));
+  }
+
+  override async findByOwner(ownerId: string): Promise<Book[]> {
+    const snapshot = await this.storage(db => db.collection("books").where("ownerId", "==", ownerId).get());
+    return snapshot.docs.map(doc => doc.data() as StoredBook).filter(book => !book.ownerRestricted).map(book => this.toBook(book));
+  }
+
+  override async findPending(): Promise<Book[]> {
+    const snapshot = await this.storage(db => db.collection("books").where("status", "==", "pending").get());
+    return snapshot.docs.map(doc => doc.data() as StoredBook).filter(book => !book.ownerRestricted).map(book => this.toBook(book));
+  }
+
+  override async update(id: string, updates: Partial<Book>): Promise<Book | null> {
+    if (updates.id !== undefined && updates.id !== id) throw new Error("Book ID cannot be changed.");
+    return this.storage(db => {
+      const ref = db.collection("books").doc(id);
+      return db.runTransaction(async tx => {
+        const snapshot = await tx.get(ref);
+        if (!snapshot.exists) return null;
+        const current = snapshot.data() as StoredBook;
+        if (updates.ownerId !== undefined && updates.ownerId !== current.ownerId) throw new Error("Book owner cannot be changed.");
+        const next = withoutUndefined({ ...current, ...updates, id: current.id, ownerId: current.ownerId });
+        tx.set(ref, next);
+        return this.toBook(next);
+      });
+    });
+  }
+
+  override async updateMetadata(
+    id: string,
+    requesterId: string,
+    isModerator: boolean,
+    clientRevision: number | undefined,
+    mutationId: string | undefined,
+    prepareUpdates: () => Pick<Partial<Book>, "title" | "author" | "categoryIds" | "genreIds">,
+    updatedAt: string,
+  ): Promise<MetadataUpdateResult> {
+    const mutationKey = mutationId
+      ? createHash("sha256").update(JSON.stringify([requesterId, id, mutationId])).digest("hex")
+      : undefined;
+    // Validation errors thrown by prepareUpdates are the caller's, not storage failures.
+    let validationError: unknown;
+    return this.storage(db => {
+      const ref = db.collection("books").doc(id);
+      const mutationRef = mutationKey ? db.collection("bookMetadataMutations").doc(mutationKey) : undefined;
+      return db.runTransaction(async (tx): Promise<MetadataUpdateResult> => {
+        const snapshot = await tx.get(ref);
+        const replay = mutationRef ? await tx.get(mutationRef) : undefined;
+        const current = snapshot.exists ? snapshot.data() as StoredBook : undefined;
+        if (!current || current.ownerRestricted) return { kind: "not_found" };
+        if (!isModerator && current.ownerId !== requesterId) return { kind: "forbidden" };
+        if (replay?.exists) return { kind: "updated", book: this.toBook(replay.data() as StoredBook) };
+        if (clientRevision !== undefined && current.revision !== clientRevision) {
+          return { kind: "conflict", book: this.toBook(current) };
+        }
+        let updates: ReturnType<typeof prepareUpdates>;
+        try {
+          updates = prepareUpdates();
+        } catch (error) {
+          validationError = error;
+          throw error;
+        }
+        const next = withoutUndefined({ ...current, ...updates, revision: current.revision + 1, updatedAt });
+        tx.set(ref, next);
+        if (mutationRef) tx.create(mutationRef, withoutUndefined(this.toBook(next)));
+        return { kind: "updated", book: this.toBook(next) };
+      });
+    }, error => validationError !== undefined && error === validationError);
+  }
+
+  override async redactOwner(uid: string): Promise<void> {
+    await this.storage(async db => {
+      const snapshot = await db.collection("books").where("ownerId", "==", uid).get();
+      for (let index = 0; index < snapshot.docs.length; index += 200) {
+        const refs = snapshot.docs.slice(index, index + 200).map(doc => db.collection("books").doc(doc.id));
+        await db.runTransaction(async tx => {
+          const current = await Promise.all(refs.map(ref => tx.get(ref)));
+          current.forEach((doc, position) => {
+            if (doc.exists) {
+              tx.set(refs[position], { ...doc.data(), author: "Deleted user", status: "pending", ownerRestricted: true });
+            }
+          });
+        });
+      }
+    });
+  }
+}
+
+export const bookRepository: BookRepository = process.env.ENABLE_CLOUD_CONTENT === "true"
+  ? new FirestoreBookRepository()
+  : new BookRepository();

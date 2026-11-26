@@ -1,8 +1,10 @@
 import type { Request, Response } from "express";
 import { commentService } from "../services/comment-service.js";
 import { PublicVisibilityUnavailableError } from "../services/public-content-visibility.js";
+import { sendStoreUnavailable } from "./store-errors.js";
 
 function sendError(response: Response, error: unknown): void {
+  if (sendStoreUnavailable(response, error)) return;
   if (error instanceof PublicVisibilityUnavailableError) {
     console.error(`[public-content] Visibility verification unavailable: ${error.cause instanceof Error ? error.cause.name : typeof error.cause}`);
     response.status(503).json({success: false, error: {code: "VISIBILITY_UNAVAILABLE", message: error.message}});

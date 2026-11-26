@@ -56,6 +56,13 @@ when records cannot be written, competing decisions, and release of a revoked
 publisher's application. These are not live Firebase evidence, and the
 single-transaction wording of SPEC-002 §2.3 is not literally met (see the spec).
 The route returns `503 FEATURE_UNAVAILABLE` for these actions when the flag is off.
+An opt-in `ENABLE_CLOUD_CONTENT` flag stores books, comments and notifications in
+Firestore (revision-checked metadata updates, replay by mutation ID, soft delete
+with moderation data, account-deletion redaction, safe 503 on storage failure).
+Fake-store tests cover these paths; there is no live-Firestore, restart, or
+cross-instance evidence yet. Moderation steps remain separate writes, the
+frontend catalog still reads its own IndexedDB data, and existing in-memory
+records are not migrated, so `S2-AC-005`, `S2-AC-006` and `S2-AC-008` stay pending.
 TC-S2-011, 013, 014, 018, 020/021 and 022 stay TODO until verified against live
 Firebase and the upload APIs.
 On 2026-11-25, a read-only query for a randomly named absent applicant passed
