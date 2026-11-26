@@ -71,6 +71,10 @@ Sprint 2 TODO, and zero failures. Anonymous deployment checks passed 7/7, but
 an unauthenticated probe of the new ban route returned 404 rather than the
 route's 401. The serving Render backend therefore had not exposed the new route
 at the time of the probe; the latest commit's deployment was not confirmed.
+Identity Toolkit tests now exercise invalid credentials, upstream outages,
+rate limiting, malformed successful responses, and the HTTP login error
+envelope. Provider outages no longer masquerade as incorrect credentials;
+these mocked tests are not evidence of live Firebase failure behavior.
 
 ---
 

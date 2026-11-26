@@ -41,12 +41,24 @@ export async function identityToolkit(endpoint: 'signUp' | 'signInWithPassword',
   }
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const code = (data && typeof data === 'object' && 'error' in data && (data as {error?: {message?: string}}).error?.message) || '';
-    if (typeof code === 'string' && code.startsWith('EMAIL_EXISTS')) throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'This email is already registered.', 'email', 409);
-    if (endpoint === 'signInWithPassword') throw new AuthCloudError('INVALID_CREDENTIALS', 'Incorrect email or password.', undefined, 401);
-    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'Could not create the account.', undefined, 502);
+    const message = (data && typeof data === 'object' && 'error' in data && (data as {error?: {message?: unknown}}).error?.message);
+    const code = typeof message === 'string' ? message.split(' : ', 1)[0] : '';
+    if (response.status < 500 && endpoint === 'signUp' && code === 'EMAIL_EXISTS') {
+      throw new AuthCloudError('EMAIL_ALREADY_EXISTS', 'This email is already registered.', 'email', 409);
+    }
+    if (response.status < 500 && endpoint === 'signInWithPassword' &&
+        ['INVALID_LOGIN_CREDENTIALS', 'INVALID_PASSWORD', 'EMAIL_NOT_FOUND', 'USER_DISABLED'].includes(code)) {
+      throw new AuthCloudError('INVALID_CREDENTIALS', 'Incorrect email or password.', undefined, 401);
+    }
+    if (response.status === 429 || code === 'TOO_MANY_ATTEMPTS_TRY_LATER') {
+      throw new AuthCloudError('AUTH_RATE_LIMITED', 'Too many authentication attempts. Try again later.', undefined, 429);
+    }
+    if (response.status >= 500) {
+      throw new AuthCloudError('AUTH_PROVIDER_UNAVAILABLE', 'Authentication provider unavailable.', undefined, 503);
+    }
+    throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'Authentication provider could not complete the request.', undefined, 502);
   }
-  if (!data || typeof data !== 'object' || !('idToken' in data) || typeof (data as {idToken: unknown}).idToken !== 'string') {
+  if (!data || typeof data !== 'object' || !('idToken' in data) || typeof (data as {idToken: unknown}).idToken !== 'string' || !(data as {idToken: string}).idToken.trim()) {
     throw new AuthCloudError('AUTH_PROVIDER_ERROR', 'Invalid authentication provider response.', undefined, 502);
   }
   return {idToken: (data as {idToken: string}).idToken};
