@@ -159,9 +159,13 @@ mark the change completed. If the claim update fails, the role is unchanged
 (never over-granted), the API returns `503 ROLE_SYNC_PENDING`, and repeating the
 same action completes it exactly once. This deliberately deviates from the
 single-transaction wording above and needs sign-off. A moderator's role is never
-changed, and a revoked publisher may apply again. Scheduled expiration is not
-implemented; the legacy default continues to use in-memory records with approval
-and revocation unavailable.
+changed, and a revoked publisher may apply again. Scheduled expiration runs from
+`POST /internal/publisher-applications/expire` (worker-secret authenticated,
+called every 15 minutes by the existing GitHub workflow). It expires each overdue
+pending application in its own transaction and reports `{enabled, expired,
+failed}`; it reports `enabled: false` and does nothing while the flag is off. The
+legacy default continues to use in-memory records with approval and revocation
+unavailable.
 
 ## 3. Revision and Synchronization Contract
 

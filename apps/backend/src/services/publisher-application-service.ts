@@ -147,6 +147,11 @@ export class PublisherApplicationService {
     return this.applications.findPending();
   }
 
+  /** Scheduled expiration needs the durable store; the in-memory service reports it as disabled. */
+  async expireDueApplications(_limit?: number): Promise<{ enabled: boolean; expired: number; failed: number }> {
+    return { enabled: false, expired: 0, failed: 0 };
+  }
+
   async approveApplication(
     id: string,
     reviewerUid: string,

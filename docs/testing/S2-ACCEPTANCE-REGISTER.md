@@ -46,8 +46,12 @@ transactional submission, withdrawal, rejection and read-triggered expiration,
 with audit and rejection/expiration notices. Isolated fake-store tests exercise
 rollback, concurrency and cross-instance reads; these are not live Firestore
 transaction or browser evidence. The flag is disabled by default pending rules
-verification, live testing and an existing-data transition plan. Scheduled
-expiration remains unavailable.
+verification, live testing and an existing-data transition plan. A scheduled
+expiration endpoint (worker-secret authenticated, called by the existing GitHub
+workflow) expires overdue applications one transaction each, continues after an
+individual failure, and reports `enabled: false` while the flag is off; fake-store
+and route tests cover it, but it has not run against live Firestore or the
+rotated worker secret, so TC-S2-008 stays unverified.
 Firebase claim synchronization for approval and revocation is implemented in that
 service as an outbox flow: the decision, audit, notice and a pending role change
 commit in one Firestore transaction, then the claim is set. Fake-store and fake-role

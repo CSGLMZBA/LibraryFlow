@@ -116,6 +116,29 @@ test("approval of an unknown application is reported as not found", async () => 
   await assert.rejects(service.approveApplication("id", "moderator"), {message: "APPLICATION_NOT_FOUND"});
 });
 
+test("scheduled expiration expires only overdue pending applications, once, and keeps going after a failure", async () => {
+  const db = fakeFirestore();
+  let time = start;
+  const service = new CloudPublisherApplicationService(() => db, () => time, fakeRoles({a: "reader", b: "reader", c: "reader"}));
+  const first = await service.submitApplication("a", dto);
+  const second = await service.submitApplication("b", dto);
+  time = start + 10 * 86400000;
+  const later = await service.submitApplication("c", dto);
+  await service.withdrawApplication(second.id, "b", 1);
+  time = Date.parse(first.expiresAt);
+  assert.deepEqual(await service.expireDueApplications(), {enabled: true, expired: 1, failed: 0});
+  assert.deepEqual(await service.expireDueApplications(), {enabled: true, expired: 0, failed: 0});
+  assert.equal((await service.getMyApplications("a"))[0].status, "expired");
+  assert.equal((await service.getMyApplications("b"))[0].status, "withdrawn");
+  assert.equal((await service.getMyApplications("c"))[0].status, "pending");
+  assert.equal(db.values("notifications").filter(n => n.type === "publisher_application_expired").length, 1);
+  time = Date.parse(later.expiresAt);
+  db.failWritesTo("notifications");
+  assert.deepEqual(await service.expireDueApplications(), {enabled: true, expired: 0, failed: 1});
+  db.failWritesTo("");
+  assert.deepEqual(await service.expireDueApplications(), {enabled: true, expired: 1, failed: 0});
+});
+
 test("cloud expiration is transactional and repeated reads send one notification", async () => {
   const db = fakeFirestore();
   let time = start;

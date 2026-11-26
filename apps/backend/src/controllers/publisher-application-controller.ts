@@ -203,3 +203,20 @@ export async function revokePublisher(
     sendError(response, error);
   }
 }
+
+/** POST /internal/publisher-applications/expire: scheduled worker, authenticated by the worker secret. */
+export async function expireDueApplications(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    const data = await publisherApplicationService.expireDueApplications();
+    response.json({ success: true, data });
+  } catch (error) {
+    console.error(`[publisher-applications] Expiry run failed: ${error instanceof Error ? error.name : typeof error}`);
+    response.status(500).json({
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "The expiration run failed." },
+    });
+  }
+}

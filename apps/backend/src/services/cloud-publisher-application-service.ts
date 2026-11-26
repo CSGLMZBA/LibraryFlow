@@ -216,8 +216,28 @@ export class CloudPublisherApplicationService extends PublisherApplicationServic
     }
   }
 
-  private async expire(id: string): Promise<void> {
-    await this.transition(id, "system", undefined, "expired");
+  private async expire(id: string): Promise<PublisherApplication> {
+    return this.transition(id, "system", undefined, "expired");
+  }
+
+  override async expireDueApplications(limit = 100): Promise<{ enabled: boolean; expired: number; failed: number }> {
+    const snapshot = await this.storage(db => db.collection("publisherApplications").where("status", "==", "pending").get());
+    const due = snapshot.docs
+      .map(doc => doc.data() as PublisherApplication)
+      .filter(application => Date.parse(application.expiresAt) <= this.now())
+      .slice(0, limit);
+    let expired = 0;
+    let failed = 0;
+    for (const application of due) {
+      try {
+        const result = await this.expire(application.id);
+        if (result.revision > application.revision) expired++;
+      } catch (error) {
+        failed++;
+        console.error(`[publisher-applications] Expiration failed: ${error instanceof Error ? error.name : typeof error}`);
+      }
+    }
+    return { enabled: true, expired, failed };
   }
 
   private async transition(
