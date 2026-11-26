@@ -376,6 +376,10 @@ Authorization: Bearer <DELETION_WORKER_SECRET>
   review.
 - A job left in `processing` for 15 minutes is reclaimed. Deleting an object
   that no longer exists succeeds, so repeating a job is safe.
+- Each claim has a unique token. A worker records completion or failure only
+  if it still owns the current claim; a stale worker must not overwrite the
+  result of a later claim. A failure to persist the result is surfaced and
+  leaves the job eligible for stale-claim recovery.
 - `completed` jobs are never claimed again. No job is ever deleted.
 - The worker reads only open jobs (`pending`, `failed`, `processing`), up to
   200 per run.

@@ -75,6 +75,10 @@ Identity Toolkit tests now exercise invalid credentials, upstream outages,
 rate limiting, malformed successful responses, and the HTTP login error
 envelope. Provider outages no longer masquerade as incorrect credentials;
 these mocked tests are not evidence of live Firebase failure behavior.
+Worker regression tests exercise stale claim fencing and persistence failure
+using an in-memory store. Live Firestore concurrency and deployed worker
+execution remain unverified. The current bounded candidate scan may also
+starve due book jobs behind 200 ineligible open jobs; S2-AC-007 stays pending.
 
 ---
 

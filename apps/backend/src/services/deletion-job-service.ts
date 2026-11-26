@@ -114,40 +114,58 @@ export class DeletionJobService {
         break;
       }
       const claimedAt = this.now();
+      const claimToken = crypto.randomUUID();
       const job = await this.store.claim(
         candidate.id,
         (current) => this.isClaimable(current, claimedAt.getTime()),
-        { status: "processing", claimedAt: claimedAt.toISOString() },
+        { status: "processing", claimedAt: claimedAt.toISOString(), claimToken },
       );
       if (!job) {
         continue; // another run claimed or finished it first
       }
       summary.claimed += 1;
 
+      let deletionError: unknown;
+      let deletionFailed = false;
       try {
         await this.requireStorage().deleteObject(job.targetId);
-        await this.store.update(job.id, {
-          status: "completed",
-          completedAt: this.now().toISOString(),
-          nextAttemptAt: undefined,
-        });
-        summary.completed += 1;
       } catch (error) {
+        deletionFailed = true;
+        deletionError = error;
+      }
+      if (deletionFailed) {
         const attempts = job.attempts + 1;
-        const lastError = safeErrorMessage(error);
+        const lastError = safeErrorMessage(deletionError);
         const exhausted = attempts >= MAX_ATTEMPTS;
-        await this.store.update(job.id, {
+        const recorded = await this.store.finishClaim(job.id, claimToken, {
           status: "failed",
           attempts,
           lastError,
+          claimToken: undefined,
           nextAttemptAt: exhausted
             ? undefined
             : new Date(this.now().getTime() + retryDelayMs(attempts)).toISOString(),
         });
+        if (!recorded) {
+          console.error(`[deletion-worker] Job ${job.id} failure was not recorded because its claim changed.`);
+          continue;
+        }
         console.error(
           `[deletion-worker] Job ${job.id} failed (attempt ${attempts}${exhausted ? ", no more retries" : ""}): ${lastError}`,
         );
         summary.failed += 1;
+      } else {
+        const recorded = await this.store.finishClaim(job.id, claimToken, {
+          status: "completed",
+          completedAt: this.now().toISOString(),
+          nextAttemptAt: undefined,
+          claimToken: undefined,
+        });
+        if (!recorded) {
+          console.error(`[deletion-worker] Job ${job.id} completion was not recorded because its claim changed.`);
+          continue;
+        }
+        summary.completed += 1;
       }
     }
     return summary;

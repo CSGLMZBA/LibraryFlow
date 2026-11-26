@@ -796,6 +796,45 @@ describe('S2-AC-007: Scheduled Cleanup — Deletion Jobs', () => {
     assert.equal((await worker.runDueJobs()).completed, 1);
   });
 
+  test('stale workers cannot overwrite a reclaimed job result', async () => {
+    for (const originalFails of [false, true]) {
+      const {store, storage, clock, worker} = setupWorker();
+      const job = await worker.scheduleDeletedBookFile(FILE_PATH);
+      let releaseFirst;
+      let firstStarted;
+      const started = new Promise(resolve => {firstStarted = resolve;});
+      let calls = 0;
+      storage.deleteObject = async () => {
+        calls++;
+        if (calls === 1) {
+          firstStarted();
+          await new Promise(resolve => {releaseFirst = resolve;});
+          if (originalFails) throw new Error('old delete failed');
+        }
+      };
+      const originalRun = worker.runDueJobs();
+      await started;
+      clock.advance(STALE_CLAIM_MS);
+      const reclaimed = await worker.runDueJobs();
+      assert.equal(reclaimed.completed, 1);
+      const completed = await store.get(job.id);
+      releaseFirst();
+      const original = await originalRun;
+      assert.deepEqual(original, {claimed:1, completed:0, failed:0});
+      assert.deepEqual(await store.get(job.id), completed);
+      assert.equal(completed.status, 'completed');
+    }
+  });
+
+  test('a failed completion write surfaces an error instead of reporting a failed delete', async () => {
+    const {store, storage, clock, worker} = setupWorker();
+    const job = await worker.scheduleDeletedBookFile(FILE_PATH);
+    const failingStore = Object.create(store);
+    failingStore.finishClaim = async () => {throw new Error('database unavailable');};
+    await assert.rejects(new DeletionJobService(failingStore, storage, clock.now).runDueJobs(), /database unavailable/);
+    assert.equal((await store.get(job.id)).status, 'processing');
+  });
+
   test('TC-S2-034: account-data jobs are left pending and untouched', async () => {
     const { store, storage, clock, worker } = setupWorker();
     const accountJob = {

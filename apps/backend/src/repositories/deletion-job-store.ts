@@ -24,6 +24,7 @@ export type DeletionJob = {
   lastError?: string;
   nextAttemptAt?: string;
   claimedAt?: string;
+  claimToken?: string;
   completedAt?: string;
 };
 
@@ -45,6 +46,7 @@ export interface DeletionJobStore {
     canClaim: (job: DeletionJob) => boolean,
     claim: Partial<DeletionJob>,
   ): Promise<DeletionJob | null>;
+  finishClaim(id: string, claimToken: string, patch: Partial<DeletionJob>): Promise<boolean>;
   update(id: string, patch: Partial<DeletionJob>): Promise<void>;
 }
 
@@ -98,7 +100,15 @@ export class MemoryDeletionJobStore implements DeletionJobStore {
     if (!job) {
       throw new Error(`Deletion job ${id} does not exist.`);
     }
+
     this.jobs.set(id, withoutUndefined({ ...job, ...patch }));
+  }
+
+  async finishClaim(id: string, claimToken: string, patch: Partial<DeletionJob>): Promise<boolean> {
+    const job = this.jobs.get(id);
+    if (!job || job.status !== "processing" || job.claimToken !== claimToken) return false;
+    this.jobs.set(id, withoutUndefined({...job, ...patch}));
+    return true;
   }
 }
 
@@ -175,6 +185,23 @@ export class FirestoreDeletionJobStore implements DeletionJobStore {
       Object.entries(patch).map(([key, value]) => [key, value === undefined ? FieldValue.delete() : value]),
     );
     await db.collection(DELETION_JOBS_COLLECTION).doc(id).update(data);
+  }
+
+  async finishClaim(id: string, claimToken: string, patch: Partial<DeletionJob>): Promise<boolean> {
+    const db = await this.db();
+    const { FieldValue } = await import("firebase-admin/firestore");
+    const reference = db.collection(DELETION_JOBS_COLLECTION).doc(id);
+    return db.runTransaction(async transaction => {
+      const snapshot = await transaction.get(reference);
+      if (!snapshot.exists) return false;
+      const job = snapshot.data() as DeletionJob;
+      if (job.status !== "processing" || job.claimToken !== claimToken) return false;
+      const data = Object.fromEntries(
+        Object.entries(patch).map(([key, value]) => [key, value === undefined ? FieldValue.delete() : value]),
+      );
+      transaction.update(reference, data);
+      return true;
+    });
   }
 }
 
