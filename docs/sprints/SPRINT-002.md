@@ -5,6 +5,22 @@
 Convert the Sprint 1 MVP into a deployable, cloud-backed platform where users
 receive publisher status only after administrator approval.
 
+## Status: Complete in code (closed 2026)
+
+Sprint 2 is closed as a working release. Everything above the line below is
+implemented, unit-tested, and pushed to `main`; the live site keeps working
+with its default configuration.
+
+Shipped: publisher applications and expiry, admin review, Firebase identity,
+deletion jobs and worker, bans/lift (`ENABLE_BAN_API`), Supabase private storage,
+notification inbox, Firestore content stores (`ENABLE_CLOUD_CONTENT`), frontend
+cloud mode (`VITE_CONTENT_MODE=cloud`), Netlify/Render deployment checks.
+
+Honest limitations (carried to Sprint 3, see `S2-ACCEPTANCE-REGISTER.md`):
+cloud flags are off by default and not yet verified live in a browser; 11 TODO
+tests remain; account-deletion scope needs approval; no migration of
+browser-only books; no publisher-initiated delete in cloud mode.
+
 ## Sprint 2 Definition of Done
 
 - Public registration never grants `publisher`.
