@@ -835,6 +835,37 @@ describe('S2-AC-007: Scheduled Cleanup — Deletion Jobs', () => {
     assert.equal((await store.get(job.id)).status, 'processing');
   });
 
+  test('rotating scan reaches due book jobs beyond ineligible open jobs and wraps', async () => {
+    const {store, storage, clock} = setupWorker();
+    const worker = new DeletionJobService(store, storage, clock.now, true);
+    for (let i=0; i<250; i++) {
+      await store.createIfAbsent({id:`a-${String(i).padStart(3,'0')}`, kind:'account-data',
+        targetId:`user-${i}`, dueAt:clock.now().toISOString(), status:'pending', attempts:0});
+    }
+    await store.createIfAbsent({id:'z-due',kind:'deleted-book-file',targetId:'books/target/1/book.pdf',
+      dueAt:clock.now().toISOString(),status:'pending',attempts:0});
+    assert.deepEqual(await worker.runDueJobs(), {claimed:0,completed:0,failed:0});
+    assert.deepEqual(await worker.runDueJobs(), {claimed:1,completed:1,failed:0});
+    assert.deepEqual(storage.deleted, ['books/target/1/book.pdf']);
+    assert.equal((await store.get('a-000')).status, 'pending');
+    await store.createIfAbsent({id:'a--new',kind:'deleted-book-file',targetId:'books/next/1/book.pdf',
+      dueAt:clock.now().toISOString(),status:'pending',attempts:0});
+    assert.deepEqual(await worker.runDueJobs(), {claimed:1,completed:1,failed:0});
+    assert.equal((await store.get('a--new')).status, 'completed');
+  });
+
+  test('rotating scan allocates distinct bounded pages to concurrent calls', async () => {
+    const {store} = setupWorker();
+    for (let i=0; i<405; i++) {
+      await store.createIfAbsent({id:`job-${String(i).padStart(3,'0')}`, kind:'account-data',
+        targetId:`user-${i}`, dueAt:REJECTED_AT.toISOString(), status:'pending', attempts:0});
+    }
+    const pages = await Promise.all([store.nextOpenJobPage(200),store.nextOpenJobPage(200),store.nextOpenJobPage(200)]);
+    assert.deepEqual(pages.map(page=>page.length),[200,200,5]);
+    assert.equal(new Set(pages.flat().map(job=>job.id)).size,405);
+    assert.equal((await store.nextOpenJobPage(200))[0].id,'job-000');
+  });
+
   test('TC-S2-034: account-data jobs are left pending and untouched', async () => {
     const { store, storage, clock, worker } = setupWorker();
     const accountJob = {

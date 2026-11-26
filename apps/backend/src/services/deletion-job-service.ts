@@ -78,6 +78,7 @@ export class DeletionJobService {
     store: DeletionJobStore = defaultStore,
     storage: BookFileStorage | null = createBookFileStorageFromEnv(),
     now: () => Date = () => new Date(),
+    private readonly rotatingScan = process.env.DELETION_WORKER_ROTATING_SCAN === "true",
   ) {
     this.store = store;
     this.storage = storage;
@@ -104,7 +105,9 @@ export class DeletionJobService {
     const nowMs = this.now().getTime();
 
     const candidates = (
-      await this.store.listByStatus(["pending", "failed", "processing"], CANDIDATE_SCAN_LIMIT)
+      this.rotatingScan
+        ? await this.store.nextOpenJobPage(CANDIDATE_SCAN_LIMIT)
+        : await this.store.listByStatus(["pending", "failed", "processing"], CANDIDATE_SCAN_LIMIT)
     )
       .filter((job) => this.isClaimable(job, nowMs))
       .sort((first, second) => this.readyAt(first) - this.readyAt(second));

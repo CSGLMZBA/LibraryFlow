@@ -369,7 +369,8 @@ Authorization: Bearer <DELETION_WORKER_SECRET>
 ```
 
 - Not for browsers. The secret is compared in constant time and never logged.
-- Each run claims at most 10 due jobs, in `dueAt` (or `nextAttemptAt`) order.
+- Each run claims at most 10 due jobs from its scanned candidates, in
+  `dueAt` (or `nextAttemptAt`) order.
 - A failure sets `failed`, increments `attempts`, stores a safe `lastError`,
   and sets `nextAttemptAt` to now + 1 min × 2^(attempts − 1), capped at 6 hours.
   After 8 attempts `nextAttemptAt` is removed and the job waits for manual
@@ -382,7 +383,13 @@ Authorization: Bearer <DELETION_WORKER_SECRET>
   leaves the job eligible for stale-claim recovery.
 - `completed` jobs are never claimed again. No job is ever deleted.
 - The worker reads only open jobs (`pending`, `failed`, `processing`), up to
-  200 per run.
+  200 per run. By default this is the original fixed scan. With
+  `DELETION_WORKER_ROTATING_SCAN=true`, Firestore stores a shared scan cursor
+  and successive runs visit pages in document-ID order, wrapping at the end.
+  This prevents permanently ignoring jobs behind an ineligible first page,
+  but can take multiple scheduled runs and does not guarantee global due-date
+  order. The cursor advances before processing, so an interrupted run may
+  leave candidates until the scan wraps.
 
 Trigger: `.github/workflows/deletion-worker.yml` calls the route every
 15 minutes with the repository secrets `RENDER_BACKEND_URL` and

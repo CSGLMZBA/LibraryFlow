@@ -36,6 +36,8 @@ export interface DeletionJobStore {
   get(id: string): Promise<DeletionJob | null>;
   /** Jobs in any of `statuses`, at most `limit`. Completed jobs are never listed. */
   listByStatus(statuses: DeletionJobStatus[], limit: number): Promise<DeletionJob[]>;
+  /** Advances a shared cursor by at most limit open jobs, wrapping at the end. */
+  nextOpenJobPage(limit: number): Promise<DeletionJob[]>;
   /**
    * Re-reads the job atomically and writes `claim` only when `canClaim`
    * accepts the current value. Returns the claimed job, or null when another
@@ -59,6 +61,7 @@ function withoutUndefined<T extends object>(value: T): T {
 
 export class MemoryDeletionJobStore implements DeletionJobStore {
   private readonly jobs = new Map<string, DeletionJob>();
+  private scanCursor: string | null = null;
 
   async createIfAbsent(job: DeletionJob): Promise<DeletionJob> {
     const existing = this.jobs.get(job.id);
@@ -79,6 +82,15 @@ export class MemoryDeletionJobStore implements DeletionJobStore {
       .filter((job) => statuses.includes(job.status))
       .slice(0, limit)
       .map((job) => ({ ...job }));
+  }
+
+  async nextOpenJobPage(limit: number): Promise<DeletionJob[]> {
+    const jobs = [...this.jobs.entries()]
+      .filter(([id, job]) => ["pending", "failed", "processing"].includes(job.status) && (this.scanCursor === null || id > this.scanCursor))
+      .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+      .slice(0, limit);
+    this.scanCursor = jobs.length === limit ? jobs[jobs.length - 1][0] : null;
+    return jobs.map(([, job]) => ({...job}));
   }
 
   async claim(
@@ -154,6 +166,27 @@ export class FirestoreDeletionJobStore implements DeletionJobStore {
       .limit(limit)
       .get();
     return snapshot.docs.map((doc) => doc.data() as DeletionJob);
+  }
+
+  async nextOpenJobPage(limit: number): Promise<DeletionJob[]> {
+    const db = await this.db();
+    const { FieldPath } = await import("firebase-admin/firestore");
+    const cursorRef = db.collection("workerState").doc("book-file-scan");
+    return db.runTransaction(async transaction => {
+      const state = await transaction.get(cursorRef);
+      const cursor: unknown = state.data()?.cursor;
+      if (cursor !== undefined && cursor !== null && typeof cursor !== "string") {
+        throw new Error("Deletion worker scan cursor is invalid.");
+      }
+      let query = db.collection(DELETION_JOBS_COLLECTION)
+        .where("status", "in", ["pending", "failed", "processing"])
+        .orderBy(FieldPath.documentId()).limit(limit);
+      if (typeof cursor === "string" && cursor) query = query.startAfter(cursor);
+      const snapshot = await transaction.get(query);
+      const next = snapshot.size === limit ? snapshot.docs[snapshot.size - 1].id : null;
+      transaction.set(cursorRef, {cursor: next});
+      return snapshot.docs.map(doc => doc.data() as DeletionJob);
+    });
   }
 
   async claim(

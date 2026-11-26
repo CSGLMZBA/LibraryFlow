@@ -76,9 +76,13 @@ rate limiting, malformed successful responses, and the HTTP login error
 envelope. Provider outages no longer masquerade as incorrect credentials;
 these mocked tests are not evidence of live Firebase failure behavior.
 Worker regression tests exercise stale claim fencing and persistence failure
-using an in-memory store. Live Firestore concurrency and deployed worker
-execution remain unverified. The current bounded candidate scan may also
-starve due book jobs behind 200 ineligible open jobs; S2-AC-007 stays pending.
+using an in-memory store. A disabled-by-default rotating scan visits successive
+bounded pages so book jobs behind ineligible open jobs are eventually reached;
+tests cover more than 200 ineligible jobs, page wrap and concurrent memory
+scans. A read-only live Firestore ordered-query probe passed on 2026-11-26.
+Live cursor transactions, concurrency and deployed worker execution remain
+unverified; S2-AC-007 stays pending. Enabling the scan can allow deletion of
+previously ignored book files and requires due-job inspection first.
 
 ---
 
