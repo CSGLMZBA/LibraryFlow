@@ -92,6 +92,7 @@ test('S1-AC-002 (TC-008, TC-010): valid EPUB/PDF up to 20 MB enters pending; inv
     {
       title: 'Compilers: Principles, Techniques, and Tools',
       author: 'Alfred V. Aho',
+      description: 'A description of the book.',
       fileType: 'pdf',
       fileSizeBytes: BOOK_MAX_FILE_SIZE_BYTES,
       categoryIds: ['cat-1'],
@@ -111,6 +112,7 @@ test('S1-AC-002 (TC-008, TC-010): valid EPUB/PDF up to 20 MB enters pending; inv
         {
           title: 'Too Large Book',
           author: 'Author',
+          description: 'A description of the book.',
           fileType: 'epub',
           fileSizeBytes: BOOK_MAX_FILE_SIZE_BYTES + 1,
           categoryIds: [],
@@ -127,6 +129,7 @@ test('S1-AC-002 (TC-008, TC-010): valid EPUB/PDF up to 20 MB enters pending; inv
         {
           title: 'Invalid Executable',
           author: 'Author',
+          description: 'A description of the book.',
           fileType: 'exe',
           fileSizeBytes: 1024,
           categoryIds: [],
@@ -144,11 +147,11 @@ test('S1-AC-003 (TC-014, TC-015): approve exposes book; reject notifies owner an
   const modService = new ModerationService(bookRepo, commentRepo, notificationRepo);
 
   const b1 = await bookService.createBook(
-    { title: 'Operating Systems', author: 'Tanenbaum', fileType: 'pdf', fileSizeBytes: 5000, categoryIds: [], genreIds: [] },
+    { title: 'Operating Systems', author: 'Tanenbaum', description: 'A description of the book.', fileType: 'pdf', fileSizeBytes: 5000, categoryIds: [], genreIds: [] },
     'pub-1',
   );
   const b2 = await bookService.createBook(
-    { title: 'Spam Upload', author: 'Unknown', fileType: 'pdf', fileSizeBytes: 5000, categoryIds: [], genreIds: [] },
+    { title: 'Spam Upload', author: 'Unknown', description: 'A description of the book.', fileType: 'pdf', fileSizeBytes: 5000, categoryIds: [], genreIds: [] },
     'pub-2',
   );
 
@@ -175,7 +178,7 @@ test('S1-AC-004 & S1-AC-005 (TC-017..TC-022): owner-only metadata update, identi
   const modService = new ModerationService(bookRepo, commentRepo, notificationRepo);
 
   const created = await bookService.createBook(
-    { title: 'Signals and Systems', author: 'Oppenheim', fileType: 'pdf', fileSizeBytes: 4096, categoryIds: ['cat-1'], genreIds: ['gen-1'] },
+    { title: 'Signals and Systems', author: 'Oppenheim', description: 'A description of the book.', fileType: 'pdf', fileSizeBytes: 4096, categoryIds: ['cat-1'], genreIds: ['gen-1'] },
     'pub-owner',
   );
   await modService.approveBook(created.id, 'mod-1');
@@ -230,7 +233,7 @@ test('S1-AC-007 (TC-027, TC-030): comment creation, moderation audit, notificati
   const modService = new ModerationService(bookRepo, commentRepo, notificationRepo);
 
   const book = await bookService.createBook(
-    { title: 'Database Internals', author: 'Alex Petrov', fileType: 'epub', fileSizeBytes: 3000, categoryIds: [], genreIds: [] },
+    { title: 'Database Internals', author: 'Alex Petrov', description: 'A description of the book.', fileType: 'epub', fileSizeBytes: 3000, categoryIds: [], genreIds: [] },
     'pub-1',
   );
   await modService.approveBook(book.id, 'mod-1');

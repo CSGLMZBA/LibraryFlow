@@ -4,6 +4,7 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 128;
 export const BOOK_TITLE_MAX_LENGTH = 100;
 export const BOOK_AUTHOR_MAX_LENGTH = 100;
+export const BOOK_DESCRIPTION_MAX_LENGTH = 2000;
 export const BOOK_MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 export const COMMENT_MAX_LENGTH = 1000;
 export const REJECTION_REASON_MAX_LENGTH = 500;

@@ -67,6 +67,10 @@ Fake-store tests cover these paths; there is no live-Firestore, restart, or
 cross-instance evidence yet. Moderation steps remain separate writes, the
 frontend catalog still reads its own IndexedDB data, and existing in-memory
 records are not migrated, so `S2-AC-005`, `S2-AC-006` and `S2-AC-008` stay pending.
+The backend book contract now enforces the SPEC-002 §4 description (required on
+creation, 1-2000 characters after trimming, validated on metadata updates and
+revision-checked); this is covered by service tests, and the browser publishing
+form does not yet send it to the cloud API.
 TC-S2-011, 013, 014, 018, 020/021 and 022 stay TODO until verified against live
 Firebase and the upload APIs.
 On 2026-11-25, a read-only query for a randomly named absent applicant passed

@@ -244,6 +244,7 @@ describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => 
       {
         title: 'Book To Delete',
         author: 'Test Author',
+        description: 'A description of the book.',
         fileType: 'pdf',
         fileSizeBytes: 2048,
         categoryIds: ['cat-1'],
@@ -270,6 +271,7 @@ describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => 
       {
         title: 'Ephemeral Distributed Guide',
         author: 'Jane Doe',
+        description: 'A description of the book.',
         fileType: 'epub',
         fileSizeBytes: 4096,
         categoryIds: ['cat-1'],

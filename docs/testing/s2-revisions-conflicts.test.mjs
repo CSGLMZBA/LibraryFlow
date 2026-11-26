@@ -11,6 +11,7 @@ import { BookRepository } from "../../apps/backend/src/repositories/book-reposit
 const validBookPayload = (title) => ({
   title,
   author: "Test Author",
+  description: 'A description of the book.',
   fileType: "pdf",
   fileSizeBytes: 4096,
   categoryIds: [],

@@ -1,5 +1,6 @@
 import {
   BOOK_AUTHOR_MAX_LENGTH,
+  BOOK_DESCRIPTION_MAX_LENGTH,
   BOOK_MAX_FILE_SIZE_BYTES,
   BOOK_TITLE_MAX_LENGTH,
 } from "@library-flow/shared";
@@ -49,6 +50,11 @@ export class BookService {
       "author",
       BOOK_AUTHOR_MAX_LENGTH,
     );
+    const description = this.validateText(
+      dto.description,
+      "description",
+      BOOK_DESCRIPTION_MAX_LENGTH,
+    );
 
     if (dto.fileType !== "epub" && dto.fileType !== "pdf") {
       throw new Error("Book file type must be epub or pdf.");
@@ -75,6 +81,7 @@ export class BookService {
       title,
       author,
       ownerId,
+      description,
       status: "pending",
       accessKey: crypto.randomUUID(),
       shareableUrl: `/books/${id}`,
@@ -132,12 +139,15 @@ export class BookService {
     const result = await this.repository.updateMetadata(
       id, requesterId, isModerator, dto.clientRevision, dto.mutationId,
       () => {
-        const updates: Pick<Partial<Book>, "title" | "author" | "categoryIds" | "genreIds"> = {};
+        const updates: Pick<Partial<Book>, "title" | "author" | "description" | "categoryIds" | "genreIds"> = {};
         if (dto.title !== undefined) {
           updates.title = this.validateText(dto.title, "title", BOOK_TITLE_MAX_LENGTH);
         }
         if (dto.author !== undefined) {
           updates.author = this.validateText(dto.author, "author", BOOK_AUTHOR_MAX_LENGTH);
+        }
+        if (dto.description !== undefined) {
+          updates.description = this.validateText(dto.description, "description", BOOK_DESCRIPTION_MAX_LENGTH);
         }
         if (dto.categoryIds !== undefined) updates.categoryIds = [...dto.categoryIds];
         if (dto.genreIds !== undefined) updates.genreIds = [...dto.genreIds];
@@ -178,7 +188,7 @@ export class BookService {
   }
 
   private validateText(value: string, field: string, maxLength: number): string {
-    const normalizedValue = value.trim();
+    const normalizedValue = typeof value === "string" ? value.trim() : "";
     if (
       normalizedValue.length === 0 ||
       normalizedValue.length > maxLength

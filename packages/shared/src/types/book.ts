@@ -13,6 +13,8 @@ export type Book = {
   title: string;
   author: string;
   readonly ownerId: string;
+  /** Publisher-supplied summary, 1-2000 characters (SPEC-002 §4). */
+  description: string;
   status: BookStatus;
   accessKey: string;
   shareableUrl: string;
@@ -35,6 +37,7 @@ export type Book = {
 export type CreateBookDto = {
   title: string;
   author: string;
+  description: string;
   fileType: BookFileType;
   fileSizeBytes: number;
   categoryIds: string[];
@@ -44,6 +47,7 @@ export type CreateBookDto = {
 export type UpdateBookMetadataDto = {
   title?: string;
   author?: string;
+  description?: string;
   categoryIds?: string[];
   genreIds?: string[];
   clientRevision?: number;

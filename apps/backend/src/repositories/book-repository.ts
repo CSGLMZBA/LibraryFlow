@@ -96,7 +96,7 @@ export class BookRepository {
     isModerator: boolean,
     clientRevision: number | undefined,
     mutationId: string | undefined,
-    prepareUpdates: () => Pick<Partial<Book>, "title" | "author" | "categoryIds" | "genreIds">,
+    prepareUpdates: () => Pick<Partial<Book>, "title" | "author" | "description" | "categoryIds" | "genreIds">,
     updatedAt: string,
   ): Promise<MetadataUpdateResult> {
     const currentBook = this.books.get(id);
@@ -236,7 +236,7 @@ export class FirestoreBookRepository extends BookRepository {
     isModerator: boolean,
     clientRevision: number | undefined,
     mutationId: string | undefined,
-    prepareUpdates: () => Pick<Partial<Book>, "title" | "author" | "categoryIds" | "genreIds">,
+    prepareUpdates: () => Pick<Partial<Book>, "title" | "author" | "description" | "categoryIds" | "genreIds">,
     updatedAt: string,
   ): Promise<MetadataUpdateResult> {
     const mutationKey = mutationId
