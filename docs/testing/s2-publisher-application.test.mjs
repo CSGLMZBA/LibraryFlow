@@ -26,6 +26,7 @@ import {
 import { parseRegistration } from '../../apps/backend/src/schemas/auth-schema.ts';
 import { createAuthGuard } from '../../apps/backend/src/middleware/auth-guard.ts';
 import { createModerationRouter } from '../../apps/backend/src/routes/moderation-routes.ts';
+import { createPublisherApplicationRouter } from '../../apps/backend/src/routes/publisher-application-routes.ts';
 
 function fakeResponse() {
   return {
@@ -42,6 +43,40 @@ function fakeResponse() {
     },
   };
 }
+
+test('publisher application routes authorize only verified readers', async () => {
+  const guard = createAuthGuard(async token => ({
+    reader: {uid: 'reader-route', role: 'reader'},
+    publisher: {uid: 'publisher-route', role: 'publisher'},
+    moderator: {uid: 'moderator-route', role: 'moderator'},
+  })[token] ?? null, 'reader');
+  const router = createPublisherApplicationRouter(guard);
+  const dispatch = (method, url, token, body) => new Promise((resolve, reject) => {
+    const response = fakeResponse();
+    response.json = function (data) { this.body = data; resolve(this); return this; };
+    router.handle({method, url, body, headers: token ? {authorization: `Bearer ${token}`} : {}},
+      response, error => reject(error ?? new Error('Route not handled')));
+  });
+  const application = {
+    publisherName: 'Reader Route Publishing',
+    legalRepresentativeName: 'Reader Route Representative',
+    independentPublisher: true,
+    publisherEmail: 'reader-route@example.com',
+  };
+  for (const [method, path] of [['POST', '/'], ['GET', '/me'], ['POST', '/missing/withdraw']]) {
+    assert.equal((await dispatch(method, path, undefined, application)).statusCode, 401);
+    assert.equal((await dispatch(method, path, 'publisher', application)).statusCode, 403);
+    assert.equal((await dispatch(method, path, 'moderator', application)).statusCode, 403);
+  }
+  const created = await dispatch('POST', '/', 'reader', application);
+  assert.equal(created.statusCode, 201);
+  const listed = await dispatch('GET', '/me', 'reader');
+  assert.equal(listed.statusCode, 200);
+  assert.equal(listed.body.data[0].id, created.body.data.id);
+  const withdrawn = await dispatch('POST', `/${created.body.data.id}/withdraw`, 'reader', {revision: 1});
+  assert.equal(withdrawn.statusCode, 200);
+  assert.equal(withdrawn.body.data.status, 'withdrawn');
+});
 
 test('HTTP publisher role changes fail closed until role synchronization is implemented', async () => {
   const application = await publisherApplicationService.submitApplication('role-gate-reader', {
@@ -589,14 +624,14 @@ describe('S2-AC-004: Upload Authorization', () => {
       allowed = true;
     });
 
-    test.todo('TC-S2-010: actual application route allows only authenticated readers');
-    test.todo('TC-S2-011: approval atomically records the decision and role grant');
-    test.todo('TC-S2-013: notification failure rolls back approval and role grant');
-    test.todo('TC-S2-014: approval with stale revision is rejected');
-    test.todo('TC-S2-018: rejected applicant retains their real reader role');
-    test.todo('TC-S2-020 and TC-S2-021: pending and rejected applicants cannot call upload APIs');
-    test.todo('TC-S2-022: revoked publisher loses actual upload privileges');
     assert.equal(res.statusCode, 403);
     assert.equal(allowed, false);
   });
 });
+
+test.todo('TC-S2-011: approval atomically records the decision and role grant');
+test.todo('TC-S2-013: notification failure rolls back approval and role grant');
+test.todo('TC-S2-014: approval with stale revision is rejected');
+test.todo('TC-S2-018: rejected applicant retains their real reader role');
+test.todo('TC-S2-020 and TC-S2-021: pending and rejected applicants cannot call upload APIs');
+test.todo('TC-S2-022: revoked publisher loses actual upload privileges');

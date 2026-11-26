@@ -3,6 +3,10 @@ import { createAuthGuard } from "./auth-guard.js";
 import { verifyFirebaseIdentity } from "../services/firebase-auth-service.js";
 
 export const requireAuth = createAuthGuard(verifyFirebaseIdentity);
+export const readerGuard = createAuthGuard(
+  verifyFirebaseIdentity,
+  "reader",
+);
 export const publisherGuard = createAuthGuard(
   verifyFirebaseIdentity,
   "publisher",

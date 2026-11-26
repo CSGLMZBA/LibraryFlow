@@ -1,17 +1,18 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import {
   getMyApplications,
   submitApplication,
   withdrawApplication,
 } from "../controllers/publisher-application-controller.js";
-import { requireAuth } from "../middleware/identity.js";
+import { readerGuard } from "../middleware/identity.js";
 
-export const publisherApplicationRouter = Router();
+export function createPublisherApplicationRouter(guard: RequestHandler = readerGuard) {
+  const router = Router();
 
-publisherApplicationRouter.post("/", requireAuth, submitApplication);
-publisherApplicationRouter.get("/me", requireAuth, getMyApplications);
-publisherApplicationRouter.post(
-  "/:id/withdraw",
-  requireAuth,
-  withdrawApplication,
-);
+  router.post("/", guard, submitApplication);
+  router.get("/me", guard, getMyApplications);
+  router.post("/:id/withdraw", guard, withdrawApplication);
+  return router;
+}
+
+export const publisherApplicationRouter = createPublisherApplicationRouter();
