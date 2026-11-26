@@ -1,7 +1,20 @@
 import type { Request, Response } from "express";
 import { publisherApplicationService } from "../services/publisher-application-service.js";
+import { ApplicationRevisionConflictError } from "../repositories/publisher-application-repository.js";
 
 function sendError(response: Response, error: unknown): void {
+  if (error instanceof ApplicationRevisionConflictError) {
+    response.status(409).json({
+      success: false,
+      error: { code: "REVISION_CONFLICT", message: error.message },
+      data: {
+        resourceId: error.application.id,
+        serverRevision: error.application.revision,
+        serverValue: error.application,
+      },
+    });
+    return;
+  }
   const message = error instanceof Error ? error.message : "Invalid request.";
   const errorResponse = {
     success: false as const,
@@ -50,6 +63,14 @@ function sendError(response: Response, error: unknown): void {
   response.status(400).json(errorResponse);
 }
 
+function revisionFromBody(body: unknown): number {
+  if (!body || typeof body !== "object" || !("revision" in body) ||
+      typeof body.revision !== "number" || !Number.isSafeInteger(body.revision) || body.revision < 1) {
+    throw new Error("A positive integer revision is required.");
+  }
+  return body.revision;
+}
+
 export async function submitApplication(
   request: Request,
   response: Response,
@@ -87,6 +108,7 @@ export async function withdrawApplication(
     const data = await publisherApplicationService.withdrawApplication(
       request.params.id as string,
       response.locals.auth.uid as string,
+      revisionFromBody(request.body),
     );
     response.json({ success: true, data });
   } catch (error) {
@@ -126,10 +148,15 @@ export async function rejectApplication(
   response: Response,
 ): Promise<void> {
   try {
+    const revision = revisionFromBody(request.body);
+    if (typeof request.body.decisionReason !== "string") {
+      throw new Error("A decision reason is required.");
+    }
     const data = await publisherApplicationService.rejectApplication(
       request.params.id as string,
       response.locals.auth.uid as string,
       request.body.decisionReason,
+      revision,
     );
     response.json({ success: true, data });
   } catch (error) {

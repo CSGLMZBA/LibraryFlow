@@ -1,5 +1,12 @@
 import type { PublisherApplication } from "@library-flow/shared";
 
+export class ApplicationRevisionConflictError extends Error {
+  constructor(public readonly application: PublisherApplication) {
+    super("The record changed. Reload it before retrying.");
+    this.name = "ApplicationRevisionConflictError";
+  }
+}
+
 export class PublisherApplicationRepository {
   private readonly applications = new Map<string, PublisherApplication>();
 
@@ -40,10 +47,14 @@ export class PublisherApplicationRepository {
   async update(
     id: string,
     updates: Partial<PublisherApplication>,
+    expectedRevision?: number,
   ): Promise<PublisherApplication | null> {
     const currentApplication = this.applications.get(id);
     if (!currentApplication) {
       return null;
+    }
+    if (expectedRevision !== undefined && currentApplication.revision !== expectedRevision) {
+      throw new ApplicationRevisionConflictError(this.clone(currentApplication));
     }
 
     if (updates.id !== undefined && updates.id !== id) {

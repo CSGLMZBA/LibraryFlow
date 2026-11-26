@@ -17,6 +17,7 @@ import {
 } from "../repositories/notification-repository.js";
 import {
   publisherApplicationRepository as defaultPublisherApplicationRepository,
+  ApplicationRevisionConflictError,
   PublisherApplicationRepository,
 } from "../repositories/publisher-application-repository.js";
 
@@ -110,18 +111,20 @@ export class PublisherApplicationService {
   async withdrawApplication(
     id: string,
     applicantUid: string,
+    clientRevision?: number,
   ): Promise<PublisherApplication> {
     const application = await this.getApplication(id);
     if (application.applicantUid !== applicantUid) {
       throw new Error("FORBIDDEN");
     }
+    this.requireRevision(application, clientRevision);
     this.requirePending(application);
 
     const updatedApplication = await this.updateApplication(id, {
       status: "withdrawn",
       updatedAt: new Date().toISOString(),
       revision: application.revision + 1,
-    });
+    }, application.revision);
     this.recordAudit({
       action: "withdrawn",
       actorUid: applicantUid,
@@ -149,7 +152,7 @@ export class PublisherApplicationService {
       reviewerUid,
       updatedAt: reviewedAt,
       revision: application.revision + 1,
-    });
+    }, application.revision);
     this.recordAudit({
       action: "approved",
       actorUid: reviewerUid,
@@ -170,8 +173,10 @@ export class PublisherApplicationService {
     id: string,
     reviewerUid: string,
     reason: string,
+    clientRevision?: number,
   ): Promise<PublisherApplication> {
     const application = await this.getApplication(id);
+    this.requireRevision(application, clientRevision);
     this.requirePending(application);
     const normalizedReason = this.validateReason(reason);
     const reviewedAt = new Date().toISOString();
@@ -182,7 +187,7 @@ export class PublisherApplicationService {
       reviewerUid,
       updatedAt: reviewedAt,
       revision: application.revision + 1,
-    });
+    }, application.revision);
     this.recordAudit({
       action: "rejected",
       actorUid: reviewerUid,
@@ -230,7 +235,7 @@ export class PublisherApplicationService {
       status: "expired",
       updatedAt: expiredAt,
       revision: application.revision + 1,
-    });
+    }, application.revision);
     this.recordAudit({
       action: "expired",
       actorUid: "system",
@@ -348,11 +353,18 @@ export class PublisherApplicationService {
     }
   }
 
+  private requireRevision(application: PublisherApplication, revision?: number): void {
+    if (revision !== undefined && revision !== application.revision) {
+      throw new ApplicationRevisionConflictError(application);
+    }
+  }
+
   private async updateApplication(
     id: string,
     updates: Partial<PublisherApplication>,
+    expectedRevision?: number,
   ): Promise<PublisherApplication> {
-    const updatedApplication = await this.applications.update(id, updates);
+    const updatedApplication = await this.applications.update(id, updates, expectedRevision);
     if (!updatedApplication) {
       throw new Error("APPLICATION_NOT_FOUND");
     }

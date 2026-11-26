@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 
 import {
+  PublisherApplicationRepository,
   publisherApplicationRepository,
 } from '../../apps/backend/src/repositories/publisher-application-repository.ts';
 import {
@@ -73,9 +74,71 @@ test('publisher application routes authorize only verified readers', async () =>
   const listed = await dispatch('GET', '/me', 'reader');
   assert.equal(listed.statusCode, 200);
   assert.equal(listed.body.data[0].id, created.body.data.id);
+  for (const body of [undefined, {}, {revision: 0}, {revision: 1.5}, {revision: '1'}]) {
+    assert.equal((await dispatch('POST', `/${created.body.data.id}/withdraw`, 'reader', body)).statusCode, 400);
+  }
+  const stale = await dispatch('POST', `/${created.body.data.id}/withdraw`, 'reader', {revision: 2});
+  assert.equal(stale.statusCode, 409);
+  assert.equal(stale.body.error.code, 'REVISION_CONFLICT');
+  assert.equal(stale.body.data.serverRevision, 1);
+  assert.equal(stale.body.data.serverValue.status, 'pending');
   const withdrawn = await dispatch('POST', `/${created.body.data.id}/withdraw`, 'reader', {revision: 1});
   assert.equal(withdrawn.statusCode, 200);
   assert.equal(withdrawn.body.data.status, 'withdrawn');
+});
+
+test('concurrent withdrawal and rejection cannot both change one in-memory revision', async () => {
+  const repository = new PublisherApplicationRepository();
+  const notifications = [];
+  const service = new PublisherApplicationService(repository, {
+    async create(value) { notifications.push(value); return value; },
+  });
+  const application = await service.submitApplication('concurrent-reader', {
+    publisherName: 'Concurrent Publishing',
+    legalRepresentativeName: 'Concurrent Representative',
+    independentPublisher: true,
+    publisherEmail: 'concurrent@example.com',
+  });
+  const results = await Promise.allSettled([
+    service.withdrawApplication(application.id, 'concurrent-reader', 1),
+    service.rejectApplication(application.id, 'moderator', 'Incomplete application', 1),
+  ]);
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1);
+  const failure = results.find(result => result.status === 'rejected');
+  assert.equal(failure.reason.name, 'ApplicationRevisionConflictError');
+  const saved = await repository.findById(application.id);
+  assert.equal(saved.revision, 2);
+  assert.ok(['withdrawn', 'rejected'].includes(saved.status));
+  assert.equal(notifications.length, saved.status === 'rejected' ? 1 : 0);
+});
+
+test('moderator rejection requires the current revision and leaves stale decisions unchanged', async () => {
+  const application = await publisherApplicationService.submitApplication('revision-review-reader', {
+    publisherName: 'Review Publisher',
+    legalRepresentativeName: 'Review Representative',
+    independentPublisher: true,
+    publisherEmail: 'review@example.com',
+  });
+  const router = createModerationRouter(createAuthGuard(
+    async () => ({uid: 'revision-review-mod', role: 'moderator'}), 'moderator',
+  ));
+  const reject = body => new Promise((resolve, rejectError) => {
+    const response = fakeResponse();
+    response.json = function (data) { this.body = data; resolve(this); return this; };
+    router.handle({method: 'POST', url: `/publisher-applications/${application.id}/reject`,
+      body, headers: {authorization: 'Bearer mod'}}, response,
+      error => rejectError(error ?? new Error('Route not handled')));
+  });
+  assert.equal((await reject(undefined)).statusCode, 400);
+  assert.equal((await reject({revision: 1})).statusCode, 400);
+  const stale = await reject({revision: 2, decisionReason: 'Incomplete'});
+  assert.equal(stale.statusCode, 409);
+  assert.equal(stale.body.error.code, 'REVISION_CONFLICT');
+  assert.equal(stale.body.data.serverValue.status, 'pending');
+  const result = await reject({revision: 1, decisionReason: 'Incomplete'});
+  assert.equal(result.statusCode, 200);
+  assert.equal(result.body.data.status, 'rejected');
+  assert.equal(result.body.data.revision, 2);
 });
 
 test('HTTP publisher role changes fail closed until role synchronization is implemented', async () => {

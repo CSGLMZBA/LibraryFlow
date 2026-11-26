@@ -31,8 +31,11 @@ Firebase roles and must not report success. This is a safety gate, not completio
 of publisher moderation; submitting and rejecting applications remain in memory.
 Publisher application submission, listing, and withdrawal HTTP routes now
 require a verified reader role; tests exercise reader, publisher, moderator,
-and anonymous access. Persistence, revision enforcement and full browser
-coverage remain pending.
+and anonymous access. Withdrawal and rejection now require client revisions
+at the HTTP boundary and compare-and-update in the in-memory repository;
+same-process competing decisions are tested. This is not durable or
+cross-instance conflict protection. Persistence and full browser coverage
+remain pending.
 Publisher service tests that assumed role changes, atomic rollback, or revision
 checking have been relabeled as partial simulations; the corresponding
 acceptance scenarios are explicit TODOs. In particular, a notification failure
