@@ -112,6 +112,30 @@ test('concurrent withdrawal and rejection cannot both change one in-memory revis
   assert.equal(notifications.length, saved.status === 'rejected' ? 1 : 0);
 });
 
+test('concurrent application reads expire one record without failing or duplicating notices', async () => {
+  const repository = new PublisherApplicationRepository();
+  const notifications = [];
+  const service = new PublisherApplicationService(repository, {
+    async create(value) { notifications.push(value); return value; },
+  });
+  await repository.save({
+    id: 'expired-concurrent', applicantUid: 'expired-reader',
+    publisherName: 'Expired Publisher', legalRepresentativeName: 'Representative',
+    independentPublisher: true, publisherEmail: 'expired@example.com',
+    status: 'pending', createdAt: '2020-01-01T00:00:00.000Z',
+    updatedAt: '2020-01-01T00:00:00.000Z', expiresAt: '2020-02-01T00:00:00.000Z',
+    revision: 1,
+  });
+  const [first, second] = await Promise.all([
+    service.getMyApplications('expired-reader'),
+    service.getMyApplications('expired-reader'),
+  ]);
+  assert.equal(first[0].status, 'expired');
+  assert.equal(second[0].status, 'expired');
+  assert.equal((await repository.findById('expired-concurrent')).revision, 2);
+  assert.equal(notifications.length, 1);
+});
+
 test('moderator rejection requires the current revision and leaves stale decisions unchanged', async () => {
   const application = await publisherApplicationService.submitApplication('revision-review-reader', {
     publisherName: 'Review Publisher',

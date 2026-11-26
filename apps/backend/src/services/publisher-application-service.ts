@@ -101,7 +101,15 @@ export class PublisherApplicationService {
         application.status === "pending" &&
         now.getTime() > new Date(application.expiresAt).getTime()
       ) {
-        await this.expireApplication(application);
+        try {
+          await this.expireApplication(application);
+        } catch (error) {
+          if (!(error instanceof ApplicationRevisionConflictError)) throw error;
+          if (error.application.status === "pending" &&
+              now.getTime() > new Date(error.application.expiresAt).getTime()) {
+            throw error;
+          }
+        }
       }
     }
 

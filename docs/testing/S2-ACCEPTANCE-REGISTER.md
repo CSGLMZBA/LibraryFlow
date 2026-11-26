@@ -37,6 +37,9 @@ same-process competing decisions are tested. This is not durable or
 cross-instance conflict protection. Persistence and full browser coverage
 remain pending. Concurrent submissions are also checked atomically within one
 in-memory repository; this does not prevent duplicates across instances.
+Concurrent reads of the same expired in-memory application tolerate a
+completed competing transition without sending a duplicate notice. Scheduled
+expiration and durable transactional notifications remain unimplemented.
 Publisher service tests that assumed role changes, atomic rollback, or revision
 checking have been relabeled as partial simulations; the corresponding
 acceptance scenarios are explicit TODOs. In particular, a notification failure
