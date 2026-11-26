@@ -458,6 +458,17 @@ Notifications are private to the recipient, created in the same transaction as
 the decision where possible, and never contain private file URLs or another
 user's data.
 
+The cloud inbox exposes `GET /notifications` and
+`POST /notifications/:id/read` to an authenticated, unrestricted recipient.
+The server derives the recipient from the verified session and returns 404 for
+another user's notification. Results are limited to 100 records and sorted
+after retrieval; this is not yet a paginated or guaranteed newest-100 inbox.
+Account-policy notifications use Firestore, while older publisher and book
+services still use in-memory notifications and are not visible in this inbox.
+Banned or deletion-pending users cannot access it; a ban reason and duration
+are shown on a verified sign-in attempt instead. Proactive delivery and email
+remain separate work.
+
 ## 8. Environment and Deployment Contract
 
 Required backend environment variables:

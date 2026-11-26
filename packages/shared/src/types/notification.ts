@@ -4,7 +4,10 @@ export type InAppNotificationType =
   | "publisher_application_approved"
   | "publisher_application_rejected"
   | "publisher_application_expired"
-  | "publisher_revoked";
+  | "publisher_revoked"
+  | "book_deleted"
+  | "account_restored"
+  | "ban_changed";
 
 export type InAppNotification = {
   id: string;

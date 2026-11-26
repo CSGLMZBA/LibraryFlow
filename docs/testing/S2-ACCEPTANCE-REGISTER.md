@@ -58,6 +58,14 @@ For an authenticated sign-in attempt, an active valid ban now provides its
 reason and duration in the restricted-account response; tests cover policy,
 HTTP envelope and client propagation. This is an on-sign-in notice, not
 evidence of proactive notification delivery.
+The cloud frontend now includes a private Firestore notification inbox and
+mark-read action for unrestricted signed-in users. The route and client have
+isolated tests for ownership, failed reads, and authentication. Inbox retrieval
+is capped at 100 without pagination; current publisher/book notifications are
+still in memory and do not reach it. A read-only live Firestore query for a
+random absent recipient passed on 2026-11-26; it is not evidence of live
+notification writes or browser delivery. Live browser and Firestore write
+evidence, proactive ban notices, and deletion confirmation email remain pending.
 On 2026-11-25, a read-only lookup of a randomly named absent account using the
 configured Firestore passed. This checks connectivity and the absent-account
 case only; it is not deployed or live ban/visibility acceptance evidence.

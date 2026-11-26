@@ -8,6 +8,7 @@ import ModeratorDashboardPage from "./pages/ModeratorDashboardPage";
 import { PublisherApplicationForm } from "./components/PublisherApplicationForm";
 import { ReaderApplicationStatus } from "./components/ReaderApplicationStatus";
 import { clearReaderApplicationCache } from "./services/reader-application-cache";
+import { NotificationInbox } from "./components/NotificationInbox";
 
 function WorkspaceShell() {
   // Get authentication state.
@@ -128,6 +129,9 @@ function WorkspaceShell() {
 
           /* Case 2: authenticated user */
           <div>
+            {(import.meta as ImportMeta & {env?: {VITE_AUTH_MODE?: string}}).env?.VITE_AUTH_MODE === "cloud" && (
+              <NotificationInbox key={user.id} />
+            )}
             {/* Reader-only publisher application navigation */}
             {user.role === "reader" && (
               <div className="mb-6 flex flex-wrap justify-end gap-3">
