@@ -27,8 +27,8 @@ JORGE ENRIQUEZ RICO
 - [Sprint 1 specification](docs/specs/SPEC-001.md)
 - [Project structure specification](docs/specs/SPEC-002-project-structure.md)
 - [Sprint 1](docs/sprints/SPRINT-001.md)
-- [Sprint 2 - Production Readiness](docs/sprints/SPRINT-002.md)
-- [Sprint 3 - Complete Platform](docs/sprints/SPRINT-003.md)
+- [Sprint 2 - Production Readiness (complete in code)](docs/sprints/SPRINT-002.md)
+- [Sprint 3 - Cutover and Core Reader Features (reduced)](docs/sprints/SPRINT-003.md)
 - [Sprint 2 Specification](docs/specs/SPEC-002.md)
 - [Sprint 3 Specification](docs/specs/SPEC-003.md)
 - [Sprint 2 Acceptance Register](docs/testing/S2-ACCEPTANCE-REGISTER.md)
@@ -60,6 +60,16 @@ seeded local moderator workspace.
 Cloud authentication is implemented behind Firebase configuration. Live
 Firestore/Supabase synchronization and external deployment require the
 credentials described in [the deployment setup guide](docs/deployment/SPRINT-1-SETUP.md).
+
+## Sprint 2 and 3 status
+
+Sprint 2 is complete in code and pushed to `main`. Cloud books, comments and
+notifications (Firestore plus private Supabase files) are off by default. Turn
+them on with `ENABLE_CLOUD_CONTENT=true` on Render and `VITE_CONTENT_MODE=cloud`
+on Netlify, then redeploy: Vite bakes `VITE_*` values in at build time. Live
+browser verification and 11 TODO tests are carried into Sprint 3, which is
+limited to cutover, favorites and ratings. See
+[the Sprint 2 deployment guide](docs/deployment/SPRINT-2-DEPLOYMENT.md).
 
 ## Local setup
 

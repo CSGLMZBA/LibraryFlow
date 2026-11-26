@@ -38,21 +38,17 @@ verification has run and its acceptance evidence is recorded.
 | S2-T10 | Cesar | Public behavior acceptance, security regression, traceability, defect evidence | S2-T01 through S2-T09 | S2-AC-001 through S2-AC-010 | `npm test`; focused acceptance suite |
 | S2-T11 | Carlos | Integration branch, contract review, conflict resolution, demo, sign-off | S2-T02, S2-T03, S2-T04, S2-T05, S2-T06, S2-T08, S2-T10 | S2-AC-001 through S2-AC-010 | `npm run typecheck`; `npm run build`; `npm test`; deployed demo |
 
-## Sprint 3 tasks
+## Sprint 3 tasks (reduced scope)
 
 | ID | Owner | Bounded deliverable | Dependencies | Acceptance | Verification |
 |---|---|---|---|---|---|
-| S3-T01 | Juan | Collections and membership persistence with ownership and revision checks | S2-T03 | S3-AC-001 | collection repository tests |
-| S3-T02 | Juan | Favorites persistence, privacy, and idempotent update notifications | S2-T03 | S3-AC-002, S3-AC-003 | favorite/notification tests |
-| S3-T03 | Juan | Ratings, purchase gate, summary transaction, update/delete | S3-T06 | S3-AC-004, S3-AC-007 | rating transaction tests |
-| S3-T04 | Juan | Publisher follows and private update notifications | S2-T02, S2-T03 | S3-AC-005 | follow/notification tests |
-| S3-T05 | Juan | Credits, moderator approvals, balances, and dummy purchase records | S2-T01, S2-T03 | S3-AC-006, S3-AC-007 | credit/purchase transaction tests |
-| S3-T06 | Bryan | Account deletion, token lifecycle, ban enforcement, and restore authorization | S2-T01, S2-T06 | S3-AC-008, S3-AC-009 | auth/account integration suite |
-| S3-T07 | Karlo | Collections, favorites, follows, ratings, responsive/offline/empty UI | S3-T01, S3-T02, S3-T03, S3-T04 | S3-AC-001 through S3-AC-005 | frontend typecheck; browser scenarios |
-| S3-T08 | Dante | Publisher pricing, purchase flow, account settings, accessible states | S3-T05, S3-T06 | S3-AC-006, S3-AC-007, S3-AC-009 | frontend typecheck; browser scenarios |
-| S3-T09 | Jorge | Permanent deletion, backup/restore, monitoring, deployment hardening | S2-T08, S3-T06 | S3-AC-008, S3-AC-010, S3-AC-011 | operational restore and health scenarios |
-| S3-T10 | Cesar | Full browser suite, accessibility/security regression, traceability | S3-T01 through S3-T09 | S3-AC-001 through S3-AC-011 | `npm test`; browser/accessibility suite |
-| S3-T11 | Carlos | Final integration, release branch, complete demo, exception approval, sign-off | S3-T07, S3-T08, S3-T09, S3-T10 | S3-AC-001 through S3-AC-011 | `npm run typecheck`; `npm run build`; `npm test`; final deployed demo |
+| S3-T01 | Carlos | Live cutover: Netlify `VITE_CONTENT_MODE=cloud`, Render `ENABLE_CLOUD_CONTENT=true`, secret rotation, browser upload check | Sprint 2 closed | S3-AC-012 | `npm run deploy:check`; `npm run storage:verify`; dated browser evidence |
+| S3-T02 | Juan | Favorites and ratings (1-5, average, update, delete) persistence and routes | None | S3-AC-002, S3-AC-004 | backend tests |
+| S3-T03 | Karlo | Favorites and ratings UI | S3-T02 | S3-AC-002, S3-AC-004 | frontend typecheck; browser scenario |
+| S3-T04 | Cesar | Run the 11 Sprint 2 TODO tests and fill the S3 register | S3-T01 | S3-AC-012 | `npm test` |
+
+Deferred to the backlog: collections, follows, pricing and purchases, favorite
+update notifications, account-deletion UI, backup/restore, accessibility audit.
 
 ## Shared completion rules
 
