@@ -968,6 +968,13 @@ describe('S2-AC-007: Scheduled Cleanup — Deletion Jobs', () => {
 // ===========================================================================
 
 describe('S2-AC-010: Deployment', () => {
+  test('production installs include build dependencies for legacy Render commands', () => {
+    const config = readFileSync(join(repoRoot, '.npmrc'), 'utf8');
+    assert.match(config, /^include\s*=\s*dev\s*$/m);
+    const render = readFileSync(join(repoRoot, 'render.yaml'), 'utf8');
+    assert.match(render, /npm ci --include=dev/);
+  });
+
   test('TC-S2-053: health handler returns 200 HealthResponse without authentication', () => {
     const result = { status: null, body: null, headers: {} };
     const response = {

@@ -21,7 +21,10 @@ in-memory and can be lost when the service restarts.
 The Render service build command must match `render.yaml` and use
 `npm ci --include=dev`, so the TypeScript compiler comes from the tracked
 lockfile even when `NODE_ENV=production`. Existing services not managed by a
-Blueprint must have this command set in their Render dashboard.
+Blueprint must have this command set in their Render dashboard. The root
+`.npmrc` also includes development dependencies for legacy `npm install`
+build commands, since TypeScript and Express declarations are needed to build.
+Explicit command-line or environment npm settings can override this fallback.
 
 ## 1. Environment variables
 
