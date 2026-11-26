@@ -28,6 +28,17 @@ Sprint 3 is complete only when every non-deferred row passes with evidence.
 An owner-approved deferral must identify the specific out-of-scope item and
 does not turn a skipped test or pending acceptance result into a pass.
 
+### S3-AC-014 partial evidence
+
+On 2026-11-25, Carlos reported updating the worker secret in Render and
+GitHub while the workflow was disabled. After re-enabling it, a
+[manual run](https://github.com/CSGLMZBA/LibraryFlow/actions/runs/45736168783)
+on `main` completed successfully against the deployed backend: it claimed
+zero deletion jobs and reported zero failures. Application expiry reported
+`enabled: false`, so that run did not verify expiration. A successful scheduled
+run and remaining storage evidence are still required; S3-AC-014 stays
+pending.
+
 ## Evidence Record Format
 
 For every passed item, record:
