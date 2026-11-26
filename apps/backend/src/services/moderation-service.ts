@@ -40,6 +40,9 @@ export class ModerationService {
 
   async approveBook(bookId: string, _moderatorId: string): Promise<Book> {
     const book = await this.getPendingBook(bookId);
+    if (!book.fileObjectPath) {
+      throw new Error("The book has no uploaded file yet and cannot be approved.");
+    }
     const updatedBook = await this.books.update(book.id, {
       status: "approved",
       updatedAt: new Date().toISOString(),

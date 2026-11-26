@@ -279,6 +279,7 @@ describe('S2-AC-008: Moderation — Bans, Revocation, and Book Deletion', () => 
       },
       'pub-owner-del-2',
     );
+    await bookRepo.update(book.id, { fileObjectPath: `books/${book.id}/1/file.epub` });
     await moderationService.approveBook(book.id, 'mod-1');
     assert.equal((await bookService.getApprovedCatalog({ search: 'Ephemeral' })).length, 1);
 

@@ -155,6 +155,7 @@ test('S1-AC-003 (TC-014, TC-015): approve exposes book; reject notifies owner an
     'pub-2',
   );
 
+  await bookRepo.update(b1.id, { fileObjectPath: `books/${b1.id}/1/file.pdf` });
   const approved = await modService.approveBook(b1.id, 'mod-1');
   assert.equal(approved.status, 'approved');
   assert.equal((await bookService.getApprovedCatalog()).length, 1);
@@ -181,6 +182,7 @@ test('S1-AC-004 & S1-AC-005 (TC-017..TC-022): owner-only metadata update, identi
     { title: 'Signals and Systems', author: 'Oppenheim', description: 'A description of the book.', fileType: 'pdf', fileSizeBytes: 4096, categoryIds: ['cat-1'], genreIds: ['gen-1'] },
     'pub-owner',
   );
+  await bookRepo.update(created.id, { fileObjectPath: `books/${created.id}/1/file.pdf` });
   await modService.approveBook(created.id, 'mod-1');
 
   // No propietario rechazado
@@ -236,6 +238,7 @@ test('S1-AC-007 (TC-027, TC-030): comment creation, moderation audit, notificati
     { title: 'Database Internals', author: 'Alex Petrov', description: 'A description of the book.', fileType: 'epub', fileSizeBytes: 3000, categoryIds: [], genreIds: [] },
     'pub-1',
   );
+  await bookRepo.update(book.id, { fileObjectPath: `books/${book.id}/1/file.epub` });
   await modService.approveBook(book.id, 'mod-1');
 
   const c1 = await commentService.addComment(book.id, '  Primer comentario  ', 'reader-1', 'Reader1001');
