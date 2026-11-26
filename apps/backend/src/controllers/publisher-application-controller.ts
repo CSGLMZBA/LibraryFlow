@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { publisherApplicationService as memoryApplicationService } from "../services/publisher-application-service.js";
-import { CloudPublisherApplicationService, PublisherApplicationStoreError } from "../services/cloud-publisher-application-service.js";
+import { CloudPublisherApplicationService, PublisherApplicationStoreError, RoleSyncPendingError } from "../services/cloud-publisher-application-service.js";
 import { ApplicationRevisionConflictError } from "../repositories/publisher-application-repository.js";
 
 const publisherApplicationService = process.env.ENABLE_CLOUD_PUBLISHER_APPLICATIONS === "true"
@@ -8,6 +8,13 @@ const publisherApplicationService = process.env.ENABLE_CLOUD_PUBLISHER_APPLICATI
   : memoryApplicationService;
 
 function sendError(response: Response, error: unknown): void {
+  if (error instanceof RoleSyncPendingError) {
+    response.status(503).json({
+      success: false,
+      error: { code: "ROLE_SYNC_PENDING", message: error.message },
+    });
+    return;
+  }
   if (error instanceof PublisherApplicationStoreError) {
     response.status(503).json({
       success: false,
@@ -148,6 +155,7 @@ export async function approveApplication(
     const data = await publisherApplicationService.approveApplication(
       request.params.id as string,
       response.locals.auth.uid as string,
+      revisionFromBody(request.body),
     );
     response.json({ success: true, data });
   } catch (error) {

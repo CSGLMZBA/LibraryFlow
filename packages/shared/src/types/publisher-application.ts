@@ -17,6 +17,7 @@ export type PublisherApplication = {
   createdAt: string;
   updatedAt: string;
   reviewedAt?: string;
+  revokedAt?: string;
   expiresAt: string;
   reviewerUid?: string;
   decisionReason?: string;

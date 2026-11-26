@@ -9,10 +9,15 @@ import {
 import {
   listPendingApplications,
   rejectApplication,
+  approveApplication,
+  revokePublisher,
 } from "../controllers/publisher-application-controller.js";
 import { deleteBook } from "../controllers/book-controller.js";
 
-export function createModerationRouter(guard: RequestHandler = moderatorGuard) {
+export function createModerationRouter(
+  guard: RequestHandler = moderatorGuard,
+  roleChangesEnabled = process.env.ENABLE_CLOUD_PUBLISHER_APPLICATIONS === "true",
+) {
   const moderationRouter = Router();
 
   const publisherRoleChangeUnavailable: RequestHandler = (_request, response) => {
@@ -24,6 +29,8 @@ export function createModerationRouter(guard: RequestHandler = moderatorGuard) {
       },
     });
   };
+  const approveHandler = roleChangesEnabled ? approveApplication : publisherRoleChangeUnavailable;
+  const revokeHandler = roleChangesEnabled ? revokePublisher : publisherRoleChangeUnavailable;
 
   moderationRouter.get("/books/pending", guard, listPendingBooks);
   moderationRouter.post("/books/:bookId/approve", guard, approveBook);
@@ -38,7 +45,7 @@ export function createModerationRouter(guard: RequestHandler = moderatorGuard) {
   moderationRouter.post(
     "/publisher-applications/:id/approve",
     guard,
-    publisherRoleChangeUnavailable,
+    approveHandler,
   );
   moderationRouter.post(
     "/publisher-applications/:id/reject",
@@ -48,7 +55,7 @@ export function createModerationRouter(guard: RequestHandler = moderatorGuard) {
   moderationRouter.post(
     "/publishers/:uid/revoke",
     guard,
-    publisherRoleChangeUnavailable,
+    revokeHandler,
   );
   return moderationRouter;
 }

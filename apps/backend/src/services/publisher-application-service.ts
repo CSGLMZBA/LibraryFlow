@@ -150,8 +150,10 @@ export class PublisherApplicationService {
   async approveApplication(
     id: string,
     reviewerUid: string,
+    clientRevision?: number,
   ): Promise<PublisherApplication> {
     const application = await this.getApplication(id);
+    this.requireRevision(application, clientRevision);
     this.requirePending(application);
     const reviewedAt = new Date().toISOString();
     const updatedApplication = await this.updateApplication(id, {

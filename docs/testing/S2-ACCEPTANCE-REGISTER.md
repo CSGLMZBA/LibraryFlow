@@ -26,9 +26,10 @@ Existing publisher application tests provide partial service/UI evidence, not
 proof of the required durable transaction, scheduled expiration, and browser
 scenarios. The application repository currently stores records in memory.
 Publisher approval and revocation HTTP endpoints return `503 FEATURE_UNAVAILABLE`
-after moderator authentication: their existing implementations do not synchronize
-Firebase roles and must not report success. This is a safety gate, not completion
-of publisher moderation; submitting and rejecting applications remain in memory.
+after moderator authentication unless the cloud application flag is on: the
+in-memory implementation does not synchronize Firebase roles and must not report
+success. This is a safety gate, not completion
+of publisher moderation; submitting and rejecting applications remain in memory by default.
 Publisher application submission, listing, and withdrawal HTTP routes now
 require a verified reader role; tests exercise reader, publisher, moderator,
 and anonymous access. Withdrawal and rejection now require client revisions
@@ -45,8 +46,18 @@ transactional submission, withdrawal, rejection and read-triggered expiration,
 with audit and rejection/expiration notices. Isolated fake-store tests exercise
 rollback, concurrency and cross-instance reads; these are not live Firestore
 transaction or browser evidence. The flag is disabled by default pending rules
-verification, live testing and an existing-data transition plan. Approval,
-Firebase claim synchronization and scheduled expiration remain unavailable.
+verification, live testing and an existing-data transition plan. Scheduled
+expiration remains unavailable.
+Firebase claim synchronization for approval and revocation is implemented in that
+service as an outbox flow: the decision, audit, notice and a pending role change
+commit in one Firestore transaction, then the claim is set. Fake-store and fake-role
+tests cover provider failure with exact-once retry, moderator protection, rollback
+when records cannot be written, competing decisions, and release of a revoked
+publisher's application. These are not live Firebase evidence, and the
+single-transaction wording of SPEC-002 §2.3 is not literally met (see the spec).
+The route returns `503 FEATURE_UNAVAILABLE` for these actions when the flag is off.
+TC-S2-011, 013, 014, 018, 020/021 and 022 stay TODO until verified against live
+Firebase and the upload APIs.
 On 2026-11-25, a read-only query for a randomly named absent applicant passed
 against the configured Firestore; this does not verify transaction writes.
 Publisher service tests that assumed role changes, atomic rollback, or revision

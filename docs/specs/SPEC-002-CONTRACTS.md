@@ -149,11 +149,19 @@ Firestore transaction: it checks `pending` and `revision`, writes the
 application, account role, audit record, and notification or writes none of
 them. A failed transaction cannot partially grant a role.
 
-The experimental Firestore implementation for submission, withdrawal,
-rejection and read-triggered expiration is disabled by default. It does not
-implement approval, role synchronization or scheduled expiration; the legacy
-default continues to use in-memory records. See the deployment guide before
-enabling the experimental store.
+The experimental Firestore implementation (`ENABLE_CLOUD_PUBLISHER_APPLICATIONS=true`,
+disabled by default) covers submission, withdrawal, rejection, read-triggered
+expiration, approval and revocation. Role claims live in Firebase Authentication,
+which cannot join a Firestore transaction. Approval and revocation therefore
+commit the decision, audit record, notification and a pending
+`publisherRoleChanges` record in one transaction, then set the Firebase claim and
+mark the change completed. If the claim update fails, the role is unchanged
+(never over-granted), the API returns `503 ROLE_SYNC_PENDING`, and repeating the
+same action completes it exactly once. This deliberately deviates from the
+single-transaction wording above and needs sign-off. A moderator's role is never
+changed, and a revoked publisher may apply again. Scheduled expiration is not
+implemented; the legacy default continues to use in-memory records with approval
+and revocation unavailable.
 
 ## 3. Revision and Synchronization Contract
 
