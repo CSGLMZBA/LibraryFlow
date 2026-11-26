@@ -12,6 +12,12 @@ deployment. Record the evidence in §8 and paste it into
 Never paste keys, private keys, `.env` contents, backup files, or signed URLs
 into chat, pull requests, or the register.
 
+Publisher approval and revocation API calls currently return
+`503 FEATURE_UNAVAILABLE` after moderator authentication. They must remain
+unavailable until durable decisions and Firebase role synchronization are
+implemented and verified. Other publisher application records remain
+in-memory and can be lost when the service restarts.
+
 The Render service build command must match `render.yaml` and use
 `npm ci --include=dev`, so the TypeScript compiler comes from the tracked
 lockfile even when `NODE_ENV=production`. Existing services not managed by a

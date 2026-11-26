@@ -25,6 +25,7 @@ import {
 } from '../../apps/backend/src/repositories/notification-repository.ts';
 import { parseRegistration } from '../../apps/backend/src/schemas/auth-schema.ts';
 import { createAuthGuard } from '../../apps/backend/src/middleware/auth-guard.ts';
+import { createModerationRouter } from '../../apps/backend/src/routes/moderation-routes.ts';
 
 function fakeResponse() {
   return {
@@ -41,6 +42,36 @@ function fakeResponse() {
     },
   };
 }
+
+test('HTTP publisher role changes fail closed until role synchronization is implemented', async () => {
+  const application = await publisherApplicationService.submitApplication('role-gate-reader', {
+    publisherName: 'Gate Publisher',
+    legalRepresentativeName: 'Gate Representative',
+    independentPublisher: true,
+    publisherEmail: 'gate@example.com',
+  });
+  const guard = createAuthGuard(async (token) => token === 'mod'
+    ? {uid: 'gate-moderator', role: 'moderator'}
+    : token === 'reader' ? {uid: 'role-gate-reader', role: 'reader'} : null, 'moderator');
+  const router = createModerationRouter(guard);
+  const dispatch = (url, token) => new Promise((resolve, reject) => {
+    const response = fakeResponse();
+    response.json = function (data) { this.body = data; resolve(this); return this; };
+    router.handle({method: 'POST', url, body: {decisionReason: 'Test'},
+      headers: token ? {authorization: `Bearer ${token}`} : {}}, response,
+      (error) => reject(error ?? new Error('Route not handled')));
+  });
+
+  for (const path of [`/publisher-applications/${application.id}/approve`, '/publishers/role-gate-reader/revoke']) {
+    assert.equal((await dispatch(path)).statusCode, 401);
+    assert.equal((await dispatch(path, 'reader')).statusCode, 403);
+    const result = await dispatch(path, 'mod');
+    assert.equal(result.statusCode, 503);
+    assert.equal(result.body.error.code, 'FEATURE_UNAVAILABLE');
+  }
+  assert.equal((await publisherApplicationRepository.findById(application.id)).status, 'pending');
+  assert.deepEqual(await notificationRepository.findByUserId('role-gate-reader'), []);
+});
 
 function createIsolatedService(options = {}) {
   const apps = new Map();
@@ -294,7 +325,7 @@ describe('S2-AC-001: Publisher Application Submission', () => {
     );
   });
 
-  test('TC-S2-010: only authenticated readers may submit applications', async () => {
+  test('reader role guard rejects anonymous and publisher identities', async () => {
     const unauthRes = fakeResponse();
     let unauthNext = false;
     await createAuthGuard(async () => null, 'reader')(
@@ -341,7 +372,7 @@ describe('S2-AC-002: Administrator Approval', () => {
     website: 'https://northstar.example.com',
   };
 
-  test('TC-S2-011: approve a pending application atomically', async () => {
+  test('in-memory service records approval and notification', async () => {
     const application = await publisherApplicationService.submitApplication(
       'reader-s2-approved',
       validApplication,
@@ -381,8 +412,8 @@ describe('S2-AC-002: Administrator Approval', () => {
     assert.equal(nextCalled, false);
   });
 
-  test('TC-S2-013: approval transaction is atomic — no partial role grant', async () => {
-    const { service, notifRepo } = createIsolatedService({ failNotificationWrite: true });
+  test('in-memory approval exposes notification failure after updating the application', async () => {
+    const { service, appRepo, notifRepo } = createIsolatedService({ failNotificationWrite: true });
     const app = await service.submitApplication('reader-atomic-check', validApplication);
 
     await assert.rejects(
@@ -392,9 +423,10 @@ describe('S2-AC-002: Administrator Approval', () => {
 
     const notifications = await notifRepo.findByUserId('reader-atomic-check');
     assert.equal(notifications.length, 0);
+    assert.equal((await appRepo.findById(app.id)).status, 'approved');
   });
 
-  test('TC-S2-014: approval with stale revision is rejected', async () => {
+  test('in-memory service rejects a second approval after the first', async () => {
     const { service } = createIsolatedService();
     const app = await service.submitApplication('reader-stale-approve', validApplication);
     const firstApproval = await service.approveApplication(app.id, 'moderator-1');
@@ -473,7 +505,7 @@ describe('S2-AC-003: Administrator Rejection', () => {
     );
   });
 
-  test('TC-S2-018: rejection never grants publisher privileges', async () => {
+  test('in-memory rejection and simulated reader role guard', async () => {
     const { service } = createIsolatedService();
     const app = await service.submitApplication('reader-rejected-guard', validApplication);
     const rejected = await service.rejectApplication(
@@ -511,7 +543,7 @@ describe('S2-AC-004: Upload Authorization', () => {
     assert.equal(allowed, false);
   });
 
-  test('TC-S2-020: pending applicant cannot create books or upload', async () => {
+  test('publisher guard rejects a simulated pending reader', async () => {
     const res = fakeResponse();
     let allowed = false;
     await createAuthGuard(
@@ -524,7 +556,7 @@ describe('S2-AC-004: Upload Authorization', () => {
     assert.equal(allowed, false);
   });
 
-  test('TC-S2-021: rejected applicant cannot create books or upload', async () => {
+  test('publisher guard rejects a simulated rejected reader', async () => {
     const res = fakeResponse();
     let allowed = false;
     await createAuthGuard(
@@ -537,7 +569,7 @@ describe('S2-AC-004: Upload Authorization', () => {
     assert.equal(allowed, false);
   });
 
-  test('TC-S2-022: revoked publisher cannot create books or upload', async () => {
+  test('in-memory revocation notice and simulated reader role guard', async () => {
     const { service, notifRepo } = createIsolatedService();
     await service.revokePublisher(
       'pub-revoked-01',
@@ -556,6 +588,14 @@ describe('S2-AC-004: Upload Authorization', () => {
     )({ headers: { authorization: 'Bearer revoked-pub-token' } }, res, () => {
       allowed = true;
     });
+
+    test.todo('TC-S2-010: actual application route allows only authenticated readers');
+    test.todo('TC-S2-011: approval atomically records the decision and role grant');
+    test.todo('TC-S2-013: notification failure rolls back approval and role grant');
+    test.todo('TC-S2-014: approval with stale revision is rejected');
+    test.todo('TC-S2-018: rejected applicant retains their real reader role');
+    test.todo('TC-S2-020 and TC-S2-021: pending and rejected applicants cannot call upload APIs');
+    test.todo('TC-S2-022: revoked publisher loses actual upload privileges');
     assert.equal(res.statusCode, 403);
     assert.equal(allowed, false);
   });

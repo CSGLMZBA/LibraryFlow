@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type RequestHandler } from "express";
 import { moderatorGuard } from "../middleware/moderator-guard.js";
 import {
   approveBook,
@@ -7,37 +7,50 @@ import {
   removeComment,
 } from "../controllers/moderation-controller.js";
 import {
-  approveApplication,
   listPendingApplications,
   rejectApplication,
-  revokePublisher,
 } from "../controllers/publisher-application-controller.js";
 import { deleteBook } from "../controllers/book-controller.js";
 
-export const moderationRouter = Router();
+export function createModerationRouter(guard: RequestHandler = moderatorGuard) {
+  const moderationRouter = Router();
 
-moderationRouter.get("/books/pending", moderatorGuard, listPendingBooks);
-moderationRouter.post("/books/:bookId/approve", moderatorGuard, approveBook);
-moderationRouter.post("/books/:bookId/reject", moderatorGuard, rejectBook);
-moderationRouter.delete("/books/:bookId", moderatorGuard, deleteBook);
-moderationRouter.delete("/comments/:commentId", moderatorGuard, removeComment);
-moderationRouter.get(
-  "/publisher-applications",
-  moderatorGuard,
-  listPendingApplications,
-);
-moderationRouter.post(
-  "/publisher-applications/:id/approve",
-  moderatorGuard,
-  approveApplication,
-);
-moderationRouter.post(
-  "/publisher-applications/:id/reject",
-  moderatorGuard,
-  rejectApplication,
-);
-moderationRouter.post(
-  "/publishers/:uid/revoke",
-  moderatorGuard,
-  revokePublisher,
-);
+  const publisherRoleChangeUnavailable: RequestHandler = (_request, response) => {
+    response.status(503).json({
+      success: false,
+      error: {
+        code: "FEATURE_UNAVAILABLE",
+        message: "Publisher role changes are temporarily unavailable.",
+      },
+    });
+  };
+
+  moderationRouter.get("/books/pending", guard, listPendingBooks);
+  moderationRouter.post("/books/:bookId/approve", guard, approveBook);
+  moderationRouter.post("/books/:bookId/reject", guard, rejectBook);
+  moderationRouter.delete("/books/:bookId", guard, deleteBook);
+  moderationRouter.delete("/comments/:commentId", guard, removeComment);
+  moderationRouter.get(
+    "/publisher-applications",
+    guard,
+    listPendingApplications,
+  );
+  moderationRouter.post(
+    "/publisher-applications/:id/approve",
+    guard,
+    publisherRoleChangeUnavailable,
+  );
+  moderationRouter.post(
+    "/publisher-applications/:id/reject",
+    guard,
+    rejectApplication,
+  );
+  moderationRouter.post(
+    "/publishers/:uid/revoke",
+    guard,
+    publisherRoleChangeUnavailable,
+  );
+  return moderationRouter;
+}
+
+export const moderationRouter = createModerationRouter();

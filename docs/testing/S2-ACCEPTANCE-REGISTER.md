@@ -25,6 +25,14 @@ The summary statuses above supersede earlier acceptance dispositions below.
 Existing publisher application tests provide partial service/UI evidence, not
 proof of the required durable transaction, scheduled expiration, and browser
 scenarios. The application repository currently stores records in memory.
+Publisher approval and revocation HTTP endpoints return `503 FEATURE_UNAVAILABLE`
+after moderator authentication: their existing implementations do not synchronize
+Firebase roles and must not report success. This is a safety gate, not completion
+of publisher moderation; submitting and rejecting applications remain in memory.
+Publisher service tests that assumed role changes, atomic rollback, or revision
+checking have been relabeled as partial simulations; the corresponding
+acceptance scenarios are explicit TODOs. In particular, a notification failure
+currently leaves an in-memory approval recorded rather than rolling it back.
 
 The revision/conflict suite now runs as part of `npm test`; it exercises book
 service conflicts and in-process replay, including authorization and isolation
