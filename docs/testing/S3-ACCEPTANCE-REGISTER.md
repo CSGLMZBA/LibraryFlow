@@ -39,6 +39,15 @@ zero deletion jobs and reported zero failures. Application expiry reported
 run and remaining storage evidence are still required; S3-AC-014 stays
 pending.
 
+### S3-AC-015 partial evidence
+
+On 2026-11-25, Carlos selected a 30-day grace period, deletion of personal data
+and user contributions where permitted, and retention of only necessary audit
+records. The retention duration, legal obligations and detailed data scope
+remain for review; permanent account deletion remains deferred. This records
+the decision only, not a verified deletion implementation. Baseline checks,
+deployed demo and release sign-off remain pending.
+
 ## Evidence Record Format
 
 For every passed item, record:
