@@ -40,8 +40,9 @@ verification has run and its acceptance evidence is recorded.
 
 ## Sprint 3 tasks (reduced scope)
 
-All tasks start `Not started`; existing code or these descriptions are not
-evidence of completion. Owners may work in parallel on independent tasks.
+Tasks are `Not started` unless progress is explicitly recorded below; existing
+code or these descriptions are not evidence of completion. Owners may work in
+parallel on independent tasks.
 Agent identity, status, evidence, and final commit are recorded in the task and
 the owner's agent log; see the [starter instructions](../agent-prompts/Starter.md).
 
@@ -58,11 +59,20 @@ the owner's agent log; see the [starter instructions](../agent-prompts/Starter.m
 S3-T03, S3-T05 and S3-T06 may start with a reviewed contract-only handoff,
 but remain blocked from integration and `Done` until S3-T02 is complete.
 Karlo and Dante coordinate before editing shared UI files; Bryan and Juan
-coordinate changes to shared authorization or route files. Jorge must disable
-the scheduled workflow before rotating the previously exposed secret, set
-the same new value in Render and GitHub without recording it, then re-enable
-and verify the workflow. Provider access or live credentials may require
-Carlos's help.
+coordinate changes to shared authorization or route files. Provider access or
+live credentials may require Carlos's help.
+
+### S3-T07 progress
+
+- **Done: worker-secret rotation and manual verification** (2026-11-25):
+  Carlos updated the secret in Render and GitHub while the workflow was
+  disabled, then authorized re-enabling it. The
+  [manual verification run](https://github.com/CSGLMZBA/LibraryFlow/actions/runs/45736168783)
+  succeeded. It claimed no deletion jobs; application expiry reported
+  `enabled: false`. No secret value is recorded.
+- **Still pending:** verify a scheduled run, the live browser upload/download
+  path and the remaining deployment and storage evidence. S3-T07 and
+  S3-AC-014 are not yet done.
 
 Deferred to the backlog: collections, follows, pricing and purchases, favorite
 update notifications, permanent account deletion, browser-only book migration,

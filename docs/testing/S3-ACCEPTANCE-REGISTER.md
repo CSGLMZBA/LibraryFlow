@@ -28,6 +28,26 @@ Sprint 3 is complete only when every non-deferred row passes with evidence.
 An owner-approved deferral must identify the specific out-of-scope item and
 does not turn a skipped test or pending acceptance result into a pass.
 
+### S3-AC-014 partial evidence
+
+On 2026-11-25, Carlos reported updating the worker secret in Render and
+GitHub while the workflow was disabled. After re-enabling it, a
+[manual run](https://github.com/CSGLMZBA/LibraryFlow/actions/runs/45736168783)
+on `main` completed successfully against the deployed backend: it claimed
+zero deletion jobs and reported zero failures. Application expiry reported
+`enabled: false`, so that run did not verify expiration. A successful scheduled
+run and remaining storage evidence are still required; S3-AC-014 stays
+pending.
+
+### S3-AC-015 partial evidence
+
+On 2026-11-25, Carlos selected a 30-day grace period, deletion of personal data
+and user contributions where permitted, and retention of only necessary audit
+records. The retention duration, legal obligations and detailed data scope
+remain for review; permanent account deletion remains deferred. This records
+the decision only, not a verified deletion implementation. Baseline checks,
+deployed demo and release sign-off remain pending.
+
 ## Evidence Record Format
 
 For every passed item, record:

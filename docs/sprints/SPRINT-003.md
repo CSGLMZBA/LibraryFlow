@@ -36,6 +36,18 @@ sprint. Purchase-gated ratings and favorite update notifications are deferred.
 Existing browser-only books are not automatically migrated; migration is not
 required for this sprint.
 
+## Account-deletion decision
+
+On 2026-11-25, Carlos chose to retain the 30-day grace period and, after it
+ends, delete personal account data and the user's contributions where
+permitted. Retain only the minimum necessary audit records; their retention
+period and applicable legal obligations require review. The exact data
+inventory, treatment of published books and third-party data, and operational
+deletion procedure also require review before implementation.
+
+This is the intended policy, not authorization to run permanent deletion.
+Implementation remains deferred; `account-data` jobs remain pending.
+
 ## Deferred (post-Sprint 3 backlog)
 
 Collections, publisher follows, update notifications, pricing and dummy
