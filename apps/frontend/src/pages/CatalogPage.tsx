@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { COMMENT_MAX_LENGTH, type BookComment } from "@library-flow/shared";
 import BookCard from "../components/BookCard";
 import BookReader from "../components/BookReader";
-import { bookRepository } from "../repositories/book-repository";
+import { useClassifications } from "../hooks/use-classifications";
+import { bookService } from "../services/book-service";
 import {
   downloadBookForOffline,
   getOfflineBook,
@@ -11,9 +12,9 @@ import {
   type OfflineBook,
 } from "../services/offline-book-service";
 import { filterCatalogBooks } from "../utils/filter-catalog-books";
+import { genreMatchesCategory } from "../utils/classification";
 import type { BookRecord } from "../types/book";
 import { useAuth } from "../contexts/AuthContext";
-import { commentRepository } from "../repositories/comment-repository";
 import { commentService } from "../services/comment-service";
 
 export default function CatalogPage() {
@@ -32,10 +33,9 @@ export default function CatalogPage() {
   const [commentText, setCommentText] = useState("");
   const [commentError, setCommentError] = useState<string | null>(null);
 
-  const categories = useMemo(() => bookRepository.getCategories(), []);
-  const genres = useMemo(() => bookRepository.getGenres(), []);
+  const { categories, genres } = useClassifications();
   const visibleGenres = useMemo(
-    () => categoryId ? genres.filter((genre) => genre.categoryId === categoryId) : genres,
+    () => categoryId ? genres.filter((genre) => genreMatchesCategory(genre, categoryId)) : genres,
     [genres, categoryId]
   );
 
@@ -44,11 +44,7 @@ export default function CatalogPage() {
     setError(null);
     try {
       const [approved, offlineIds] = await Promise.all([
-        bookRepository.getAllBooks().then((allBooks) =>
-          allBooks
-            .filter((book) => book.status === "approved")
-            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-        ),
+        bookService.listApprovedBooks(),
         listOfflineBookIds(),
       ]);
       setBooks(approved);
@@ -56,7 +52,7 @@ export default function CatalogPage() {
       offlineIds.forEach((id) => { saved[id] = "Completed"; });
       setDownloadStates(saved);
     } catch {
-      setError("Could not load the catalog. Check browser storage.");
+      setError("Could not load the catalog. Check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +67,7 @@ export default function CatalogPage() {
       setCommentError(null);
       return;
     }
-    void commentRepository.getCommentsByBookId(selectedBook.id)
+    void commentService.listBookComments(selectedBook.id)
       .then(setComments)
       .catch(() => setComments([]));
   }, [selectedBook]);
@@ -89,7 +85,7 @@ export default function CatalogPage() {
       return;
     }
     setCommentText("");
-    setComments(await commentRepository.getCommentsByBookId(selectedBook.id));
+    setComments(await commentService.listBookComments(selectedBook.id));
   }
 
   const filteredBooks = useMemo(
@@ -105,7 +101,7 @@ export default function CatalogPage() {
 
   function changeCategory(id: string) {
     setCategoryId(id);
-    if (genreId && id && !genres.some((genre) => genre.id === genreId && genre.categoryId === id)) {
+    if (genreId && id && !genres.some((genre) => genre.id === genreId && genreMatchesCategory(genre, id))) {
       setGenreId("");
     }
   }

@@ -6,6 +6,7 @@ import type {
   CreateBookInput,
   UpdateBookInput,
 } from "../types/book";
+import { genreMatchesCategory } from "../utils/classification";
 
 export const BOOK_TITLE_MAX_LENGTH = 100;
 export const BOOK_AUTHOR_MAX_LENGTH = 25;
@@ -69,7 +70,7 @@ export function validateBookMetadataFields(
   const matchedGenre = validGenres.find((g) => g.id === input.genreId);
   if (!input.genreId || !matchedGenre) {
     errors.genreId = "Select a valid moderator-approved genre.";
-  } else if (categoryExists && matchedGenre.categoryId !== input.categoryId) {
+  } else if (categoryExists && !genreMatchesCategory(matchedGenre, input.categoryId)) {
     errors.genreId = "Selected genre does not belong to the chosen category.";
   }
 

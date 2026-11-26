@@ -7,6 +7,8 @@ import {
   validateUpdateBookInput,
 } from "../schemas/book-schema";
 import { bookService } from "../services/book-service";
+import { useClassifications } from "../hooks/use-classifications";
+import { genreMatchesCategory } from "../utils/classification";
 import type { AuthUser } from "../types/auth";
 import type { BookRecord, BookValidationErrors } from "../types/book";
 
@@ -23,8 +25,7 @@ export function PublisherBookForm({
   onSuccess,
   onCancelEdit,
 }: PublisherBookFormProps) {
-  const categories = useMemo(() => bookService.getAvailableCategories(), []);
-  const allGenres = useMemo(() => bookService.getAvailableGenres(), []);
+  const { categories, genres: allGenres } = useClassifications();
 
   const [title, setTitle] = useState("");
   const [author, setAuthor] = useState("");
@@ -38,7 +39,7 @@ export function PublisherBookForm({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const filteredGenres = useMemo(
-    () => allGenres.filter((g) => g.categoryId === categoryId),
+    () => allGenres.filter((g) => genreMatchesCategory(g, categoryId)),
     [allGenres, categoryId]
   );
 
@@ -57,7 +58,7 @@ export function PublisherBookForm({
       setDescription("");
       const defaultCategory = categories[0]?.id ?? "";
       setCategoryId(defaultCategory);
-      const firstGenre = allGenres.find((g) => g.categoryId === defaultCategory);
+      const firstGenre = allGenres.find((g) => genreMatchesCategory(g, defaultCategory));
       setGenreId(firstGenre?.id ?? "");
       setFile(null);
       setErrors({});
@@ -69,7 +70,7 @@ export function PublisherBookForm({
 
   const handleCategoryChange = (nextCategoryId: string) => {
     setCategoryId(nextCategoryId);
-    const firstValidGenre = allGenres.find((g) => g.categoryId === nextCategoryId);
+    const firstValidGenre = allGenres.find((g) => genreMatchesCategory(g, nextCategoryId));
     setGenreId(firstValidGenre?.id ?? "");
   };
 
@@ -96,6 +97,7 @@ export function PublisherBookForm({
           description,
           categoryId,
           genreId,
+          revision: editingBook.revision,
         });
 
         if (!result.success) {

@@ -6,12 +6,23 @@ import {
 import { bookRepository } from "../repositories/book-repository";
 import { commentRepository } from "../repositories/comment-repository";
 import type { AuthUser } from "../types/auth";
+import { CLOUD_CONTENT } from "../utils/content-mode";
+import { createCloudCommentService } from "./cloud-comment-service";
+import type { CommentServicePort, CommentServiceResult } from "./comment-service-port";
 
-export type CommentServiceResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { code: string; message: string } };
+export type { CommentServiceResult } from "./comment-service-port";
 
-export const commentService = {
+const localCommentService: CommentServicePort = {
+  async listBookComments(bookId: string): Promise<BookComment[]> {
+    return commentRepository.getCommentsByBookId(bookId);
+  },
+
+  async listAllForModeration(): Promise<BookComment[]> {
+    const all = await commentRepository.getAllComments();
+    return all.filter((comment) => !comment.isDeleted)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
   async moderateComment(
     moderator: AuthUser,
     commentId: string,
@@ -144,3 +155,6 @@ export const commentService = {
     return { success: true, data: saved };
   },
 };
+
+/** The comments backend for this build: browser storage by default, the cloud API when VITE_CONTENT_MODE=cloud. */
+export const commentService: CommentServicePort = CLOUD_CONTENT ? createCloudCommentService() : localCommentService;

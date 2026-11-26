@@ -6,7 +6,7 @@
   NODE_VERSION = "20"
   # These values are public browser configuration, not credentials.
   # Avoid Netlify secret false positives while still scanning all other build output.
-  SECRETS_SCAN_OMIT_KEYS = "VITE_AUTH_MODE,VITE_API_BASE_URL"
+  SECRETS_SCAN_OMIT_KEYS = "VITE_AUTH_MODE,VITE_CONTENT_MODE,VITE_API_BASE_URL"
 
 [[redirects]]
   from = "/*"

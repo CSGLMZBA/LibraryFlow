@@ -10,6 +10,7 @@ export interface BookCategory {
 export interface BookGenre {
   id: string;
   name: string;
+  /** Empty when the genre applies to every category (cloud classifications). */
   categoryId: string;
 }
 
@@ -30,6 +31,8 @@ export interface BookRecord {
   rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
+  /** Server revision, present only for cloud records; sent back to detect conflicting edits. */
+  revision?: number;
 }
 
 export interface StoredBookEntry extends BookRecord {
@@ -51,6 +54,8 @@ export interface UpdateBookInput {
   description: string;
   categoryId: string;
   genreId: string;
+  /** The revision the editor was looking at (cloud mode). */
+  revision?: number;
 }
 
 export interface BookValidationErrors {

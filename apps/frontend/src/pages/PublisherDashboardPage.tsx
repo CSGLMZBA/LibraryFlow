@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PublisherBookCommentsSection } from "../components/PublisherBookCommentsSection";
 import { PublisherBookForm } from "../components/PublisherBookForm";
+import { useClassifications } from "../hooks/use-classifications";
 import { bookService } from "../services/book-service";
 import type { AuthUser } from "../types/auth";
 import type { BookModerationStatus, BookRecord } from "../types/book";
@@ -40,8 +41,7 @@ export function PublisherDashboardPage({ publisher }: PublisherDashboardPageProp
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const categories = useMemo(() => bookService.getAvailableCategories(), []);
-  const genres = useMemo(() => bookService.getAvailableGenres(), []);
+  const { categories, genres, error: classificationError } = useClassifications();
 
   const loadBooks = useCallback(async () => {
     setIsLoading(true);
@@ -111,6 +111,12 @@ export function PublisherDashboardPage({ publisher }: PublisherDashboardPageProp
           className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
         >
           {errorMessage}
+        </div>
+      )}
+
+      {classificationError && (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {classificationError}
         </div>
       )}
 

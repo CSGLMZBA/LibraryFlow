@@ -1,7 +1,6 @@
 import { AccountRecoveryRequests } from "../components/AccountRecoveryRequests";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { COMMENT_MAX_LENGTH, type BookComment } from "@library-flow/shared";
-import { commentRepository } from "../repositories/comment-repository";
 import { bookService } from "../services/book-service";
 import { commentService } from "../services/comment-service";
 import type { AuthUser } from "../types/auth";
@@ -25,11 +24,10 @@ export default function ModeratorDashboardPage({ moderator }: ModeratorDashboard
     try {
       const [pendingBooks, allComments] = await Promise.all([
         bookService.listPendingBooks(moderator),
-        commentRepository.getAllComments(),
+        commentService.listAllForModeration(),
       ]);
       setPending(pendingBooks);
-      setComments(allComments.filter((comment) => !comment.isDeleted)
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      setComments(allComments);
     } catch {
       setError("Could not load moderation data.");
     }

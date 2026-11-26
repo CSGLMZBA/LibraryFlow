@@ -1,5 +1,7 @@
 import { bookRepository } from "../repositories/book-repository";
+import { CLOUD_CONTENT } from "../utils/content-mode";
 import type { AllowedBookFileFormat, BookRecord } from "../types/book";
+import { cloudContentApi } from "./cloud-content-api";
 
 export type DownloadState = "Not Started" | "In Progress" | "Completed" | "Failed";
 
@@ -59,34 +61,58 @@ export async function getOfflineBook(bookId: string): Promise<OfflineBook | null
   }
 }
 
-/**
- * Local mode: the original file must exist in LibraryFlowDB in this browser.
- * Cloud mode must replace the source lookup with an authorized endpoint.
- * Completed is set only after the IndexedDB transaction completes.
- */
-export async function downloadBookForOffline(book: BookRecord): Promise<void> {
-  if (book.status !== "approved") {
-    throw new Error("Only approved books can be downloaded.");
-  }
+export interface OfflineSource {
+  fileBlob: Blob;
+  fileName: string;
+  fileFormat: AllowedBookFileFormat;
+}
 
+/** Cloud mode: a short-lived signed URL is requested for the authorized reader, then the file is fetched. */
+async function loadCloudSource(book: BookRecord): Promise<OfflineSource> {
+  const { downloadUrl } = await cloudContentApi.requestDownloadUrl(book.id);
+  return {
+    fileBlob: await cloudContentApi.fetchSignedFile(downloadUrl),
+    fileName: book.fileName,
+    fileFormat: book.fileFormat,
+  };
+}
+
+/** Local mode: the original file must exist in LibraryFlowDB in this browser. */
+async function loadLocalSource(book: BookRecord): Promise<OfflineSource> {
   const stored = await bookRepository.getStoredEntryById(book.id);
   if (!stored || stored.status !== "approved" || !(stored.fileBlob instanceof Blob)) {
     throw new Error("The file is unavailable in this browser. Download it from the server.");
   }
-  if (stored.fileBlob.size === 0 || stored.fileBlob.size > MAX_FILE_SIZE) {
+  return { fileBlob: stored.fileBlob, fileName: stored.fileName, fileFormat: stored.fileFormat };
+}
+
+/**
+ * Completed is set only after the IndexedDB transaction completes.
+ * The source is injectable so both modes share the same validation and storage.
+ */
+export async function downloadBookForOffline(
+  book: BookRecord,
+  loadSource: (book: BookRecord) => Promise<OfflineSource> = CLOUD_CONTENT ? loadCloudSource : loadLocalSource,
+): Promise<void> {
+  if (book.status !== "approved") {
+    throw new Error("Only approved books can be downloaded.");
+  }
+
+  const source = await loadSource(book);
+  if (!(source.fileBlob instanceof Blob) || source.fileBlob.size === 0 || source.fileBlob.size > MAX_FILE_SIZE) {
     throw new Error("The file is empty or exceeds the 20 MB limit.");
   }
-  if (stored.fileFormat !== "pdf" && stored.fileFormat !== "epub") {
+  if (source.fileFormat !== "pdf" && source.fileFormat !== "epub") {
     throw new Error("Unsupported format. Only PDF or EPUB is allowed.");
   }
 
   const offlineCopy: OfflineBook = {
-    id: stored.id,
-    title: stored.title,
-    author: stored.author,
-    fileName: stored.fileName,
-    fileFormat: stored.fileFormat,
-    fileBlob: stored.fileBlob,
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    fileName: source.fileName,
+    fileFormat: source.fileFormat,
+    fileBlob: source.fileBlob,
     downloadedAt: new Date().toISOString(),
   };
 

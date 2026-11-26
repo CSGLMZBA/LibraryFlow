@@ -4,6 +4,9 @@ import {
   validateCreateBookInput,
   validateUpdateBookInput,
 } from "../schemas/book-schema";
+import { CLOUD_CONTENT } from "../utils/content-mode";
+import type { BookServicePort } from "./book-service-port";
+import { createCloudBookService } from "./cloud-book-service";
 import type { AuthUser } from "../types/auth";
 import type {
   BookCategory,
@@ -45,7 +48,18 @@ function generateUniqueAccessKey(
   return key;
 }
 
-export const bookService = {
+const localBookService: BookServicePort = {
+  async loadClassifications() {
+    return { categories: bookRepository.getCategories(), genres: bookRepository.getGenres() };
+  },
+
+  async listApprovedBooks(): Promise<BookRecord[]> {
+    const books = await bookRepository.getAllBooks();
+    return books
+      .filter((book) => book.status === "approved")
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
   async listPendingBooks(moderator: AuthUser): Promise<BookRecord[]> {
     if (moderator.role !== "moderator") return [];
     const books = await bookRepository.getAllBooks();
@@ -345,3 +359,6 @@ export const bookService = {
     };
   },
 };
+
+/** The books backend for this build: browser storage by default, the cloud API when VITE_CONTENT_MODE=cloud. */
+export const bookService: BookServicePort = CLOUD_CONTENT ? createCloudBookService() : localBookService;

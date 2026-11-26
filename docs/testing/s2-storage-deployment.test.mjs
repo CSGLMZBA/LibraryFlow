@@ -1077,7 +1077,7 @@ describe('S2-AC-010: Deployment', () => {
 
   test('TC-S2-056: frontend code uses only public VITE_ variables', () => {
     const PUBLIC_VITE_NAMES = new Set([
-      'VITE_API_BASE_URL', 'VITE_AUTH_MODE', 'VITE_FIREBASE_API_KEY',
+      'VITE_API_BASE_URL', 'VITE_AUTH_MODE', 'VITE_CONTENT_MODE', 'VITE_FIREBASE_API_KEY',
       'VITE_FIREBASE_AUTH_DOMAIN', 'VITE_FIREBASE_PROJECT_ID', 'VITE_FIREBASE_AUTH_EMULATOR_HOST',
     ]);
     const sources = [

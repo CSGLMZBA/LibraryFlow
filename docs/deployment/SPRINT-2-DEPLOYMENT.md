@@ -60,6 +60,7 @@ Delete them from the dashboard to avoid confusion.
 | Variable | Value | Notes |
 |---|---|---|
 | `VITE_AUTH_MODE` | `cloud` | Public. |
+| `VITE_CONTENT_MODE` | unset (default) or `cloud` | Public. Leave unset until the backend runs with `ENABLE_CLOUD_CONTENT=true` and the live checks below pass. `cloud` makes the catalog, publishing, moderation, comments and offline downloads use the API instead of the browser's IndexedDB; existing browser-only books are not migrated and no longer appear. Requires `VITE_AUTH_MODE=cloud`. |
 | `VITE_API_BASE_URL` | `https://<service>.onrender.com` | Public. No trailing `/`. |
 | `VITE_FIREBASE_API_KEY` | Firebase web API key | Public browser configuration. |
 | `VITE_FIREBASE_AUTH_DOMAIN` | `<project>.firebaseapp.com` | Public. |

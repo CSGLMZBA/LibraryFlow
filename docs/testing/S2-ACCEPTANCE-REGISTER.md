@@ -69,8 +69,22 @@ frontend catalog still reads its own IndexedDB data, and existing in-memory
 records are not migrated, so `S2-AC-005`, `S2-AC-006` and `S2-AC-008` stay pending.
 The backend book contract now enforces the SPEC-002 §4 description (required on
 creation, 1-2000 characters after trimming, validated on metadata updates and
-revision-checked); this is covered by service tests, and the browser publishing
-form does not yet send it to the cloud API.
+revision-checked); this is covered by service tests. A moderator can no longer
+approve a book whose file upload never completed.
+The frontend now has an opt-in cloud mode (`VITE_CONTENT_MODE=cloud`, off by
+default, so the live site is unchanged): an HTTP client, cloud book and comment
+services behind the existing `bookService`/`commentService` names, a
+classification hook, and signed-URL offline downloads. Publishing creates the
+record, uploads the file straight to the private bucket with the signed URL, then
+completes it; edits send the observed revision and a mutation ID; the comment
+author name is never sent by the browser. Unit tests with a fake transport cover
+these flows, error mapping, role checks, and that the session token is never sent
+to the storage host. Nothing has been exercised in a browser against the live
+backend, genres are not linked to categories in the backend (the UI treats them
+as applying to every category), the backend has no duplicate title/author check
+(US-PUB-001 RN-008) or publisher-initiated delete, and existing browser-only
+books are not migrated. `S2-AC-005`, `S2-AC-006` and `S2-AC-008` therefore stay
+pending until a live browser scenario passes.
 Classification create/rename now require the moderator role (they were open to
 anonymous callers), and comment authorship now comes from the verified Firebase
 account instead of an `x-user-display-name` request header that any client could
