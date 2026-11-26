@@ -40,15 +40,33 @@ verification has run and its acceptance evidence is recorded.
 
 ## Sprint 3 tasks (reduced scope)
 
-| ID | Owner | Bounded deliverable | Dependencies | Acceptance | Verification |
+All tasks start `Not started`; existing code or these descriptions are not
+evidence of completion. Owners may work in parallel on independent tasks.
+Agent identity, status, evidence, and final commit are recorded in the task and
+the owner's agent log; see the [starter instructions](../agent-prompts/Starter.md).
+
+| ID | Owner | Bounded deliverable | Dependencies | Acceptance | Functional verification |
 |---|---|---|---|---|---|
-| S3-T01 | Carlos | Live cutover: Netlify `VITE_CONTENT_MODE=cloud`, Render `ENABLE_CLOUD_CONTENT=true`, secret rotation, browser upload check | Sprint 2 closed | S3-AC-012 | `npm run deploy:check`; `npm run storage:verify`; dated browser evidence |
-| S3-T02 | Juan | Favorites and ratings (1-5, average, update, delete) persistence and routes | None | S3-AC-002, S3-AC-004 | backend tests |
-| S3-T03 | Karlo | Favorites and ratings UI | S3-T02 | S3-AC-002, S3-AC-004 | frontend typecheck; browser scenario |
-| S3-T04 | Cesar | Run the 11 Sprint 2 TODO tests and fill the S3 register | S3-T01 | S3-AC-012 | `npm test` |
+| S3-T01 | Carlos | Integrate the release, record deletion-scope/retention decision, run final demo and sign off | S3-T03, S3-T04, S3-T05, S3-T06, S3-T07 | S3-AC-015 | Review evidence; `npm run typecheck`, `npm run build`, `npm test`; dated deployed demo |
+| S3-T02 | Juan | Define shared favorites/ratings contract and implement private repositories, routes and rating summaries; no purchase gate | None | S3-AC-002, S3-AC-004 | Focused backend tests for privacy, idempotency, invalid input, updates/deletes and concurrent summaries |
+| S3-T03 | Karlo | Favorites controls and private list, including loading, empty, signed-out and error/retry states | S3-T02 contract; integration depends on S3-T02 | S3-AC-002 | Focused frontend tests and browser add/remove/list/reload scenario |
+| S3-T04 | Cesar | Reconcile the 11 previously reported Sprint 2 TODOs individually; run in-scope tests and record approved deferrals; execute cross-role acceptance and record evidence | S3-T02, S3-T03, S3-T05, S3-T06, S3-T07 | S3-AC-012, S3-AC-016 | `npm test`; dated local and live browser results; per-TODO dispositions |
+| S3-T05 | Bryan | Verify reader-action identity, authorization, privacy and account-restriction handling; fix gaps in the assigned boundary and coordinate with Juan | S3-T02 contract; final feature checks depend on S3-T02 | S3-AC-013 | Focused tests for anonymous, reader, other-user and restricted-account cases; record any unavailable enforcement as a blocker |
+| S3-T06 | Dante | Ratings controls and summary, including loading, signed-out, invalid input and error/retry states | S3-T02 contract; integration depends on S3-T02 | S3-AC-004 | Focused frontend tests and browser rate/update/delete/reload scenario |
+| S3-T07 | Jorge | Verify Render/Netlify configuration and live storage; coordinate worker-secret rotation and scheduled workflow verification | Provider access and owner authorization | S3-AC-012, S3-AC-014 | `npm run deploy:check`; `npm run storage:verify`; dated signed upload/download and workflow evidence |
+
+S3-T03, S3-T05 and S3-T06 may start with a reviewed contract-only handoff,
+but remain blocked from integration and `Done` until S3-T02 is complete.
+Karlo and Dante coordinate before editing shared UI files; Bryan and Juan
+coordinate changes to shared authorization or route files. Jorge must disable
+the scheduled workflow before rotating the previously exposed secret, set
+the same new value in Render and GitHub without recording it, then re-enable
+and verify the workflow. Provider access or live credentials may require
+Carlos's help.
 
 Deferred to the backlog: collections, follows, pricing and purchases, favorite
-update notifications, account-deletion UI, backup/restore, accessibility audit.
+update notifications, permanent account deletion, browser-only book migration,
+backup/restore drills and a full accessibility audit.
 
 ## Shared completion rules
 
@@ -62,5 +80,10 @@ update notifications, account-deletion UI, backup/restore, accessibility audit.
    defect entry with owner, reproduction, and retest evidence.
 4. A production credential or secret must never be placed in a Planner task,
    repository file, browser bundle, or acceptance artifact.
-5. Sprint 3 cannot close while any Sprint 2 acceptance row is pending or while
-   a critical/high security finding is unresolved.
+5. Sprint 2 acceptance rows remain pending until supported by evidence; Carlos
+   must record the disposition of each outstanding row and each TODO without
+   marking deferred work passed. Sprint 3 cannot close with an unresolved
+   in-scope acceptance item or a critical/high security finding.
+6. Only mark a task `Done` when its actual functional checks pass, evidence is
+   recorded, and its final agent commit contains the required complete summary.
+   If a check cannot run or fails, record the blocker; do not claim success.

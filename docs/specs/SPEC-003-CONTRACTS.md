@@ -1,9 +1,12 @@
 # SPEC-003 Implementation Contract
 
-This document is normative for Sprint 3. It defines the shared domain
-contracts, validation, authorization, idempotency, and evidence expected by
-all Sprint 3 agents. UI agents consume these contracts and do not implement
-repositories or direct Firestore access.
+For the reduced Sprint 3, the common rules and the favorites and ratings
+sections below are normative only to the extent described in
+[SPRINT-003.md](../sprints/SPRINT-003.md). Other feature sections are deferred
+backlog contracts, not sprint requirements. Where a deferred purchase or
+notification requirement conflicts with the reduced scope, the explicit
+exceptions below take precedence. UI agents consume these contracts and do not
+implement repositories or direct Firestore access.
 
 ## 1. Common Rules
 
@@ -92,10 +95,8 @@ Favorite lists never expose another user's records. A deleted, rejected, or
 hidden book is omitted from the list but the favorite may remain for audit
 purposes. Re-favoriting the same book is idempotent.
 
-When a favorited book reaches a new published revision, create at most one
-notification per reader using idempotency key
-`favorite-update:{readerUid}:{bookId}:{bookRevision}`. Removing a favorite
-before the event prevents a new notification.
+Favorite update notifications are deferred; creating or removing a favorite
+does not require a notification in this sprint.
 
 ## 4. Ratings
 
@@ -121,9 +122,10 @@ type RatingSummary = {
 };
 ```
 
-Only authenticated readers with a completed dummy purchase may rate. The
-backend, not the UI, enforces purchase ownership. Create, update, and delete
-are separate operations but use a transaction to update the summary without
+Authenticated readers may rate approved, available books. Purchases and the
+purchase-ownership gate are deferred. The backend enforces identity, applicable
+account restrictions, book availability, and ownership of rating mutations.
+Create, update, and delete use a transaction to update the summary without
 lost updates.
 
 Routes:

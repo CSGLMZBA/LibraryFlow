@@ -5,6 +5,24 @@ them literally. They define the Spec-Driven Development workflow for
 LibraryFlow. They are generic: each agent must use its own assigned identity,
 owner, responsibilities, and task dependencies.
 
+## Required agent-assisted workflow
+
+- Every team member must run an AI coding agent on their own computer in their
+  local LibraryFlow checkout for project work. The agent must read and
+  acknowledge this starter, identify the assigned board task, and make the
+  repository file changes itself using its tools. Do not copy agent-generated
+  changes into the repository manually or work around this requirement.
+- The human owner directs and reviews the work, provides approvals, handles
+  provider-side settings and credentials when needed, and signs off evidence.
+  Agent assistance does not replace the human's responsibility for security
+  or deployment decisions.
+- Record the owner, agent name, task ID, dates, changed files, verification
+  evidence and commit in the task and session log. If an agent, checkout or
+  dependency is unavailable, mark the task `Blocked`; do not work around the
+  requirement or report it complete.
+- This is a team process requirement, not technical enforcement: a document
+  cannot detect whether an agent is running or prevent unassisted edits.
+
 ## 1. Agent identity and authority
 
 - Before development, ask the owner to assign or confirm the agent's singular
@@ -49,7 +67,8 @@ Before any implementation task:
 1. Read this file again.
 2. Confirm the repository is a real writable checkout and identify the current
    branch and worktree changes.
-3. Pull the latest `develop` branch with fast-forward-only behavior. Do not
+3. Confirm the owner-approved target branch and upstream. Update it only with
+   owner authorization and fast-forward-only behavior when safe. Do not
    discard unrelated work or use destructive reset/checkout commands.
 4. Read the relevant agent logs and documentation, then ask the owner to
    authorize the baseline commands. Verify the baseline with:
@@ -129,20 +148,18 @@ mandatory security boundary.
 
 Sprint 3 always enforces these rules:
 
-- Collections are private, owner-controlled, name-unique per owner, and may
-  contain only approved/non-deleted books.
-- Favorites and follows are private, deterministic, and idempotent.
-- Favorite and publisher-update notifications are deduplicated by event key.
-- Ratings are integers from 1 to 5, one per reader/book, and require completed
-  dummy purchase ownership.
-- Prices use non-negative integer `priceCents` and USD display; no real
-  payments, cards, refunds, or financial credentials are implemented.
-- Credit approval and purchase balance changes are transactional.
-- Banned users cannot use restricted Sprint 3 actions.
-- Deleted or hidden books cannot be collected or purchased.
-- All mutable records use stable IDs, revisions, and explicit conflicts.
-- Every UI implements loading, empty, error/retry, offline, keyboard-focus,
-  and responsive states at 320px, 768px, and 1280px.
+- Favorites are private, deterministic, and idempotent.
+- Ratings are integers from 1 to 5, one per authenticated reader/book, with
+  transactional summaries. Purchases and their rating gate are deferred.
+- Server-side identity, ownership, applicable account restrictions and book
+  availability must be enforced; a disabled or unverified restriction is a
+  blocker, not proof it works.
+- Applicable mutable records use stable IDs, revisions, and explicit conflicts.
+- Feature UI handles loading, empty, signed-out, error/retry and relevant
+  offline states, with keyboard access and responsive layouts.
+- Collections, follows, update notifications, pricing and purchases are
+  deferred. Only the current sprint's applicable contract sections are in
+  scope; do not silently implement deferred requirements.
 
 ## 6. Task-board and dependency rules
 
@@ -174,7 +191,7 @@ applicable sprint plan to approve changes before UI consumers change.
 
 After every significant change:
 
-1. Update the worktree from `develop` as permitted without discarding changes.
+1. Check the owner-approved branch and upstream without discarding changes.
 2. Run the smallest relevant focused verification.
 3. Run the baseline commands again before handoff:
 
@@ -187,7 +204,9 @@ After every significant change:
 4. If verification fails, stop, record the failure, and report it. Do not mark
    the task done.
 5. Update the matching acceptance register only after the scenario actually
-   runs.
+   runs. A passing build alone does not demonstrate a functional feature.
+   Record skipped/TODO tests, failed checks and missing live evidence as such.
+   Keep the task `Blocked` or `In progress` if required checks cannot pass.
 
 Every passed S2/S3 evidence record must include acceptance ID, linked story and
 contract section, date, environment, actor role, route/UI path, exact command
@@ -207,6 +226,17 @@ issue reference, and retest date.
   <type>(<scope>) [<owner>]: <description>
   ```
 
+- Before marking a task `Done`, the agent must create the final task commit
+  itself. Its commit body must contain a complete, truthful summary with:
+  task ID, owner and agent name; implemented behavior and affected files;
+  verification commands/scenarios with actual results and environment;
+  linked acceptance evidence; and any remaining limitations or follow-up.
+  Do not include secrets or claim a test or deployment passed without
+  observing it. Intermediate commits may be used, but a work-in-progress
+  commit is not a completion claim.
+- Mark the task `Done` only after the functional checks and required evidence
+  pass and the final commit exists. If required work or verification is
+  blocked, report the blocker rather than creating a success-shaped summary.
 - Include this trailer in every commit unless the owner explicitly says not
   to:
 
@@ -231,11 +261,11 @@ Stop and ask the owner before proceeding when:
   is needed but not specified;
 - a security boundary or acceptance result is uncertain.
 
-The project is not complete because documentation or code exists. Sprint 2 and
-Sprint 3 are complete only when their acceptance registers contain dated
-evidence, all required deployment checks pass, no critical/high security issue
-remains, and the designated product owner approves the final demo and release
-evidence.
+The project is not complete because documentation or code exists. Sprint 3
+is complete only when its in-scope acceptance register contains dated evidence,
+required deployment checks pass, no critical/high security issue remains,
+outstanding Sprint 2 items have honest dispositions, and Carlos approves the
+final demo and release evidence.
 
 ## 10. First-task readiness response
 

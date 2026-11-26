@@ -2,9 +2,13 @@
 
 ## 1. Purpose
 
-Sprint 3 completes the LibraryFlow platform: personal organization, ratings,
-publisher following, social discovery, account lifecycle, full moderation,
-pricing/dummy purchases, release quality, and production documentation.
+The current reduced Sprint 3 delivers cloud cutover verification, private
+favorites, ratings, and their release evidence. See
+[SPRINT-003.md](../sprints/SPRINT-003.md) for scope and completion gates.
+Other sections in this document describe deferred backlog, not requirements
+for this sprint. In particular, purchase-gated ratings and favorite update
+notifications are deferred; the reduced-scope rules in
+[SPEC-003-CONTRACTS.md](./SPEC-003-CONTRACTS.md) take precedence.
 
 ## 2. Collections
 

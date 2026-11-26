@@ -2,7 +2,8 @@
 
 ## Status
 
-Sprint 3 is reduced to cutover, favorites and ratings (AC-002, AC-004, AC-012). Deferred rows are backlog, not passed.
+Sprint 3 includes cutover, favorites, ratings, authorization, operations,
+verification and release sign-off. Deferred rows are backlog, not passed.
 
 | ID | Scope | Required Evidence | Status |
 |---|---|---|---|
@@ -10,7 +11,11 @@ Sprint 3 is reduced to cutover, favorites and ratings (AC-002, AC-004, AC-012). 
 | S3-AC-002 | Favorites | Add/remove/list/private behavior | Pending |
 | S3-AC-003 | Favorite notifications | Idempotent update notification | Deferred (backlog) |
 | S3-AC-004 | Ratings | One per reader, update/delete, average | Pending |
-| S3-AC-012 | Sprint 2 cutover | Cloud mode verified live in a browser; 11 TODO tests run | Pending |
+| S3-AC-012 | Sprint 2 cutover | Cloud mode verified live in a browser; test TODOs reconciled under S3-AC-016 | Pending |
+| S3-AC-013 | Reader authorization | Anonymous and restricted accounts denied as applicable; another reader cannot modify private records | Pending |
+| S3-AC-014 | Storage and worker operations | Private storage checks, secret rotation and successful scheduled workflow, without exposing secrets | Pending |
+| S3-AC-015 | Release and decisions | Account-deletion scope and retention decision, baseline checks, deployed demo and Carlos's sign-off | Pending |
+| S3-AC-016 | Acceptance reconciliation | Each previously reported TODO and outstanding Sprint 2 row has evidence or an owner-approved disposition; in-scope cases pass | Pending |
 | S3-AC-005 | Publisher follows | Follow/unfollow/list/update notification | Deferred (backlog) |
 | S3-AC-006 | Pricing | Valid/invalid USD price and ownership | Deferred (backlog) |
 | S3-AC-007 | Dummy purchases | Purchase record unlocks permitted rating behavior | Deferred (backlog) |
@@ -19,8 +24,9 @@ Sprint 3 is reduced to cutover, favorites and ratings (AC-002, AC-004, AC-012). 
 | S3-AC-010 | Platform quality | Accessibility, responsive UI, backup/restore, monitoring | Deferred (backlog) |
 | S3-AC-011 | Final deployment | Netlify/Render live health and complete demo | Deferred (backlog) |
 
-Sprint 3 is complete only when every non-deferred row is passed or an owner-approved
-exception is recorded.
+Sprint 3 is complete only when every non-deferred row passes with evidence.
+An owner-approved deferral must identify the specific out-of-scope item and
+does not turn a skipped test or pending acceptance result into a pass.
 
 ## Evidence Record Format
 

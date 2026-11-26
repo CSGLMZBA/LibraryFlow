@@ -27,7 +27,7 @@ JORGE ENRIQUEZ RICO
 - [Sprint 1 specification](docs/specs/SPEC-001.md)
 - [Project structure specification](docs/specs/SPEC-002-project-structure.md)
 - [Sprint 1](docs/sprints/SPRINT-001.md)
-- [Sprint 2 - Production Readiness (complete in code)](docs/sprints/SPRINT-002.md)
+- [Sprint 2 - Production Readiness (closed with limitations)](docs/sprints/SPRINT-002.md)
 - [Sprint 3 - Cutover and Core Reader Features (reduced)](docs/sprints/SPRINT-003.md)
 - [Sprint 2 Specification](docs/specs/SPEC-002.md)
 - [Sprint 3 Specification](docs/specs/SPEC-003.md)
@@ -63,13 +63,16 @@ credentials described in [the deployment setup guide](docs/deployment/SPRINT-1-S
 
 ## Sprint 2 and 3 status
 
-Sprint 2 is complete in code and pushed to `main`. Cloud books, comments and
-notifications (Firestore plus private Supabase files) are off by default. Turn
-them on with `ENABLE_CLOUD_CONTENT=true` on Render and `VITE_CONTENT_MODE=cloud`
-on Netlify, then redeploy: Vite bakes `VITE_*` values in at build time. Live
-browser verification and 11 TODO tests are carried into Sprint 3, which is
-limited to cutover, favorites and ratings. See
-[the Sprint 2 deployment guide](docs/deployment/SPRINT-2-DEPLOYMENT.md).
+Sprint 2 was closed with unverified and deferred items; the
+[acceptance register](docs/testing/S2-ACCEPTANCE-REGISTER.md) records their
+status. Cloud books, comments and notifications use Firestore and private
+Supabase files when configured; flag defaults are off, and actual deployed
+settings must be verified. Cutover requires `ENABLE_CLOUD_CONTENT=true` on
+Render and `VITE_CONTENT_MODE=cloud` on Netlify followed by redeployment:
+Vite bakes `VITE_*` values in at build time. Sprint 3 covers cutover, favorites,
+ratings, targeted authorization and release evidence. See the
+[deployment guide](docs/deployment/SPRINT-2-DEPLOYMENT.md) and
+[task board](docs/sprints/SPRINT-002-003-TASK-BOARD.md).
 
 ## Local setup
 
