@@ -40,6 +40,15 @@ in-memory repository; this does not prevent duplicates across instances.
 Concurrent reads of the same expired in-memory application tolerate a
 completed competing transition without sending a duplicate notice. Scheduled
 expiration and durable transactional notifications remain unimplemented.
+An experimental, opt-in Firestore publisher application service implements
+transactional submission, withdrawal, rejection and read-triggered expiration,
+with audit and rejection/expiration notices. Isolated fake-store tests exercise
+rollback, concurrency and cross-instance reads; these are not live Firestore
+transaction or browser evidence. The flag is disabled by default pending rules
+verification, live testing and an existing-data transition plan. Approval,
+Firebase claim synchronization and scheduled expiration remain unavailable.
+On 2026-11-25, a read-only query for a randomly named absent applicant passed
+against the configured Firestore; this does not verify transaction writes.
 Publisher service tests that assumed role changes, atomic rollback, or revision
 checking have been relabeled as partial simulations; the corresponding
 acceptance scenarios are explicit TODOs. In particular, a notification failure

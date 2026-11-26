@@ -259,7 +259,7 @@ export class PublisherApplicationService {
     );
   }
 
-  private validateCreateDto(
+  protected validateCreateDto(
     dto: CreatePublisherApplicationDto,
   ): Omit<
     PublisherApplication,
@@ -271,6 +271,9 @@ export class PublisherApplicationService {
     | "expiresAt"
     | "revision"
   > {
+    if (!dto || typeof dto !== "object" || Array.isArray(dto)) {
+      throw new Error("Invalid application.");
+    }
     const publisherName = this.validateText(
       dto.publisherName,
       "publisherName",
@@ -294,6 +297,9 @@ export class PublisherApplicationService {
       throw new Error("publisherEmail must be a valid email address.");
     }
 
+    if (dto.website !== undefined && typeof dto.website !== "string") {
+      throw new Error("website must be a valid HTTPS URL.");
+    }
     const website = dto.website?.trim();
     if (website) {
       if (website.length > APPLICATION_WEBSITE_MAX_LENGTH) {
@@ -321,8 +327,8 @@ export class PublisherApplicationService {
     };
   }
 
-  private validateReason(reason: string): string {
-    const normalizedReason = reason.trim();
+  protected validateReason(reason: string): string {
+    const normalizedReason = typeof reason === "string" ? reason.trim() : "";
     if (
       normalizedReason.length === 0 ||
       normalizedReason.length > REJECTION_REASON_MAX_LENGTH
@@ -335,7 +341,7 @@ export class PublisherApplicationService {
   }
 
   private validateText(value: string, field: string, maxLength: number): string {
-    const normalizedValue = value.trim();
+    const normalizedValue = typeof value === "string" ? value.trim() : "";
     if (
       normalizedValue.length === 0 ||
       normalizedValue.length > maxLength

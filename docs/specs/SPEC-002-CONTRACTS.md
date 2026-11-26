@@ -149,6 +149,12 @@ Firestore transaction: it checks `pending` and `revision`, writes the
 application, account role, audit record, and notification or writes none of
 them. A failed transaction cannot partially grant a role.
 
+The experimental Firestore implementation for submission, withdrawal,
+rejection and read-triggered expiration is disabled by default. It does not
+implement approval, role synchronization or scheduled expiration; the legacy
+default continues to use in-memory records. See the deployment guide before
+enabling the experimental store.
+
 ## 3. Revision and Synchronization Contract
 
 All mutable Sprint 2 records contain `revision`, starting at `1`. A mutation

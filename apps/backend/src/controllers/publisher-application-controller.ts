@@ -1,8 +1,20 @@
 import type { Request, Response } from "express";
-import { publisherApplicationService } from "../services/publisher-application-service.js";
+import { publisherApplicationService as memoryApplicationService } from "../services/publisher-application-service.js";
+import { CloudPublisherApplicationService, PublisherApplicationStoreError } from "../services/cloud-publisher-application-service.js";
 import { ApplicationRevisionConflictError } from "../repositories/publisher-application-repository.js";
 
+const publisherApplicationService = process.env.ENABLE_CLOUD_PUBLISHER_APPLICATIONS === "true"
+  ? new CloudPublisherApplicationService()
+  : memoryApplicationService;
+
 function sendError(response: Response, error: unknown): void {
+  if (error instanceof PublisherApplicationStoreError) {
+    response.status(503).json({
+      success: false,
+      error: { code: "APPLICATIONS_UNAVAILABLE", message: error.message },
+    });
+    return;
+  }
   if (error instanceof ApplicationRevisionConflictError) {
     response.status(409).json({
       success: false,
