@@ -81,10 +81,16 @@ author name is never sent by the browser. Unit tests with a fake transport cover
 these flows, error mapping, role checks, and that the session token is never sent
 to the storage host. Nothing has been exercised in a browser against the live
 backend, genres are not linked to categories in the backend (the UI treats them
-as applying to every category), the backend has no duplicate title/author check
-(US-PUB-001 RN-008) or publisher-initiated delete, and existing browser-only
+as applying to every category), there is no publisher-initiated delete, and existing browser-only
 books are not migrated. `S2-AC-005`, `S2-AC-006` and `S2-AC-008` therefore stay
 pending until a live browser scenario passes.
+The backend now enforces US-PUB-001 RN-008 (a title may repeat, but the title and
+author combination must be unique, ignoring case and spacing) on creation and on
+metadata updates, returning `409 DUPLICATE_RESOURCE` on the `title` field. The
+in-memory repository checks atomically within one process; the Firestore
+repository writes a guard document in the same transaction as the book, tested
+with a fake store (concurrent publishes, renames moving the guard, deleted books
+freeing their combination). It is not live-Firestore evidence.
 Classification create/rename now require the moderator role (they were open to
 anonymous callers), and comment authorship now comes from the verified Firebase
 account instead of an `x-user-display-name` request header that any client could

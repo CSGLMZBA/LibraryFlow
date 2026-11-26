@@ -6,8 +6,21 @@ import { authAdmin } from "../services/firebase-auth-service.js";
 type MetadataUpdateResult =
   | { kind: "updated"; book: Book }
   | { kind: "conflict"; book: Book }
+  | { kind: "duplicate" }
   | { kind: "not_found" }
   | { kind: "forbidden" };
+
+/** US-PUB-001 RN-008: a title may repeat, but the title and author combination must be unique. */
+export class DuplicateBookError extends Error {
+  constructor() {
+    super("A book with the same title and author already exists.");
+    this.name = "DuplicateBookError";
+  }
+}
+
+export function titleAuthorKey(title: string, author: string): string {
+  return `${title.trim().toLocaleLowerCase()}\u0000${author.trim().toLocaleLowerCase()}`;
+}
 
 export class BookRepository {
   private readonly restrictedOwners = new Set<string>();
@@ -18,6 +31,18 @@ export class BookRepository {
     const storedBook = this.clone(book);
     this.books.set(storedBook.id, storedBook);
     return this.clone(storedBook);
+  }
+
+  private titleAuthorTaken(title: string, author: string, exceptId?: string): boolean {
+    const key = titleAuthorKey(title, author);
+    return Array.from(this.books.values()).some((book) =>
+      book.id !== exceptId && book.status !== "deleted" && titleAuthorKey(book.title, book.author) === key);
+  }
+
+  /** Saves a new book unless another live book already has the same title and author. */
+  async saveIfUnique(book: Book): Promise<Book> {
+    if (this.titleAuthorTaken(book.title, book.author, book.id)) throw new DuplicateBookError();
+    return this.save(book);
   }
 
   async findById(id: string): Promise<Book | null> {
@@ -120,6 +145,7 @@ export class BookRepository {
       revision: currentBook.revision + 1,
       updatedAt,
     });
+    if (this.titleAuthorTaken(updatedBook.title, updatedBook.author, id)) return { kind: "duplicate" };
     this.books.set(id, updatedBook);
     if (key) this.processedMetadataMutations.set(key, this.clone(updatedBook));
     return { kind: "updated", book: this.clone(updatedBook) };
@@ -183,6 +209,37 @@ export class FirestoreBookRepository extends BookRepository {
 
   override async save(book: Book): Promise<Book> {
     await this.storage(db => db.collection("books").doc(book.id).set(withoutUndefined(book)));
+    return this.toBook(book);
+  }
+
+  private guardRef(db: FirebaseFirestore.Firestore, title: string, author: string) {
+    return db.collection("bookTitleAuthorKeys").doc(createHash("sha256").update(titleAuthorKey(title, author)).digest("hex"));
+  }
+
+  /** True when the guard points at a different book that still exists and is not deleted. */
+  private async guardTaken(
+    db: FirebaseFirestore.Firestore,
+    tx: FirebaseFirestore.Transaction,
+    guard: FirebaseFirestore.DocumentSnapshot,
+    bookId: string,
+  ): Promise<boolean> {
+    const holder = guard.exists ? (guard.data() as { bookId?: string }).bookId : undefined;
+    if (!holder || holder === bookId) return false;
+    const other = await tx.get(db.collection("books").doc(holder));
+    return other.exists && (other.data() as StoredBook).status !== "deleted";
+  }
+
+  /** The guard document is written in the same transaction as the book, so concurrent publishes cannot both win. */
+  override async saveIfUnique(book: Book): Promise<Book> {
+    await this.storage(db => {
+      const guardRef = this.guardRef(db, book.title, book.author);
+      return db.runTransaction(async tx => {
+        const guard = await tx.get(guardRef);
+        if (await this.guardTaken(db, tx, guard, book.id)) throw new DuplicateBookError();
+        tx.set(guardRef, { bookId: book.id });
+        tx.set(db.collection("books").doc(book.id), withoutUndefined(book));
+      });
+    }, error => error instanceof DuplicateBookError);
     return this.toBook(book);
   }
 
@@ -265,7 +322,18 @@ export class FirestoreBookRepository extends BookRepository {
           throw error;
         }
         const next = withoutUndefined({ ...current, ...updates, revision: current.revision + 1, updatedAt });
+        const keyChanged = titleAuthorKey(current.title, current.author) !== titleAuthorKey(next.title, next.author);
+        const newGuardRef = this.guardRef(db, next.title, next.author);
+        const oldGuardRef = this.guardRef(db, current.title, current.author);
+        // All reads happen before any write in the transaction.
+        const newGuard = keyChanged ? await tx.get(newGuardRef) : undefined;
+        if (newGuard && await this.guardTaken(db, tx, newGuard, id)) return { kind: "duplicate" };
+        const oldGuard = keyChanged ? await tx.get(oldGuardRef) : undefined;
         tx.set(ref, next);
+        if (keyChanged) {
+          tx.set(newGuardRef, { bookId: id });
+          if (oldGuard?.exists && (oldGuard.data() as { bookId?: string }).bookId === id) tx.delete(oldGuardRef);
+        }
         if (mutationRef) tx.create(mutationRef, withoutUndefined(this.toBook(next)));
         return { kind: "updated", book: this.toBook(next) };
       });

@@ -55,6 +55,10 @@ function fakeFirestore() {
           set(ref, data) { writer(staged, ref.path, "set", data); },
           create(ref, data) { writer(staged, ref.path, "create", data); },
           update(ref, data) { writer(staged, ref.path, "update", data); },
+          delete(ref) {
+            if (ref.path.startsWith(`${failing}/`)) throw new Error("storage failed");
+            staged.delete(ref.path);
+          },
         });
         records = staged;
         return result;
@@ -164,4 +168,34 @@ test("notifications persist for the recipient only and can be marked read", asyn
   assert.equal((await other.findByUserId("bob"))[0].read, false);
   db.fail("notifications");
   await assert.rejects(other.create(item("n3", "alice")), {name: "NotificationStoreError"});
+});
+
+test("Firestore books keep the title and author combination unique across instances and renames", async () => {
+  const db = fakeFirestore();
+  const first = new FirestoreBookRepository(() => db);
+  const second = new FirestoreBookRepository(() => db);
+  const outcomes = await Promise.allSettled([
+    first.saveIfUnique(book("1", "alice", {title: "Dune", author: "Herbert"})),
+    second.saveIfUnique(book("2", "bob", {title: " dune ", author: "HERBERT"})),
+  ]);
+  assert.equal(outcomes.filter(o => o.status === "fulfilled").length, 1);
+  assert.equal(outcomes.find(o => o.status === "rejected").reason.name, "DuplicateBookError");
+  assert.equal(db.values("books").length, 1);
+  await second.saveIfUnique(book("3", "bob", {title: "Dune", author: "Other"}));
+
+  const winner = db.values("books").find(b => b.author === "Herbert").id;
+  const rename = (id, title, mutation) => first.updateMetadata(id, id === "3" ? "bob" : "alice", false, undefined, mutation,
+    () => ({title}), "2026-11-26T00:00:00.000Z");
+  assert.equal((await rename("3", "Dune", "m1")).kind, "updated", "Renaming to its own current key is allowed.");
+  await second.saveIfUnique(book("4", "carol", {title: "Taken", author: "Herbert"}));
+  assert.equal((await rename(winner, "Taken", "m2")).kind, "duplicate");
+  assert.equal((await first.findById(winner)).title, "Dune", "A refused rename leaves the book unchanged.");
+  const moved = await rename(winner, "Free Title", "m3");
+  assert.equal(moved.kind, "updated");
+  await second.saveIfUnique(book("5", "dave", {title: "Dune", author: "Herbert"}));
+  await first.update("5", {status: "deleted"});
+  await second.saveIfUnique(book("6", "erin", {title: "Dune", author: "Herbert"}));
+  await assert.rejects(second.saveIfUnique(book("7", "frank", {title: "Dune", author: "Herbert"})), {name: "DuplicateBookError"});
+  db.fail("bookTitleAuthorKeys");
+  await assert.rejects(second.saveIfUnique(book("8", "gina", {title: "New", author: "New"})), {name: "BookStoreError"});
 });

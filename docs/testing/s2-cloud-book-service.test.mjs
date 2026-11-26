@@ -112,6 +112,10 @@ test("a failed upload is reported with a clear message and never looks published
   const rejected = await createCloudBookService(fakeApi({createBook: async () => { throw new ContentApiError("FORBIDDEN", "Access is not authorized.", 403); }}).api)
     .publishBook(publisher, input());
   assert.deepEqual([rejected.success, rejected.error.code], [false, "FORBIDDEN"]);
+  const duplicate = await createCloudBookService(fakeApi({createBook: async () => {
+    throw new ContentApiError("DUPLICATE_RESOURCE", "A book with the same title and author already exists.", 409);
+  }}).api).publishBook(publisher, input());
+  assert.deepEqual([duplicate.error.code, duplicate.error.field], ["DUPLICATE_RESOURCE", "title"]);
 });
 
 test("updates send the observed revision and a mutation id, and conflicts are explained", async () => {

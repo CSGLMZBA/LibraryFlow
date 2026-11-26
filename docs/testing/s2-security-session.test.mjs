@@ -75,6 +75,9 @@ function createTestHarness() {
       books.set(book.id, { ...book });
       return { ...book };
     },
+    async saveIfUnique(book) {
+      return this.save(book);
+    },
     async findById(id) {
       const b = books.get(id);
       return b ? { ...b } : null;

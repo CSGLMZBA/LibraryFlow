@@ -13,6 +13,7 @@ import type {
 import {
   bookRepository as defaultBookRepository,
   BookRepository,
+  DuplicateBookError,
 } from "../repositories/book-repository.js";
 import {
   DeletionScheduleError,
@@ -95,7 +96,7 @@ export class BookService {
       revision: 1,
     };
 
-    return this.repository.save(book);
+    return this.repository.saveIfUnique(book);
   }
 
   /** The owner's own books in every state except permanently deleted ones. */
@@ -164,6 +165,7 @@ export class BookService {
       new Date().toISOString(),
     );
     if (result.kind === "not_found") throw new Error("Book not found.");
+    if (result.kind === "duplicate") throw new DuplicateBookError();
     if (result.kind === "forbidden") throw new Error("You are not authorized to update this book.");
     if (result.kind === "conflict") {
       throw new RevisionConflictError(result.book.id, result.book.revision, result.book);

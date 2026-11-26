@@ -43,12 +43,13 @@ function records(books: Book[]): BookRecord[] {
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
 }
 
-function failure(error: unknown): { success: false; error: { code: string; message: string; field: "general" } } {
+function failure(error: unknown): { success: false; error: { code: string; message: string; field: "general" | "title" } } {
   if (error instanceof ContentApiError) {
     const message = error.code === "REVISION_CONFLICT"
       ? "This book was changed elsewhere. Reload it and try again."
       : error.message;
-    return { success: false, error: { code: error.code, message, field: "general" } };
+    const field = error.code === "DUPLICATE_RESOURCE" ? "title" : "general";
+    return { success: false, error: { code: error.code, message, field } };
   }
   return { success: false, error: { code: "SERVICE_UNAVAILABLE", message: "The request could not be completed. Try again.", field: "general" } };
 }
