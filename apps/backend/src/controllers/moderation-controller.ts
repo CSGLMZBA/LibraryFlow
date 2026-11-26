@@ -23,6 +23,18 @@ export async function listPendingBooks(
   }
 }
 
+export async function listRecentComments(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    const comments = await moderationService.getRecentComments();
+    response.json({ success: true, data: comments });
+  } catch (error) {
+    sendError(response, error);
+  }
+}
+
 export async function approveBook(
   request: Request,
   response: Response,

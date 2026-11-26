@@ -30,6 +30,10 @@ export class ModerationService {
     private readonly deletions: BookFileDeletionScheduler = deletionJobService,
   ) {}
 
+  async getRecentComments(): Promise<BookComment[]> {
+    return this.comments.findRecentActive();
+  }
+
   async getPendingBooks(): Promise<Book[]> {
     return this.books.findPending();
   }

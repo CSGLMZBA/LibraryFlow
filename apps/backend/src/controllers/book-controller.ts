@@ -54,6 +54,18 @@ export async function listApprovedBooks(
   }
 }
 
+export async function listMyBooks(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    const books = await bookService.listOwnedBooks(response.locals.auth.uid as string);
+    response.json({ success: true, data: books });
+  } catch (error) {
+    sendError(response, error);
+  }
+}
+
 export async function createBook(
   request: Request,
   response: Response,

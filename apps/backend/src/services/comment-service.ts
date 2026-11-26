@@ -21,8 +21,12 @@ export class CommentService {
     bookId: string,
     content: string,
     authorId: string,
-    authorDisplayName: string,
+    authorDisplayName: string | undefined,
   ): Promise<BookComment> {
+    const displayName = typeof authorDisplayName === "string" ? authorDisplayName.trim() : "";
+    if (!displayName || displayName.length > 100) {
+      throw new Error("A verified display name is required to comment.");
+    }
     const book = await this.books.findById(bookId);
     if (!book) {
       throw new Error("Book not found.");
@@ -32,7 +36,7 @@ export class CommentService {
     }
     if (!await this.visible(book.ownerId)) throw new Error("Book not found.");
 
-    const normalizedContent = content.trim();
+    const normalizedContent = typeof content === "string" ? content.trim() : "";
     if (
       normalizedContent.length === 0 ||
       normalizedContent.length > COMMENT_MAX_LENGTH
@@ -46,7 +50,7 @@ export class CommentService {
       id: crypto.randomUUID(),
       bookId,
       authorId,
-      authorDisplayName,
+      authorDisplayName: displayName,
       content: normalizedContent,
       createdAt: new Date().toISOString(),
       isDeleted: false,

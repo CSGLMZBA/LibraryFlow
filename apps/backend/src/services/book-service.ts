@@ -98,6 +98,14 @@ export class BookService {
     return this.repository.save(book);
   }
 
+  /** The owner's own books in every state except permanently deleted ones. */
+  async listOwnedBooks(ownerId: string): Promise<Book[]> {
+    const books = await this.repository.findByOwner(ownerId);
+    return books
+      .filter((book) => book.status !== "deleted")
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  }
+
   async getApprovedCatalog(filters?: BookFilterQuery): Promise<Book[]> {
     const books = await this.repository.findApproved(filters);
     return visibleItems(books, book => book.ownerId, this.visible);

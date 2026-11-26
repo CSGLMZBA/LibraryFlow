@@ -71,6 +71,13 @@ The backend book contract now enforces the SPEC-002 §4 description (required on
 creation, 1-2000 characters after trimming, validated on metadata updates and
 revision-checked); this is covered by service tests, and the browser publishing
 form does not yet send it to the cloud API.
+Classification create/rename now require the moderator role (they were open to
+anonymous callers), and comment authorship now comes from the verified Firebase
+account instead of an `x-user-display-name` request header that any client could
+forge. Both are covered by route/controller tests. New `GET /books/mine`
+(publisher) and `GET /moderation/comments` (moderator) endpoints list a
+publisher's own books and the newest 200 active comments for the cloud UI; they
+are covered at service/repository level, not yet through the browser.
 TC-S2-011, 013, 014, 018, 020/021 and 022 stay TODO until verified against live
 Firebase and the upload APIs.
 On 2026-11-25, a read-only query for a randomly named absent applicant passed

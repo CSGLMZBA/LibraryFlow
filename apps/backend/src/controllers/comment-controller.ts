@@ -40,13 +40,11 @@ export async function addComment(
 ): Promise<void> {
   try {
     const authorId = response.locals.auth.uid as string;
-    // TODO: Read display name from the verified identity once it is available.
-    const authorDisplayName = request.headers[
-      "x-user-display-name"
-    ] as string;
+    // The display name comes from the verified account, never from a client header.
+    const authorDisplayName = response.locals.auth.displayName as string | undefined;
     const comment = await commentService.addComment(
       request.params.bookId as string,
-      request.body.content,
+      request.body?.content,
       authorId,
       authorDisplayName,
     );

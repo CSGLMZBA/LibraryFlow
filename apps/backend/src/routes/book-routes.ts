@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createBook,
   getBookDetails,
+  listMyBooks,
   listApprovedBooks,
   updateBook,
 } from "../controllers/book-controller.js";
@@ -24,6 +25,7 @@ export const bookRouter = Router();
 
 bookRouter.get("/", listApprovedBooks);
 bookRouter.post("/", publisherGuard, createBook);
+bookRouter.get("/mine", publisherGuard, listMyBooks);
 bookRouter.get("/:bookId", optionalAuth, getBookDetails);
 bookRouter.patch("/:bookId", requireAuth, updateBook);
 bookRouter.post("/:bookId/file/upload-url", publisherGuard, createBookFileUploadUrl);

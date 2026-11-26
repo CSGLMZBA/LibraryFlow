@@ -3,6 +3,7 @@ import { moderatorGuard } from "../middleware/moderator-guard.js";
 import {
   approveBook,
   listPendingBooks,
+  listRecentComments,
   rejectBook,
   removeComment,
 } from "../controllers/moderation-controller.js";
@@ -33,6 +34,7 @@ export function createModerationRouter(
   const revokeHandler = roleChangesEnabled ? revokePublisher : publisherRoleChangeUnavailable;
 
   moderationRouter.get("/books/pending", guard, listPendingBooks);
+  moderationRouter.get("/comments", guard, listRecentComments);
   moderationRouter.post("/books/:bookId/approve", guard, approveBook);
   moderationRouter.post("/books/:bookId/reject", guard, rejectBook);
   moderationRouter.delete("/books/:bookId", guard, deleteBook);

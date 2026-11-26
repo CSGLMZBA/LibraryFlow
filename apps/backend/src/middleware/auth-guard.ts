@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 /** Authenticated identity MUST be supplied by a trusted server-side token verifier.
  * Never take role/userId from request.body, query, or an unverified token. */
 export type VerifiedRole = 'reader'|'publisher'|'moderator';
-export interface VerifiedIdentity { uid: string; role: VerifiedRole }
+export interface VerifiedIdentity { uid: string; role: VerifiedRole; displayName?: string }
 export type VerifySessionToken = (token: string) => Promise<VerifiedIdentity | null>;
 export function createAuthGuard(verify: VerifySessionToken, requiredRole?: VerifiedRole) {
   return async (req:Request,res:Response,next:NextFunction):Promise<void> => {

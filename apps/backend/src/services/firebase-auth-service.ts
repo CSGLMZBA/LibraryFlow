@@ -143,7 +143,8 @@ export async function verifyFirebaseIdentity(token: string): Promise<VerifiedIde
     await accountSessionPolicy.authorize(tokenProof(record.uid, decoded.auth_time, decoded.iat, token), {touch: true});
     const role = roleFromClaims(record.customClaims?.role);
     if (!role) return null;
-    return {uid: record.uid, role};
+    const displayName = (record.displayName || record.email?.split('@')[0] || '').trim();
+    return {uid: record.uid, role, ...(displayName ? {displayName} : {})};
   } catch (error) {
     if (error instanceof AuthCloudError && error.code === 'AUTH_INVALID') return null;
     throw error;

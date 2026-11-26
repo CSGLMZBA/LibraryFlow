@@ -34,6 +34,15 @@ export class CommentRepository {
       .map((comment) => this.clone(comment));
   }
 
+  /** Newest active comments across all books, for the moderation queue. */
+  async findRecentActive(limit = 200): Promise<BookComment[]> {
+    return Array.from(this.comments.values())
+      .filter((comment) => !comment.isDeleted)
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, limit)
+      .map((comment) => this.clone(comment));
+  }
+
   async findById(id: string): Promise<BookComment | null> {
     const comment = this.comments.get(id);
     return comment ? this.clone(comment) : null;
@@ -110,6 +119,13 @@ export class FirestoreCommentRepository extends CommentRepository {
     return snapshot.docs.map(doc => doc.data() as BookComment)
       .filter(comment => includeDeleted || !comment.isDeleted)
       .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+  }
+
+  override async findRecentActive(limit = 200): Promise<BookComment[]> {
+    const snapshot = await this.storage(db => db.collection("comments").where("isDeleted", "==", false).get());
+    return snapshot.docs.map(doc => doc.data() as BookComment)
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+      .slice(0, limit);
   }
 
   override async findById(id: string): Promise<BookComment | null> {

@@ -133,6 +133,7 @@ test("comments persist, sort newest first, soft delete with moderation data, and
     content: "Hello", createdAt, isDeleted: false});
   await comments.create(comment("c1", "2026-11-25T01:00:00.000Z"));
   await comments.create(comment("c2", "2026-11-25T02:00:00.000Z", "bob"));
+  assert.deepEqual((await comments.findRecentActive(1)).map(c => c.id), ["c2"]);
   await assert.rejects(comments.create(comment("c1", "2026-11-25T03:00:00.000Z")), {name: "CommentStoreError"});
   const other = new FirestoreCommentRepository(() => db);
   assert.deepEqual((await other.findByBookId("b1")).map(c => c.id), ["c2", "c1"]);
