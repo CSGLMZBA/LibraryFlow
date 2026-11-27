@@ -10,6 +10,7 @@ import { banRouter } from "./routes/ban-routes.js";
 import { internalRouter } from "./routes/internal-routes.js";
 import { publisherApplicationRouter } from "./routes/publisher-application-routes.js";
 import { notificationRouter } from "./routes/notification-routes.js";
+import { favoriteRouter } from "./routes/favorite-routes.js";
 
 import { accountRouter } from "./routes/account-routes.js";
 import { healthHandler } from "./routes/health-routes.js";
@@ -43,6 +44,7 @@ app.use("/api/v1/books", bookRouter);
 app.use("/api/v1/classifications", classificationRouter);
 app.use("/api/v1/publisher-applications", publisherApplicationRouter);
 app.use("/api/v1/notifications", notificationRouter);
+app.use("/api/v1", favoriteRouter);
 app.use("/api/v1/moderation", moderationRouter);
 app.use("/api/v1/moderation", banRouter);
 app.delete("/api/v1/comments/:commentId", moderatorGuard, removeComment);
